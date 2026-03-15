@@ -16,7 +16,8 @@ class PedidoController extends Controller
      */
     public function index()
     {
-        $pedidos = Pedido::where('comprador_id', auth()->id())
+        $pedidos = Pedido::with('productos') // ✅ Cambiado
+                        ->where('comprador_id', auth()->id())
                         ->latest()
                         ->paginate(10);
 
@@ -37,19 +38,17 @@ class PedidoController extends Controller
 
         // Calcular totales
         $subtotal = 0;
-        $items = [];
         $vendedores = [];
 
         foreach ($carrito as $item) {
             $subtotal += $item['precio'] * $item['cantidad'];
-            $items[] = $item;
             $vendedores[$item['vendedor_id']] = $item['vendedor_nombre'];
         }
 
         // Si hay múltiples vendedores, mostrar advertencia
         $multiplesVendedores = count($vendedores) > 1;
 
-        return view('public.pedidos.checkout', compact('carrito', 'subtotal', 'items', 'multiplesVendedores'));
+        return view('public.pedidos.checkout', compact('carrito', 'subtotal', 'multiplesVendedores'));
     }
 
     /**
@@ -94,18 +93,31 @@ class PedidoController extends Controller
                 $pedido = Pedido::create([
                     'comprador_id' => auth()->id(),
                     'vendedor_id' => $vendedorId,
-                    'items' => $items,
                     'subtotal' => $subtotal,
-                    'total' => $subtotal, // Sin impuestos por ahora
+                    'total' => $subtotal,
                     'estado' => 'pendiente',
                     'direccion_envio' => $request->direccion_envio,
                     'telefono_contacto' => $request->telefono_contacto,
                     'notas' => $request->notas,
                 ]);
 
-                // Actualizar stock
+                // Agregar productos a la tabla pivote
                 foreach ($items as $item) {
                     $producto = Producto::find($item['id']);
+
+                    // Verificar stock
+                    if ($producto->stock < $item['cantidad']) {
+                        throw new \Exception("Stock insuficiente para {$producto->nombre}");
+                    }
+
+                    // Adjuntar producto con cantidad y precio
+                    $pedido->productos()->attach($item['id'], [
+                        'cantidad' => $item['cantidad'],
+                        'precio_unitario' => $item['precio'],
+                        'subtotal' => $item['precio'] * $item['cantidad'],
+                    ]);
+
+                    // Actualizar stock
                     $producto->stock -= $item['cantidad'];
 
                     if ($producto->stock == 0) {
@@ -142,7 +154,7 @@ class PedidoController extends Controller
      */
     public function show($id)
     {
-        $pedido = Pedido::with('vendedor')
+        $pedido = Pedido::with(['vendedor', 'productos']) // ✅ Cargar productos
                        ->where('comprador_id', auth()->id())
                        ->findOrFail($id);
 
@@ -154,19 +166,17 @@ class PedidoController extends Controller
      */
     public function cancelar(Request $request, $id)
     {
-        $pedido = Pedido::where('comprador_id', auth()->id())
+        $pedido = Pedido::with('productos') // ✅ Cargar productos para restaurar stock
+                       ->where('comprador_id', auth()->id())
                        ->where('estado', 'pendiente')
                        ->findOrFail($id);
 
         DB::transaction(function () use ($pedido) {
             // Restaurar stock
-            foreach ($pedido->items as $item) {
-                $producto = Producto::find($item['id']);
-                if ($producto) {
-                    $producto->stock += $item['cantidad'];
-                    $producto->estado = 'disponible';
-                    $producto->save();
-                }
+            foreach ($pedido->productos as $producto) {
+                $producto->stock += $producto->pivot->cantidad;
+                $producto->estado = 'disponible';
+                $producto->save();
             }
 
             $pedido->estado = 'cancelado';

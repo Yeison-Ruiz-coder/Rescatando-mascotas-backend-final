@@ -16,7 +16,7 @@ class ComentarioController extends Controller
     public function index(Request $request)
     {
         $request->validate([
-            'entidad_tipo' => 'required|in:mascota,evento',
+            'entidad_tipo' => 'required|in:mascota,evento,fundacion', // ✅ Agregar más tipos si aplica
             'entidad_id' => 'required|integer',
         ]);
 
@@ -34,15 +34,15 @@ class ComentarioController extends Controller
      */
     public function show($entidadTipo, $entidadId)
     {
-        if ($entidadTipo === 'mascota') {
-            $entidad = Mascota::findOrFail($entidadId);
-        } elseif ($entidadTipo === 'evento') {
-            $entidad = Evento::findOrFail($entidadId);
-        } else {
+        $modelClass = 'App\\Models\\' . ucfirst($entidadTipo);
+
+        if (!class_exists($modelClass)) {
             abort(404);
         }
 
-        $comentarios = Comentario::where('comentable_type', 'App\\Models\\' . ucfirst($entidadTipo))
+        $entidad = $modelClass::findOrFail($entidadId);
+
+        $comentarios = Comentario::where('comentable_type', $modelClass)
                                  ->where('comentable_id', $entidadId)
                                  ->with('usuario')
                                  ->latest()
@@ -58,8 +58,8 @@ class ComentarioController extends Controller
     {
         $request->validate([
             'contenido' => 'required|string|min:3|max:1000',
-            'entidad_tipo' => 'required|in:mascota,evento',
-            'entidad_id' => 'required|integer',
+            'entidad_tipo' => 'required|in:mascota,evento,fundacion',
+            'entidad_id' => 'required|integer|exists:' . strtolower($request->entidad_tipo) . 's,id',
         ]);
 
         $comentario = Comentario::create([

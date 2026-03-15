@@ -4,41 +4,37 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasScopes;
 use App\Traits\Translatable;
 
 class Mascota extends Model
 {
-    use HasFactory, Translatable;
+    use HasFactory, Translatable, HasScopes;
 
 
     protected $table = 'mascotas';
 
-    protected $fillable = [
-        'nombre_mascota',
-        'especie',
-        'edad_aprox',
-        'genero',
-        'estado',
-        'lugar_rescate',
-        'descripcion',
-        'foto_principal',
-        'galeria_fotos',
-        'necesita_hogar_temporal',
-        'apto_con_ninos',
-        'apto_con_otros_animales',
-        'condiciones_especiales',
-        'fecha_ingreso',
-        'fecha_salida',
-        'fundacion_id',
+    protected $allowIncluded = [
+        'fundacion',
+        'razas',
+        'vacunas',
+        'solicitudes',
+        'adopciones'
     ];
 
-    protected $casts = [
-        'galeria_fotos' => 'array',
-        'necesita_hogar_temporal' => 'boolean',
-        'apto_con_ninos' => 'boolean',
-        'apto_con_otros_animales' => 'boolean',
-        'fecha_ingreso' => 'date',
-        'fecha_salida' => 'date',
+    protected $allowFilter = [
+        'id',
+        'nombre_mascota',
+        'especie',
+        'estado',
+        'genero'
+    ];
+
+    protected $allowSort = [
+        'id',
+        'nombre_mascota',
+        'edad_aprox',
+        'created_at'
     ];
 
     // Relaciones
@@ -77,11 +73,6 @@ class Mascota extends Model
     public function suscripciones()
     {
         return $this->hasMany(Suscripcion::class, 'mascota_id');
-    }
-
-    public function apadrinamientos()
-    {
-        return $this->hasMany(Apadrinamiento::class, 'mascota_id');
     }
 
     public function historialMedico()

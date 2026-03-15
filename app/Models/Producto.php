@@ -4,20 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasScopes;
 
 class Producto extends Model
 {
-    use HasFactory;
+    use HasFactory, HasScopes;
 
-    protected $fillable = [
-        'nombre',
-        'descripcion',
-        'precio',
-        'stock',
-        'imagen_url',
-        'estado',
-        'user_id', // 👈 ID del vendedor (fundación/veterinaria)
-    ];
+    protected $allowIncluded = ['vendedor', 'categorias'];
+    protected $allowFilter = ['id', 'nombre', 'estado', 'precio'];
+    protected $allowSort = ['id', 'nombre', 'precio', 'stock'];
 
     // Relación con el vendedor
     public function vendedor()

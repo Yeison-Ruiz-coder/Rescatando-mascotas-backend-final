@@ -10,24 +10,40 @@ use Illuminate\Support\Facades\Route;
 
 class RouteServiceProvider extends ServiceProvider
 {
-    public const HOME = '/admin/dashboard';
+    public const HOME = '/';
+    public const ADMIN_DASHBOARD = '/admin/dashboard';
+    public const FUNDACION_DASHBOARD = '/admin/dashboard';
+    public const VETERINARIA_DASHBOARD = '/admin/dashboard';
 
     public function boot(): void
     {
-        RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
-        });
+        $this->configureRateLimiting();
 
         $this->routes(function () {
-
-            // Rutas de API
-            Route::prefix('api/v1')
-                ->middleware('api')
-                ->group(base_path('routes/api.php'));
-
-            // Rutas web
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
+
+            Route::prefix('api')
+                ->middleware('api')
+                ->group(base_path('routes/api.php'));
+        });
+    }
+
+    protected function configureRateLimiting(): void
+    {
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(60)
+                ->by($request->user()?->id ?: $request->ip())
+                ->response(function () {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Demasiadas peticiones. Por favor, espera un momento.'
+                    ], 429);
+                });
+        });
+
+        RateLimiter::for('login', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip());
         });
     }
 }

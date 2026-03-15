@@ -7,11 +7,25 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Traits\HasScopes;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes, HasScopes;
+    protected $allowIncluded = [
+        'solicitudes',
+        'adopciones',
+        'mascotas',
+        'donaciones',
+        'suscripciones',
+        'comentarios',
+        'notificaciones'
+    ];
+
+    protected $allowFilter = ['id', 'nombre', 'email', 'tipo', 'estado'];
+    protected $allowSort = ['id', 'nombre', 'email', 'created_at'];
+    // Campos permitidos para incluir relaciones
 
     protected $fillable = [
         'nombre',
@@ -128,17 +142,11 @@ class User extends Authenticatable
 
     public function rescatesGestionados()
     {
-        return $this->hasMany(Rescate::class, 'administrador_gestion_id');
+        return $this->hasMany(Rescate::class, 'gestionado_por'); //Campo nuevo
     }
-
     public function entrevistas()
     {
         return $this->hasMany(Entrevista::class, 'administrador_id');
-    }
-
-    public function apadrinamientos()
-    {
-        return $this->hasMany(Apadrinamiento::class, 'user_id');
     }
 
     public function seguimientosRealizados()

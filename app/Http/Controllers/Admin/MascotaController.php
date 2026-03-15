@@ -43,11 +43,10 @@ class MascotaController extends Controller
 
         $mascotas = $query->latest()->paginate(15);
 
-        $fundaciones = Fundacion::all();
         $estados = ['En adopcion', 'Adoptado', 'Rescatada', 'En acogida'];
         $especies = Mascota::whereNotNull('especie')->distinct('especie')->pluck('especie');
 
-        return view('admin.mascotas.index', compact('mascotas', 'fundaciones', 'estados', 'especies'));
+        return view('admin.mascotas.index', compact('mascotas', 'estados', 'especies'));
     }
 
     /**

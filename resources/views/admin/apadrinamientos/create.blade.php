@@ -101,7 +101,7 @@
 
                 <div>
                     <button type="submit" class="btn btn-primary">{{ isset($apadrinamiento) ? 'Actualizar' : 'Crear' }}</button>
-                    <a href="{{ route('admin.apadrinamientos.index') }}" class="btn btn-secondary">Cancelar</a>
+                    <a href="{{ route('admin.donaciones.index') }}" class="btn btn-secondary">Cancelar</a>
                 </div>
             </form>
         </div>

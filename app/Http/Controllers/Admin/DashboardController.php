@@ -21,37 +21,6 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        // Estadísticas generales
-        $totalMascotas = Mascota::count();
-        $mascotasEnAdopcion = Mascota::where('estado', 'En adopcion')->count();
-        $mascotasAdoptadas = Mascota::where('estado', 'Adoptado')->count();
-
-        $totalUsuarios = User::count();
-        $totalFundaciones = Fundacion::count();
-        $totalVeterinarias = Veterinaria::count();
-
-        $solicitudesPendientes = Solicitud::where('estado', 'pendiente')->count();
-        $adopcionesMes = Adopcion::whereMonth('created_at', now()->month)->count();
-
-        $donacionesMes = Donacion::whereMonth('created_at', now()->month)->sum('valor_donacion');
-
-        $reportesActivos = Reporte::where('estado', 'activo')->count();
-        $rescatesMes = Rescate::whereMonth('created_at', now()->month)->count();
-
-        // Gráfico de adopciones por mes (últimos 6 meses)
-        $adopcionesPorMes = Adopcion::select(
-            DB::raw('YEAR(created_at) as year'),
-            DB::raw('MONTH(created_at) as month'),
-            DB::raw('COUNT(*) as total')
-        )
-        ->where('created_at', '>=', now()->subMonths(6))
-        ->groupBy('year', 'month')
-        ->orderBy('year', 'asc')
-        ->orderBy('month', 'asc')
-        ->get();
-
-
-
         return view('admin.dashboard.index');
     }
 

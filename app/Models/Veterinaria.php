@@ -27,10 +27,9 @@ class Veterinaria extends Model
         'urgencias_24h' => 'boolean',
     ];
 
-    // Relaciones
     public function rescates()
     {
-        return $this->hasMany(Rescate::class, 'veterinaria_id');
+        return $this->morphMany(Rescate::class, 'entidadResponsable');
     }
 
     public function historialesMedicos()

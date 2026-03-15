@@ -18,9 +18,6 @@ return new class extends Migration
             // 👇 Quién vende (fundación o veterinaria)
             $table->foreignId('vendedor_id')->constrained('users')->onDelete('cascade');
 
-            // Productos en JSON
-            $table->json('items');
-
             // Totales
             $table->decimal('subtotal', 10, 2);
             $table->decimal('total', 10, 2);

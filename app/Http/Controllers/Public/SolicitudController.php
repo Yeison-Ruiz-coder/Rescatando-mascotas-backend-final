@@ -36,6 +36,7 @@ class SolicitudController extends Controller
             'nombre_solicitante' => 'required|string',
             'email_solicitante' => 'required|email',
             'telefono_solicitante' => 'required|string',
+            'datos_adicionales' => 'nullable|array',
         ]);
 
         $solicitud = Solicitud::create([

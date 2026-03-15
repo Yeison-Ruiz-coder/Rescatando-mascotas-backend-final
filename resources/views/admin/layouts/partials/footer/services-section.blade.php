@@ -13,7 +13,7 @@
             <li><a href="{{ route('admin.adopciones.index') }}">Proceso de Adopción</a></li>
             <li><a href="#">Donación de suministros</a></li>
             <li><a href="{{ route('admin.donaciones.index') }}">Donaciones</a></li>
-            <li><a href="{{ route('admin.apadrinamientos.index') }}">Apadrinamientos</a></li>
+            <li><a href="{{ route('admin.donaciones.index') }}">Apadrinamientos</a></li>
             <li><a href="#">Rescatistas</a></li>
             <li><a href="{{ route('admin.eventos.index') }}">Eventos</a></li>
             <li><a href="#">Calificación</a></li>

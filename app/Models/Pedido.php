@@ -16,7 +16,6 @@ class Pedido extends Model
         'codigo',
         'comprador_id',
         'vendedor_id',
-        'items',
         'subtotal',
         'total',
         'estado',
@@ -26,7 +25,6 @@ class Pedido extends Model
     ];
 
     protected $casts = [
-        'items' => 'array',
         'subtotal' => 'decimal:2',
         'total' => 'decimal:2',
     ];

@@ -9,7 +9,7 @@ class TiendaController extends \App\Http\Controllers\Controller
 {
     public function index()
     {
-        $tiendas = Tienda::all();
+        $tiendas = Tienda::with('vendedor')->get();
         return view('admin.tiendas.index', compact('tiendas'));
     }
 
@@ -21,10 +21,12 @@ class TiendaController extends \App\Http\Controllers\Controller
     public function store(Request $request)
     {
         $request->validate([
-            'Nombre_tienda' => 'required|string|max:255',
-            'Direccion' => 'required|string|unique:tiendas',
-            'Telefono' => 'required|string|unique:tiendas',
-            'Email' => 'required|email|unique:tiendas'
+            'nombre' => 'required|string|max:255', // ✅ Cambiado
+            'direccion' => 'required|string|unique:tiendas', // ✅ Cambiado
+            'telefono' => 'required|string|unique:tiendas', // ✅ Cambiado
+            'email' => 'required|email|unique:tiendas', // ✅ Cambiado
+            'tipo' => 'required|in:veterinaria,fundacion', // ✅ Agregado
+            'user_id' => 'required|exists:users,id', // ✅ Agregado
         ]);
 
         Tienda::create($request->all());
@@ -35,7 +37,7 @@ class TiendaController extends \App\Http\Controllers\Controller
 
     public function show($id)
     {
-        $tienda = Tienda::findOrFail($id);
+        $tienda = Tienda::with('productos', 'vendedor')->findOrFail($id);
         return view('admin.tiendas.show', compact('tienda'));
     }
 
@@ -47,14 +49,16 @@ class TiendaController extends \App\Http\Controllers\Controller
 
     public function update(Request $request, $id)
     {
+        $tienda = Tienda::findOrFail($id);
+
         $request->validate([
-            'Nombre_tienda' => 'required|string|max:255',
-            'Direccion' => 'required|string|unique:tiendas,direccion,' . $id,
-            'Telefono' => 'required|string|unique:tiendas,telefono,' . $id,
-            'Email' => 'required|email|unique:tiendas,email,' . $id
+            'nombre' => 'required|string|max:255', // ✅ Cambiado
+            'direccion' => 'required|string|unique:tiendas,direccion,' . $id, // ✅ Cambiado
+            'telefono' => 'required|string|unique:tiendas,telefono,' . $id, // ✅ Cambiado
+            'email' => 'required|email|unique:tiendas,email,' . $id, // ✅ Cambiado
+            'tipo' => 'required|in:veterinaria,fundacion',
         ]);
 
-        $tienda = Tienda::findOrFail($id);
         $tienda->update($request->all());
 
         return redirect()->route('admin.tiendas.index')
@@ -70,23 +74,7 @@ class TiendaController extends \App\Http\Controllers\Controller
             ->with('success', 'Tienda eliminada exitosamente.');
     }
 
-    public function ventas($id = null)
-    {
-        if ($id) {
-            $tienda = Tienda::with('ventas')->findOrFail($id);
-            return view('admin.tiendas.ventas', compact('tienda'));
-        }
-        // si no se especifica tienda, podríamos mostrar una página genérica
-        // por ahora simplemente mostramos la vista sin variable para que el menú funcione
-        return view('admin.tiendas.ventas');
-    }
-
-    public function inventario($id = null)
-    {
-        if ($id) {
-            $tienda = Tienda::with('inventario')->findOrFail($id);
-            return view('admin.tiendas.inventario', compact('tienda'));
-        }
-        return view('admin.tiendas.inventario');
-    }
+    // ✅ Estos métodos pueden eliminarse si no se usan
+    // public function ventas($id = null) { ... }
+    // public function inventario($id = null) { ... }
 }

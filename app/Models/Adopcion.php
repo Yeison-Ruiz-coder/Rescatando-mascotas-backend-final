@@ -4,29 +4,24 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasScopes;
 
 class Adopcion extends Model
 {
-    use HasFactory;
+    use HasFactory, HasScopes;
 
-    protected $table = 'adopciones';
-
-    protected $fillable = [
-        'fecha_adopcion',
-        'estado',
-        'razon_rechazo',
-        'fecha_cierre',
-        'solicitud_id',
-        'user_id',
-        'mascota_id',
-        'fundacion_id',
-        'administrador_id',
+    protected $allowIncluded = [
+        'solicitud',
+        'adoptante',
+        'mascota',
+        'fundacion',
+        'administrador',
+        'entrevistas',
+        'seguimientos'
     ];
 
-    protected $casts = [
-        'fecha_adopcion' => 'date',
-        'fecha_cierre' => 'date',
-    ];
+    protected $allowFilter = ['id', 'estado'];
+    protected $allowSort = ['id', 'fecha_adopcion', 'created_at'];
 
     // Relaciones
     public function solicitud()

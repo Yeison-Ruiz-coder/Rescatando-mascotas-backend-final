@@ -4,30 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasScopes;
 
 class Fundacion extends Model
 {
-    use HasFactory;
+    use HasFactory, HasScopes;
 
-    protected $table = 'fundaciones';
-
-    protected $fillable = [
-        'Nombre_1',
-        'Direccion',
-        'Telefono',
-        'Email',
-        'registro_sanitario',
-        'capacidad_maxima',
-        'necesidades_actuales',
-        'horario_atencion',
-        'recibe_voluntarios',
-    ];
-
-    protected $casts = [
-        'necesidades_actuales' => 'array',
-        'recibe_voluntarios' => 'boolean',
-        'capacidad_maxima' => 'integer',
-    ];
+    protected $allowIncluded = ['mascotas', 'adopciones', 'donaciones'];
+    protected $allowFilter = ['id', 'Nombre_1', 'Email', 'Telefono'];
+    protected $allowSort = ['id', 'Nombre_1', 'created_at'];
 
     // Relaciones
     public function mascotas()
@@ -47,7 +32,7 @@ class Fundacion extends Model
 
     public function rescates()
     {
-        return $this->hasMany(Rescate::class, 'fundacion_id');
+        return $this->morphMany(Rescate::class, 'entidadResponsable');
     }
 
     public function usuariosFundacion()

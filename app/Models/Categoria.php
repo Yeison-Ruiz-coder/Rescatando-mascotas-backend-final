@@ -4,23 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasScopes;
 
 class Categoria extends Model
 {
-    use HasFactory;
+    use HasFactory, HasScopes;
 
-    protected $table = 'categorias';
-
-    protected $fillable = [
-        'nombre',
-        'descripcion',
-        'categoria_padre_id',
-        'activo',
-    ];
-
-    protected $casts = [
-        'activo' => 'boolean',
-    ];
+    protected $allowIncluded = ['productos', 'categoriaPadre', 'categoriasHijas'];
+    protected $allowFilter = ['id', 'nombre', 'activo'];
+    protected $allowSort = ['id', 'nombre', 'created_at'];
 
     /**
      * Productos en esta categoría

@@ -3,36 +3,35 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\HasScopes;
 use Illuminate\Database\Eloquent\Model;
 
 class Solicitud extends Model
 {
-    use HasFactory;
+    use HasFactory, HasScopes;
 
     protected $table = 'solicitudes';
 
-    protected $fillable = [
-        'tipo_solicitud',
-        'contenido',
-        'fecha_solicitud',
-        'estado',
-        'razon_rechazo',
-        'notas_internas',
-        'user_id',
-        'nombre_solicitante',
-        'email_solicitante',
-        'telefono_solicitante',
-        'datos_adicionales', // NUEVO CAMPO
-        'solicitable_id',
-        'solicitable_type',
-        'revisado_por',
-        'fecha_revision',
+    protected $allowIncluded = [
+        'usuario',
+        'revisor',
+        'solicitable',
+        'adopcion'
     ];
 
-    protected $casts = [
-        'fecha_solicitud' => 'datetime',
-        'fecha_revision' => 'datetime',
-        'datos_adicionales' => 'array', // IMPORTANTE: castear a array
+    protected $allowFilter = [
+        'id',
+        'tipo_solicitud',
+        'estado',
+        'nombre_solicitante',
+        'email_solicitante'
+    ];
+
+    protected $allowSort = [
+        'id',
+        'fecha_solicitud',
+        'estado',
+        'created_at'
     ];
 
     // Constantes para tipos de solicitud

@@ -5,8 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Rescate;
 use App\Models\Mascota;
-use App\Models\Veterinaria;
-use App\Models\Fundacion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -17,7 +15,7 @@ class RescateController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Rescate::with(['mascota', 'reporte', 'veterinaria', 'fundacion']);
+        $query = Rescate::with(['mascota', 'reporte', 'entidadResponsable', 'gestionadoPor']);
 
         if ($request->filled('estado')) {
             $query->where('estado', $request->estado);
@@ -33,11 +31,9 @@ class RescateController extends Controller
      */
     public function create()
     {
-        $veterinarias = Veterinaria::all();
-        $fundaciones = Fundacion::all();
         $mascotas = Mascota::whereNull('fundacion_id')->get();
 
-        return view('admin.rescates.create', compact('veterinarias', 'fundaciones', 'mascotas'));
+        return view('admin.rescates.create', compact('mascotas'));
     }
 
     /**
@@ -51,12 +47,13 @@ class RescateController extends Controller
             'descripcion_rescate' => 'required|string',
             'estado' => 'required|in:en_proceso,completado,seguimiento',
             'mascota_id' => 'nullable|exists:mascotas,id',
-            'veterinaria_id' => 'nullable|exists:veterinarias,id',
-            'fundacion_id' => 'nullable|exists:fundaciones,id',
+            'reporte_id' => 'nullable|exists:reportes,id',
+            'entidad_responsable_id' => 'nullable',
+            'entidad_responsable_type' => 'nullable|string',
         ]);
 
         $data = $request->all();
-        $data['administrador_gestion_id'] = auth()->id();
+        $data['gestionado_por'] = auth()->id();
 
         Rescate::create($data);
 
@@ -69,7 +66,7 @@ class RescateController extends Controller
      */
     public function show($id)
     {
-        $rescate = Rescate::with(['mascota', 'reporte', 'usuarioReporto', 'veterinaria', 'fundacion', 'administradorGestion'])
+        $rescate = Rescate::with(['mascota', 'reporte', 'usuarioReporto', 'entidadResponsable', 'gestionadoPor'])
                           ->findOrFail($id);
 
         return view('admin.rescates.show', compact('rescate'));
@@ -81,10 +78,8 @@ class RescateController extends Controller
     public function edit($id)
     {
         $rescate = Rescate::findOrFail($id);
-        $veterinarias = Veterinaria::all();
-        $fundaciones = Fundacion::all();
 
-        return view('admin.rescates.edit', compact('rescate', 'veterinarias', 'fundaciones'));
+        return view('admin.rescates.edit', compact('rescate'));
     }
 
     /**
@@ -99,8 +94,8 @@ class RescateController extends Controller
             'lugar_rescate' => 'required|string',
             'descripcion_rescate' => 'required|string',
             'estado' => 'required|in:en_proceso,completado,seguimiento',
-            'veterinaria_id' => 'nullable|exists:veterinarias,id',
-            'fundacion_id' => 'nullable|exists:fundaciones,id',
+            'entidad_responsable_id' => 'nullable',
+            'entidad_responsable_type' => 'nullable|string',
         ]);
 
         $rescate->update($request->all());

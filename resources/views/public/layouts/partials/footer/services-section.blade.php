@@ -14,7 +14,6 @@
             <li><a href="{{ route('public.adopciones.index') }}">Proceso de Adopción</a></li>
             <li><a href="#">Donación de suministros</a></li>
             <li><a href="{{ route('public.donaciones.index') }}">Donaciones</a></li>
-            <li><a href="{{ route('public.apadrinamientos.index') }}">Apadrinamientos</a></li>
             <li><a href="#">Rescatistas</a></li>
             <li><a href="{{ route('public.eventos.index') }}">Eventos</a></li>
             <li><a href="#">Calificación</a></li>

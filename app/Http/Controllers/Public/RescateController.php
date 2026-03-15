@@ -15,7 +15,7 @@ class RescateController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Rescate::with(['mascota', 'fundacion'])
+        $query = Rescate::with(['mascota', 'entidadResponsable']) // ✅ Cambiado
                        ->where('estado', 'completado');
 
         if ($request->filled('ano')) {
@@ -32,7 +32,7 @@ class RescateController extends Controller
      */
     public function show($id)
     {
-        $rescate = Rescate::with(['mascota', 'reporte', 'usuarioReporto', 'veterinaria', 'fundacion'])
+        $rescate = Rescate::with(['mascota', 'reporte', 'usuarioReporto', 'entidadResponsable', 'gestionadoPor']) // ✅ Cambiado
                          ->findOrFail($id);
 
         return view('public.rescates.show', compact('rescate'));

@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
 class Rescate extends Model
 {
     use HasFactory;
@@ -19,9 +18,9 @@ class Rescate extends Model
         'mascota_id',
         'reporte_id',
         'usuario_reporto_id',
-        'veterinaria_id',
-        'fundacion_id',
-        'administrador_gestion_id',
+        'entidad_responsable_id',    //  Para veterinaria o fundación
+        'entidad_responsable_type',  //  'App\Models\Veterinaria' o 'App\Models\Fundacion'
+        'gestionado_por',            //  Usuario admin que gestiona
     ];
 
     protected $casts = [
@@ -44,18 +43,15 @@ class Rescate extends Model
         return $this->belongsTo(User::class, 'usuario_reporto_id');
     }
 
-    public function veterinaria()
+    //  NUEVA - Relación polimórfica
+    public function entidadResponsable()
     {
-        return $this->belongsTo(Veterinaria::class, 'veterinaria_id');
+        return $this->morphTo();
     }
 
-    public function fundacion()
+    //  NUEVA - Usuario que gestiona
+    public function gestionadoPor()
     {
-        return $this->belongsTo(Fundacion::class, 'fundacion_id');
-    }
-
-    public function administradorGestion()
-    {
-        return $this->belongsTo(User::class, 'administrador_gestion_id');
+        return $this->belongsTo(User::class, 'gestionado_por');
     }
 }

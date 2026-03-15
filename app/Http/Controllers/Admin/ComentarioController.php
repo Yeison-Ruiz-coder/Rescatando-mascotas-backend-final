@@ -4,100 +4,64 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Comentario;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class ComentarioController extends Controller
 {
+    /**
+     * Listado de comentarios para admin
+     */
     public function index(Request $request)
     {
-        $query = Comentario::with('user');
+        $query = Comentario::with(['usuario', 'comentable']);
 
         // Filtros
-        if ($request->has('user_id') && $request->user_id != '') {
+        if ($request->filled('user_id')) {
             $query->where('user_id', $request->user_id);
         }
 
-        if ($request->has('fecha_inicio') && $request->fecha_inicio != '') {
+        if ($request->filled('fecha_inicio')) {
             $query->whereDate('fecha', '>=', $request->fecha_inicio);
         }
 
-        if ($request->has('fecha_fin') && $request->fecha_fin != '') {
+        if ($request->filled('fecha_fin')) {
             $query->whereDate('fecha', '<=', $request->fecha_fin);
         }
 
-        if ($request->has('search') && $request->search != '') {
+        if ($request->filled('search')) {
             $query->where('contenido', 'like', "%{$request->search}%");
         }
 
-        $comentarios = $query->orderBy('fecha', 'desc')->paginate(15);
+        $comentarios = $query->latest()->paginate(20);
 
-        // Estadísticas
-        $stats = [
-            'total' => Comentario::count(),
-            'hoy' => Comentario::whereDate('fecha', today())->count(),
-            'esta_semana' => Comentario::whereBetween('fecha', [now()->startOfWeek(), now()->endOfWeek()])->count(),
-            'usuarios_activos' => Comentario::distinct('user_id')->count('user_id'),
-        ];
-
-        // Usuarios para filtro
-        $usuarios = User::whereHas('comentarios')->orderBy('nombre')->get();
-
-        return view('admin.comentarios.index', compact('comentarios', 'stats', 'usuarios'));
+        return view('admin.comentarios.index', compact('comentarios'));
     }
 
-    public function create()
-    {
-        $usuarios = User::where('estado', 'activo')->orderBy('nombre')->get();
-
-        return view('admin.comentarios.create', compact('usuarios'));
-    }
-
-    public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'contenido' => 'required|string',
-            'user_id' => 'required|exists:users,id',
-            'fecha' => 'nullable|date',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
-        $data = $request->all();
-
-        // Si no se proporciona fecha, se usará la actual (por la migración)
-
-        Comentario::create($data);
-
-        return redirect()->route('admin.comentarios.index')
-            ->with('success', 'Comentario creado exitosamente.');
-    }
-
+    /**
+     * Mostrar detalle de comentario
+     */
     public function show(Comentario $comentario)
     {
-        $comentario->load('user');
-
+        $comentario->load(['usuario', 'comentable']);
         return view('admin.comentarios.show', compact('comentario'));
     }
 
+    /**
+     * Formulario de edición
+     */
     public function edit(Comentario $comentario)
     {
-        $usuarios = User::where('estado', 'activo')->orderBy('nombre')->get();
-
-        return view('admin.comentarios.edit', compact('comentario', 'usuarios'));
+        return view('admin.comentarios.edit', compact('comentario'));
     }
 
+    /**
+     * Actualizar comentario
+     */
     public function update(Request $request, Comentario $comentario)
     {
         $validator = Validator::make($request->all(), [
-            'contenido' => 'required|string',
-            'user_id' => 'required|exists:users,id',
-            'fecha' => 'nullable|date',
+            'contenido' => 'required|string|min:3|max:1000',
         ]);
 
         if ($validator->fails()) {
@@ -106,24 +70,32 @@ class ComentarioController extends Controller
                 ->withInput();
         }
 
-        $comentario->update($request->all());
+        $comentario->update([
+            'contenido' => $request->contenido,
+        ]);
 
         return redirect()->route('admin.comentarios.index')
-            ->with('success', 'Comentario actualizado exitosamente.');
+            ->with('success', 'Comentario actualizado');
     }
 
+    /**
+     * Eliminar comentario
+     */
     public function destroy(Comentario $comentario)
     {
         $comentario->delete();
 
         return redirect()->route('admin.comentarios.index')
-            ->with('success', 'Comentario eliminado exitosamente.');
+            ->with('success', 'Comentario eliminado');
     }
 
+    /**
+     * Acción masiva (eliminar varios)
+     */
     public function masivo(Request $request)
     {
         $request->validate([
-            'accion' => 'required|in:eliminar,ocultar',
+            'accion' => 'required|in:eliminar',
             'comentarios' => 'required|array',
             'comentarios.*' => 'exists:comentarios,id'
         ]);
