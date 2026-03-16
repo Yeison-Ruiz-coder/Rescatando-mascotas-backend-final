@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+
 class Rescate extends Model
 {
     use HasFactory;
@@ -18,9 +19,9 @@ class Rescate extends Model
         'mascota_id',
         'reporte_id',
         'usuario_reporto_id',
-        'entidad_responsable_id',    //  Para veterinaria o fundación
-        'entidad_responsable_type',  //  'App\Models\Veterinaria' o 'App\Models\Fundacion'
-        'gestionado_por',            //  Usuario admin que gestiona
+        'entidad_responsable_id',    // IMPORTANTE: debe coincidir con morph
+        'entidad_responsable_type',  // IMPORTANTE: debe coincidir con morph
+        'gestionado_por',
     ];
 
     protected $casts = [
@@ -43,15 +44,25 @@ class Rescate extends Model
         return $this->belongsTo(User::class, 'usuario_reporto_id');
     }
 
-    //  NUEVA - Relación polimórfica
+    // CORREGIDO: nombre del método debe coincidir con los campos en la BD
     public function entidadResponsable()
     {
-        return $this->morphTo();
+        return $this->morphTo('entidad_responsable'); // Especificamos el nombre del morph
     }
 
-    //  NUEVA - Usuario que gestiona
     public function gestionadoPor()
     {
         return $this->belongsTo(User::class, 'gestionado_por');
+    }
+
+    // Scopes útiles
+    public function scopeEnProceso($query)
+    {
+        return $query->where('estado', 'en_proceso');
+    }
+
+    public function scopeCompletados($query)
+    {
+        return $query->where('estado', 'completado');
     }
 }

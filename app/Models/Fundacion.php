@@ -10,11 +10,42 @@ class Fundacion extends Model
 {
     use HasFactory, HasScopes;
 
-    protected $allowIncluded = ['mascotas', 'adopciones', 'donaciones'];
+    protected $table = 'fundaciones';
+
+    protected $allowIncluded = ['mascotas', 'adopciones', 'donaciones', 'usuarios']; // Añadido 'usuarios'
     protected $allowFilter = ['id', 'Nombre_1', 'Email', 'Telefono'];
     protected $allowSort = ['id', 'Nombre_1', 'created_at'];
 
+    protected $fillable = [ // AÑADIDO - importante para asignación masiva
+        'Nombre_1',
+        'Direccion',
+        'Telefono',
+        'Email',
+        'registro_sanitario',
+        'capacidad_maxima',
+        'necesidades_actuales',
+        'horario_atencion',
+        'recibe_voluntarios',
+        'user_id', // AÑADIDO
+    ];
+
+    protected $casts = [
+        'necesidades_actuales' => 'array',
+        'recibe_voluntarios' => 'boolean',
+        'capacidad_maxima' => 'integer',
+    ];
+
     // Relaciones
+    public function usuarios() // NUEVA - Relación con users
+    {
+        return $this->hasMany(User::class, 'fundacion_id');
+    }
+
+    public function usuarioPrincipal() // NUEVA - Usuario principal/administrador de la fundación
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     public function mascotas()
     {
         return $this->hasMany(Mascota::class, 'fundacion_id');
@@ -32,12 +63,7 @@ class Fundacion extends Model
 
     public function rescates()
     {
-        return $this->morphMany(Rescate::class, 'entidadResponsable');
-    }
-
-    public function usuariosFundacion()
-    {
-        return $this->hasMany(User::class, 'fundacion_id');
+        return $this->morphMany(Rescate::class, 'entidad_responsable'); // CORREGIDO: 'entidad_responsable' (debe coincidir con el morph en Rescate)
     }
 
     // Scope para fundaciones que reciben voluntarios

@@ -11,8 +11,38 @@ class Mascota extends Model
 {
     use HasFactory, Translatable, HasScopes;
 
-
     protected $table = 'mascotas';
+
+    //Campos permitidos para asignación masiva
+    protected $fillable = [
+        'nombre_mascota',
+        'especie',
+        'edad_aprox',
+        'genero',
+        'estado',
+        'lugar_rescate',
+        'descripcion',
+        'foto_principal',
+        'galeria_fotos',
+        'necesita_hogar_temporal',
+        'apto_con_ninos',
+        'apto_con_otros_animales',
+        'condiciones_especiales',
+        'fecha_ingreso',
+        'fecha_salida',
+        'fundacion_id',
+        'user_id' // Si tienes este campo
+    ];
+
+    protected $casts = [
+        'galeria_fotos' => 'array',
+        'necesita_hogar_temporal' => 'boolean',
+        'apto_con_ninos' => 'boolean',
+        'apto_con_otros_animales' => 'boolean',
+        'fecha_ingreso' => 'date',
+        'fecha_salida' => 'date',
+        'edad_aprox' => 'integer'
+    ];
 
     protected $allowIncluded = [
         'fundacion',

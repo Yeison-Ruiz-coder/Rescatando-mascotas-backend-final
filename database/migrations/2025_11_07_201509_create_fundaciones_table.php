@@ -22,6 +22,10 @@ return new class extends Migration
             $table->json('necesidades_actuales')->nullable(); // ["alimento", "medicinas", "voluntarios"]
             $table->string('horario_atencion')->nullable();
             $table->boolean('recibe_voluntarios')->default(false);
+
+
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
+            
             $table->timestamps();
         });
     }

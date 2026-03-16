@@ -19,6 +19,7 @@ class Veterinaria extends Model
         'servicios',
         'urgencias_24h',
         'convenios',
+        'user_id', // AÑADIDO
     ];
 
     protected $casts = [
@@ -27,9 +28,20 @@ class Veterinaria extends Model
         'urgencias_24h' => 'boolean',
     ];
 
+    // NUEVAS RELACIONES
+    public function usuarios()
+    {
+        return $this->hasMany(User::class, 'veterinaria_id');
+    }
+
+    public function usuarioPrincipal()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     public function rescates()
     {
-        return $this->morphMany(Rescate::class, 'entidadResponsable');
+        return $this->morphMany(Rescate::class, 'entidad_responsable'); // CORREGIDO
     }
 
     public function historialesMedicos()

@@ -9,7 +9,7 @@ use App\Traits\HasScopes;
 class Adopcion extends Model
 {
     use HasFactory, HasScopes;
-
+    protected $table = 'adopciones';
     protected $allowIncluded = [
         'solicitud',
         'adoptante',

@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes, HasScopes;
+
     protected $allowIncluded = [
         'solicitudes',
         'adopciones',
@@ -20,12 +21,14 @@ class User extends Authenticatable
         'donaciones',
         'suscripciones',
         'comentarios',
-        'notificaciones'
+        'notificaciones',
+        'tienda', // NUEVA
+        'fundacion', // NUEVA
+        'veterinaria' // NUEVA
     ];
 
     protected $allowFilter = ['id', 'nombre', 'email', 'tipo', 'estado'];
     protected $allowSort = ['id', 'nombre', 'email', 'created_at'];
-    // Campos permitidos para incluir relaciones
 
     protected $fillable = [
         'nombre',
@@ -74,10 +77,41 @@ class User extends Authenticatable
         return $this->hasMany(User::class, 'created_by');
     }
 
-    // Relaciones con otras tablas
+    // RELACIONES CORREGIDAS Y NUEVAS
+    public function tienda()
+    {
+        return $this->hasOne(Tienda::class, 'user_id');
+    }
+
+    public function fundacion()
+    {
+        return $this->hasOne(Fundacion::class, 'user_id'); // IMPORTANTE: fundaciones necesita user_id
+    }
+
+    public function veterinaria()
+    {
+        return $this->hasOne(Veterinaria::class, 'user_id'); // IMPORTANTE: veterinarias necesita user_id
+    }
+
+    public function productos()
+    {
+        return $this->hasMany(Producto::class, 'user_id');
+    }
+
+    public function pedidosComoComprador()
+    {
+        return $this->hasMany(Pedido::class, 'comprador_id');
+    }
+
+    public function pedidosComoVendedor()
+    {
+        return $this->hasMany(Pedido::class, 'vendedor_id');
+    }
+
+    // Relaciones existentes (verifica que los foreign keys sean correctos)
     public function mascotas()
     {
-        return $this->hasMany(Mascota::class, 'fundacion_id');
+        return $this->hasMany(Mascota::class, 'fundacion_id'); // OJO: Esto asume que el user es una fundación
     }
 
     public function reportes()
@@ -142,8 +176,9 @@ class User extends Authenticatable
 
     public function rescatesGestionados()
     {
-        return $this->hasMany(Rescate::class, 'gestionado_por'); //Campo nuevo
+        return $this->hasMany(Rescate::class, 'gestionado_por');
     }
+
     public function entrevistas()
     {
         return $this->hasMany(Entrevista::class, 'administrador_id');

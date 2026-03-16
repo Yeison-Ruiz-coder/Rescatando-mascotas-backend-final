@@ -20,6 +20,9 @@ return new class extends Migration
             $table->json('servicios')->nullable(); // ["urgencias", "cirugía", "vacunación", etc.]
             $table->boolean('urgencias_24h')->default(false);
             $table->json('convenios')->nullable(); // IDs de fundaciones con convenio
+
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
+
             $table->timestamps();
         });
     }

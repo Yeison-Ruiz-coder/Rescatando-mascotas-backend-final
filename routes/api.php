@@ -25,12 +25,10 @@ Route::prefix('auth')->name('auth.')->group(function () {
 });
 
 // Mascotas - Público
-Route::prefix('mascotas')->name('mascotas.')->group(function () {
-    Route::get('/', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'index']);
-    Route::get('/{id}', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'show']);
-    Route::get('/especie/{especie}', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'porEspecie']);
-    Route::get('/fundacion/{fundacionId}', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'porFundacion']);
-});
+Route::get('/mascotas', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'index']);
+Route::get('/mascotas/{id}', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'show']);
+Route::get('/mascotas/especie/{especie}', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'porEspecie']);
+Route::get('/mascotas/fundacion/{fundacionId}', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'porFundacion']);
 
 // Adopciones - Público
 Route::prefix('adopciones')->name('adopciones.')->group(function () {
