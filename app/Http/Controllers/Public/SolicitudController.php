@@ -1,43 +1,35 @@
 <?php
 
-namespace App\Http\Controllers\Public;
+namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\Solicitud;
-use App\Models\Mascota;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class SolicitudController extends Controller
 {
     /**
-     * Formulario de solicitud general
-     */
-    public function create()
-    {
-        $tipos = [
-            'adopcion' => 'Adopción',
-            'rescate' => 'Rescate',
-            'apadrinamiento' => 'Apadrinamiento',
-            'donacion' => 'Donación',
-            'otro' => 'Otro'
-        ];
-
-        return view('public.solicitudes.create', compact('tipos'));
-    }
-
-    /**
-     * Guardar solicitud general
+     * POST /api/solicitudes
+     * Crear solicitud general (sin autenticación)
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'tipo_solicitud' => 'required|in:adopcion,rescate,apadrinamiento,donacion,otro',
-            'contenido' => 'required|string',
-            'nombre_solicitante' => 'required|string',
-            'email_solicitante' => 'required|email',
-            'telefono_solicitante' => 'required|string',
+            'contenido' => 'required|string|min:10',
+            'nombre_solicitante' => 'required|string|max:255',
+            'email_solicitante' => 'required|email|max:255',
+            'telefono_solicitante' => 'required|string|max:20',
             'datos_adicionales' => 'nullable|array',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
         $solicitud = Solicitud::create([
             'tipo_solicitud' => $request->tipo_solicitud,
@@ -50,16 +42,22 @@ class SolicitudController extends Controller
             'telefono_solicitante' => $request->telefono_solicitante,
         ]);
 
-        return redirect()->route('public.solicitudes.gracias', $solicitud->id)
-                        ->with('success', 'Solicitud enviada');
-    }
+        // Guardar datos adicionales si existen
+        if ($request->has('datos_adicionales')) {
+            $solicitud->update([
+                'datos_adicionales' => json_encode($request->datos_adicionales, JSON_UNESCAPED_UNICODE)
+            ]);
+        }
 
-    /**
-     * Página de agradecimiento
-     */
-    public function gracias($id)
-    {
-        $solicitud = Solicitud::findOrFail($id);
-        return view('public.solicitudes.gracias', compact('solicitud'));
+        return response()->json([
+            'success' => true,
+            'message' => 'Solicitud enviada exitosamente',
+            'data' => [
+                'id' => $solicitud->id,
+                'tipo_solicitud' => $solicitud->tipo_solicitud,
+                'estado' => $solicitud->estado,
+                'created_at' => $solicitud->created_at
+            ]
+        ], 201);
     }
 }

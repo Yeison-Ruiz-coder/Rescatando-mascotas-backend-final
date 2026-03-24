@@ -16,33 +16,15 @@ class AdopcionController extends Controller
     /**
      * Listado de adopciones
      */
-    public function index(Request $request)
+    // Public\AdopcionController.php debería ser:
+    public function index()
     {
-        $query = Adopcion::with(['adoptante', 'mascota', 'fundacion', 'administrador', 'solicitud']);
+        $adopciones = Adopcion::with(['mascota', 'fundacion'])
+            ->where('estado', 'completada')
+            ->latest()
+            ->paginate(15);
 
-        // Filtros
-        if ($request->has('estado')) {
-            $query->where('estado', $request->estado);
-        }
-
-        if ($request->has('fundacion_id')) {
-            $query->where('fundacion_id', $request->fundacion_id);
-        }
-
-        if ($request->has('fecha_desde')) {
-            $query->whereDate('fecha_adopcion', '>=', $request->fecha_desde);
-        }
-
-        if ($request->has('fecha_hasta')) {
-            $query->whereDate('fecha_adopcion', '<=', $request->fecha_hasta);
-        }
-
-        $adopciones = $query->latest()->paginate($request->get('per_page', 15));
-
-        return response()->json([
-            'success' => true,
-            'data' => $adopciones
-        ]);
+        return response()->json(['success' => true, 'data' => $adopciones]);
     }
 
     /**
@@ -89,7 +71,6 @@ class AdopcionController extends Controller
                 'message' => 'Adopción creada',
                 'data' => $adopcion->load(['adoptante', 'mascota'])
             ], 201);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -154,7 +135,6 @@ class AdopcionController extends Controller
                 'message' => 'Adopción actualizada',
                 'data' => $adopcion->fresh(['adoptante', 'mascota'])
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -194,7 +174,6 @@ class AdopcionController extends Controller
                 'success' => true,
                 'message' => 'Adopción eliminada'
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -241,7 +220,6 @@ class AdopcionController extends Controller
                 'message' => 'Estado actualizado',
                 'data' => $adopcion
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -274,5 +252,47 @@ class AdopcionController extends Controller
                 $adopcion->mascota->update(['estado' => 'En adopcion']);
                 break;
         }
+    }
+
+    public function seguimientos($id)
+    {
+        $adopcion = Adopcion::findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'data' => $adopcion->seguimientos()->with('creadoPor')->latest()->get()
+        ]);
+    }
+
+    /**
+     * Crear seguimiento para una adopción
+     */
+    public function storeSeguimiento(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'descripcion' => 'required|string',
+            'fecha_seguimiento' => 'nullable|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $adopcion = Adopcion::findOrFail($id);
+
+        $seguimiento = $adopcion->seguimientos()->create([
+            'descripcion' => $request->descripcion,
+            'fecha_seguimiento' => $request->fecha_seguimiento ?? now(),
+            'creado_por_id' => auth()->id(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Seguimiento registrado',
+            'data' => $seguimiento
+        ], 201);
     }
 }

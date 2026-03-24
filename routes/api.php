@@ -2,17 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 
-// ===== RUTA DE PRUEBA =====
-Route::get('/mascotas-test', function() {
-    return response()->json([
-        'success' => true,
-        'message' => 'Ruta de prueba funcionando',
-        'data' => [
-            'mascotas' => []
-        ]
-    ]);
-});
-
 // =========================================================================
 // API V1 - RUTAS PÚBLICAS (SIN AUTENTICACIÓN)
 // =========================================================================
@@ -37,7 +26,7 @@ Route::prefix('adopciones')->name('adopciones.')->group(function () {
     Route::get('/{id}', [App\Http\Controllers\Api\V1\Public\AdopcionController::class, 'show']);
 });
 
-// Rescates - Público (URGENTE - sin auth)
+// Rescates - Público
 Route::prefix('rescates')->name('rescates.')->group(function () {
     Route::get('/', [App\Http\Controllers\Api\V1\Public\RescateController::class, 'index']);
     Route::post('/reportar', [App\Http\Controllers\Api\V1\Public\RescateController::class, 'reportar']);
@@ -58,20 +47,6 @@ Route::apiResource('eventos', App\Http\Controllers\Api\V1\Public\EventoControlle
     ->only(['index', 'show']);
 Route::get('/eventos/calendario/data', [App\Http\Controllers\Api\V1\Public\EventoController::class, 'calendario']);
 
-// Productos/Tienda - Público
-Route::prefix('productos')->name('productos.')->group(function () {
-    Route::get('/', [App\Http\Controllers\Api\V1\Public\ProductoController::class, 'index']);
-    Route::get('/categoria/{categoriaId}', [App\Http\Controllers\Api\V1\Public\ProductoController::class, 'porCategoria']);
-    Route::get('/{id}', [App\Http\Controllers\Api\V1\Public\ProductoController::class, 'show']);
-});
-
-// Comentarios - Público (ver), Auth (crear)
-Route::prefix('comentarios')->name('comentarios.')->group(function () {
-    Route::get('/{entidadTipo}/{entidadId}', [App\Http\Controllers\Api\V1\Public\ComentarioController::class, 'index']);
-    Route::post('/', [App\Http\Controllers\Api\V1\Public\ComentarioController::class, 'store'])
-        ->middleware('auth:sanctum');
-});
-
 // =========================================================================
 // API V1 - RUTAS DE USUARIO (REQUIEREN AUTENTICACIÓN)
 // =========================================================================
@@ -80,30 +55,49 @@ Route::middleware(['auth:sanctum'])->prefix('user')->name('user.')->group(functi
     // Perfil
     Route::get('/profile', [App\Http\Controllers\Api\V1\User\ProfileController::class, 'show']);
     Route::put('/profile', [App\Http\Controllers\Api\V1\User\ProfileController::class, 'update']);
+    Route::post('/profile/change-password', [App\Http\Controllers\Api\V1\User\ProfileController::class, 'changePassword']);
+    Route::delete('/profile', [App\Http\Controllers\Api\V1\User\ProfileController::class, 'destroy']);
 
     // Solicitudes de adopción del usuario
     Route::get('/solicitudes', [App\Http\Controllers\Api\V1\User\SolicitudController::class, 'index']);
     Route::post('/solicitudes/adopcion', [App\Http\Controllers\Api\V1\User\SolicitudController::class, 'storeAdopcion']);
     Route::get('/solicitudes/{id}', [App\Http\Controllers\Api\V1\User\SolicitudController::class, 'show']);
 
-    // Carrito y pedidos
-    Route::prefix('carrito')->name('carrito.')->group(function () {
-        Route::get('/', [App\Http\Controllers\Api\V1\User\CarritoController::class, 'index']);
-        Route::post('/agregar/{productoId}', [App\Http\Controllers\Api\V1\User\CarritoController::class, 'agregar']);
-        Route::put('/actualizar/{productoId}', [App\Http\Controllers\Api\V1\User\CarritoController::class, 'actualizar']);
-        Route::delete('/eliminar/{productoId}', [App\Http\Controllers\Api\V1\User\CarritoController::class, 'eliminar']);
-    });
-
-    Route::prefix('pedidos')->name('pedidos.')->group(function () {
-        Route::get('/', [App\Http\Controllers\Api\V1\User\PedidoController::class, 'index']);
-        Route::post('/checkout', [App\Http\Controllers\Api\V1\User\PedidoController::class, 'checkout']);
-        Route::get('/{id}', [App\Http\Controllers\Api\V1\User\PedidoController::class, 'show']);
-        Route::post('/{id}/cancelar', [App\Http\Controllers\Api\V1\User\PedidoController::class, 'cancelar']);
-    });
-
     // Donaciones del usuario
     Route::get('/donaciones', [App\Http\Controllers\Api\V1\User\DonacionController::class, 'index']);
     Route::post('/donaciones', [App\Http\Controllers\Api\V1\User\DonacionController::class, 'store']);
+});
+
+// =========================================================================
+// API V1 - RUTAS DE ENTIDADES (FUNDACIÓN Y VETERINARIA)
+// =========================================================================
+
+Route::middleware(['auth:sanctum'])->prefix('entity')->name('entity.')->group(function () {
+    // Rescates para entidades
+    Route::prefix('rescates')->name('rescates.')->group(function () {
+        Route::get('/disponibles', [App\Http\Controllers\Api\V1\Entity\RescateController::class, 'disponibles']);
+        Route::get('/mis-rescates', [App\Http\Controllers\Api\V1\Entity\RescateController::class, 'misRescates']);
+        Route::put('/{id}/aceptar', [App\Http\Controllers\Api\V1\Entity\RescateController::class, 'aceptar']);
+        Route::put('/{id}/rechazar', [App\Http\Controllers\Api\V1\Entity\RescateController::class, 'rechazar']);
+        Route::post('/{id}/registrar-mascota', [App\Http\Controllers\Api\V1\Entity\RescateController::class, 'registrarMascota']);
+    });
+
+    // Mascotas de la entidad
+    Route::prefix('mascotas')->name('mascotas.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'index']);
+        Route::post('/', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'store']);
+        Route::get('/{id}', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'show']);
+        Route::put('/{id}', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'update']);
+        Route::delete('/{id}', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'destroy']);
+    });
+
+    // Solicitudes de adopción para la entidad
+    Route::prefix('solicitudes')->name('solicitudes.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\V1\Entity\SolicitudController::class, 'index']);
+        Route::get('/{id}', [App\Http\Controllers\Api\V1\Entity\SolicitudController::class, 'show']);
+        Route::put('/{id}/aprobar', [App\Http\Controllers\Api\V1\Entity\SolicitudController::class, 'aprobar']);
+        Route::put('/{id}/rechazar', [App\Http\Controllers\Api\V1\Entity\SolicitudController::class, 'rechazar']);
+    });
 });
 
 // =========================================================================
@@ -114,88 +108,83 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     // Dashboard
     Route::get('/dashboard', [App\Http\Controllers\Api\V1\Admin\DashboardController::class, 'index']);
 
-    // ===== MASCOTAS =====
+    // Notificaciones
+    Route::apiResource('notificaciones', App\Http\Controllers\Api\V1\Admin\NotificacionController::class);
+    Route::post('/notificaciones/enviar-masivo', [App\Http\Controllers\Api\V1\Admin\NotificacionController::class, 'enviarMasivo']);
+    Route::get('/notificaciones/usuario/{userId}', [App\Http\Controllers\Api\V1\Admin\NotificacionController::class, 'porUsuario']);
+    Route::get('/notificaciones-estadisticas/generales', [App\Http\Controllers\Api\V1\Admin\NotificacionController::class, 'estadisticas']);
+
+    // Mascotas
     Route::apiResource('mascotas', App\Http\Controllers\Api\V1\Admin\MascotaController::class);
     Route::delete('/mascotas/{mascota}/foto-galeria', [App\Http\Controllers\Api\V1\Admin\MascotaController::class, 'eliminarFotoGaleria']);
 
-    // ===== USUARIOS =====
+    // Seguimientos de adopciones
+    Route::prefix('seguimientos')->name('seguimientos.')->group(function () {
+        Route::get('/adopcion/{adopcionId}', [App\Http\Controllers\Api\V1\Admin\SeguimientoController::class, 'index']);
+        Route::post('/adopcion/{adopcionId}', [App\Http\Controllers\Api\V1\Admin\SeguimientoController::class, 'store']);
+        Route::get('/{id}', [App\Http\Controllers\Api\V1\Admin\SeguimientoController::class, 'show']);
+        Route::put('/{id}', [App\Http\Controllers\Api\V1\Admin\SeguimientoController::class, 'update']);
+        Route::delete('/{id}', [App\Http\Controllers\Api\V1\Admin\SeguimientoController::class, 'destroy']);
+        Route::get('/estadisticas/{adopcionId}', [App\Http\Controllers\Api\V1\Admin\SeguimientoController::class, 'estadisticas']);
+    });
+
+    // Usuarios
     Route::apiResource('usuarios', App\Http\Controllers\Api\V1\Admin\UsuarioController::class);
     Route::patch('/usuarios/{usuario}/estado', [App\Http\Controllers\Api\V1\Admin\UsuarioController::class, 'cambiarEstado']);
     Route::post('/usuarios/{usuario}/verificar-email', [App\Http\Controllers\Api\V1\Admin\UsuarioController::class, 'verificarEmail']);
+    Route::get('/usuarios/pendientes/count', [App\Http\Controllers\Api\V1\Admin\UsuarioController::class, 'pendientesCount']);
 
-    // ===== ADOPCIONES =====
+    // Adopciones
     Route::apiResource('adopciones', App\Http\Controllers\Api\V1\Admin\AdopcionController::class);
     Route::patch('/adopciones/{adopcion}/estado', [App\Http\Controllers\Api\V1\Admin\AdopcionController::class, 'cambiarEstado']);
     Route::get('/adopciones/{adopcion}/seguimientos', [App\Http\Controllers\Api\V1\Admin\AdopcionController::class, 'seguimientos']);
     Route::post('/adopciones/{adopcion}/seguimientos', [App\Http\Controllers\Api\V1\Admin\AdopcionController::class, 'storeSeguimiento']);
 
-    // ===== SOLICITUDES =====
+    // Solicitudes
     Route::apiResource('solicitudes', App\Http\Controllers\Api\V1\Admin\SolicitudController::class);
     Route::patch('/solicitudes/{id}/status', [App\Http\Controllers\Api\V1\Admin\SolicitudController::class, 'updateStatus']);
     Route::get('/solicitudes-estadisticas/generales', [App\Http\Controllers\Api\V1\Admin\SolicitudController::class, 'estadisticas']);
 
-    // ===== DONACIONES =====
+    // Donaciones
     Route::apiResource('donaciones', App\Http\Controllers\Api\V1\Admin\DonacionController::class);
     Route::patch('/donaciones/{donacion}/toggle-publica', [App\Http\Controllers\Api\V1\Admin\DonacionController::class, 'togglePublica']);
     Route::get('/donaciones-reportes/generales', [App\Http\Controllers\Api\V1\Admin\DonacionController::class, 'reporte']);
 
-    // ===== RESCATES =====
+    // Rescates - ADMIN
     Route::apiResource('rescates', App\Http\Controllers\Api\V1\Admin\RescateController::class);
-    Route::post('/rescates/{rescate}/completar', [App\Http\Controllers\Api\V1\Admin\RescateController::class, 'completar']);
-    Route::post('/rescates/{rescate}/asignar-entidad', [App\Http\Controllers\Api\V1\Admin\RescateController::class, 'asignarEntidad']);
+    Route::post('/rescates/{id}/asignar', [App\Http\Controllers\Api\V1\Admin\RescateController::class, 'asignar']);
     Route::get('/rescates-estadisticas/generales', [App\Http\Controllers\Api\V1\Admin\RescateController::class, 'estadisticas']);
 
-    // ===== REPORTES =====
+    // Reportes
     Route::get('/reportes/generales', [App\Http\Controllers\Api\V1\Admin\ReporteController::class, 'estadisticas']);
     Route::get('/reportes/cercanos', [App\Http\Controllers\Api\V1\Admin\ReporteController::class, 'cercanos']);
     Route::apiResource('reportes', App\Http\Controllers\Api\V1\Admin\ReporteController::class);
     Route::post('/reportes/{reporte}/convertir-rescate', [App\Http\Controllers\Api\V1\Admin\ReporteController::class, 'convertirARescate']);
 
-    // ===== COMENTARIOS =====
+    // Comentarios
     Route::apiResource('comentarios', App\Http\Controllers\Api\V1\Admin\ComentarioController::class);
     Route::post('/comentarios/accion-masiva', [App\Http\Controllers\Api\V1\Admin\ComentarioController::class, 'masivo']);
 
-    // ===== PRODUCTOS =====
-    Route::apiResource('productos', App\Http\Controllers\Api\V1\Admin\ProductoController::class);
-    Route::patch('/productos/{producto}/estado', [App\Http\Controllers\Api\V1\Admin\ProductoController::class, 'cambiarEstado']);
-    Route::post('/productos/{producto}/stock', [App\Http\Controllers\Api\V1\Admin\ProductoController::class, 'actualizarStock']);
-    Route::get('/productos-stock/bajo', [App\Http\Controllers\Api\V1\Admin\ProductoController::class, 'stockBajo']);
-
-    // ===== PEDIDOS =====
-    Route::apiResource('pedidos', App\Http\Controllers\Api\V1\Admin\PedidoController::class);
-    Route::patch('/pedidos/{pedido}/estado', [App\Http\Controllers\Api\V1\Admin\PedidoController::class, 'cambiarEstado']);
-    Route::get('/pedidos-reportes/generales', [App\Http\Controllers\Api\V1\Admin\PedidoController::class, 'reporte']);
-
-    // ===== CATEGORÍAS =====
-    Route::apiResource('categorias', App\Http\Controllers\Api\V1\Admin\CategoriaController::class);
-    Route::patch('/categorias/{categoria}/toggle', [App\Http\Controllers\Api\V1\Admin\CategoriaController::class, 'toggleActivo']);
-    Route::get('/categorias-arbol', [App\Http\Controllers\Api\V1\Admin\CategoriaController::class, 'arbol']);
-    Route::get('/categorias/para-select', [App\Http\Controllers\Api\V1\Admin\CategoriaController::class, 'paraSelect']);
-
-    // ===== TIENDAS =====
-    Route::apiResource('tiendas', App\Http\Controllers\Api\V1\Admin\TiendaController::class);
-    Route::get('/tiendas/{tienda}/productos', [App\Http\Controllers\Api\V1\Admin\TiendaController::class, 'productos']);
-
-    // ===== RAZAS =====
+    // Razas
     Route::apiResource('razas', App\Http\Controllers\Api\V1\Admin\RazaController::class);
     Route::get('/razas/especie/{especie}', [App\Http\Controllers\Api\V1\Admin\RazaController::class, 'porEspecie']);
     Route::get('/razas-especies/todas', [App\Http\Controllers\Api\V1\Admin\RazaController::class, 'especies']);
 
-    // ===== TIPOS DE VACUNA =====
+    // Tipos de Vacuna
     Route::apiResource('tipos-vacunas', App\Http\Controllers\Api\V1\Admin\TipoVacunaController::class);
     Route::get('/tipos-vacunas/recomendadas', [App\Http\Controllers\Api\V1\Admin\TipoVacunaController::class, 'recomendadas']);
     Route::get('/tipos-vacunas-estadisticas/generales', [App\Http\Controllers\Api\V1\Admin\TipoVacunaController::class, 'estadisticas']);
 
-    // ===== FUNDACIONES =====
+    // Fundaciones
     Route::apiResource('fundaciones', App\Http\Controllers\Api\V1\Admin\FundacionController::class);
     Route::get('/fundaciones/{fundacion}/necesidades', [App\Http\Controllers\Api\V1\Admin\FundacionController::class, 'necesidades']);
     Route::put('/fundaciones/{fundacion}/necesidades', [App\Http\Controllers\Api\V1\Admin\FundacionController::class, 'actualizarNecesidades']);
 
-    // ===== VETERINARIAS =====
+    // Veterinarias
     Route::apiResource('veterinarias', App\Http\Controllers\Api\V1\Admin\VeterinariaController::class);
     Route::get('/veterinarias/cercanas', [App\Http\Controllers\Api\V1\Admin\VeterinariaController::class, 'cercanas']);
 
-    // ===== EVENTOS =====
+    // Eventos
     Route::apiResource('eventos', App\Http\Controllers\Api\V1\Admin\EventoController::class);
     Route::get('/eventos/calendario/data', [App\Http\Controllers\Api\V1\Admin\EventoController::class, 'calendarData']);
     Route::get('/eventos/proximos', [App\Http\Controllers\Api\V1\Admin\EventoController::class, 'proximos']);

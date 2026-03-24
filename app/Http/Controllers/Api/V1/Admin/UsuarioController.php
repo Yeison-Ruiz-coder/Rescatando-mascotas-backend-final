@@ -198,6 +198,21 @@ class UsuarioController extends Controller
         ]);
     }
 
+
+    /**
+     * Usuario Pendiente
+     */
+    public function pendientesCount()
+    {
+        $count = User::where('estado', 'pendiente')
+            ->whereIn('tipo', ['fundacion', 'veterinaria'])
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'count' => $count
+        ]);
+    }
     /**
      * Verificar email
      */

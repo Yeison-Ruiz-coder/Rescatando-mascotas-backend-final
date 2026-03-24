@@ -3,29 +3,53 @@
 namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Auth\LoginRequest;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 
 class LoginController extends Controller
 {
-    /**
-     * Iniciar sesión y generar token Sanctum
-     */
-    public function login(LoginRequest $request)
+    public function login(Request $request)
     {
-        $request->authenticate();
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
 
-        $user = $request->user();
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Credenciales incorrectas'
+            ], 401);
+        }
+
+        // 🔥 VERIFICAR QUE EL USUARIO ESTÉ ACTIVO
+        if ($user->estado !== 'activo') {
+            $mensaje = match($user->estado) {
+                'pendiente' => 'Tu cuenta está pendiente de aprobación por un administrador',
+                'inactivo' => 'Tu cuenta está inactiva',
+                'suspendido' => 'Tu cuenta ha sido suspendida',
+                default => 'No puedes iniciar sesión'
+            };
+
+            return response()->json([
+                'success' => false,
+                'message' => $mensaje,
+                'estado' => $user->estado
+            ], 403);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'success' => true,
-            'message' => 'Login exitoso',
+            'message' => 'Inicio de sesión exitoso',
             'data' => [
-                'user' => $user,
                 'token' => $token,
-                'token_type' => 'Bearer'
+                'user' => $user->load(['fundacion', 'veterinaria'])
             ]
         ]);
     }

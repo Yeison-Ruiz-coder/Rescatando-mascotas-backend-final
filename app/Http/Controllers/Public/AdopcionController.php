@@ -1,229 +1,137 @@
 <?php
-// app/Http/Controllers/Public/AdopcionController.php
 
-namespace App\Http\Controllers\Public;
+namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Http\Controllers\Controller;
+use App\Models\Adopcion;
 use App\Models\Mascota;
-use App\Models\Solicitud;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class AdopcionController extends Controller
 {
     /**
-     * Listado de mascotas en adopción
+     * Listado de adopciones exitosas (para historial público)
+     * GET /api/adopciones
      */
-    public function index()
+    public function index(Request $request)
     {
-        $mascotas = Mascota::where('estado', 'En adopcion')
-            ->with('fundacion')
-            ->latest()
-            ->paginate(9);
+        $adopciones = Adopcion::with(['mascota', 'fundacion', 'adoptante'])
+            ->where('estado', 'completada')
+            ->latest('fecha_adopcion')
+            ->paginate($request->get('per_page', 15));
 
-        return view('public.adopciones.index', compact('mascotas'));
+        return response()->json([
+            'success' => true,
+            'data' => $adopciones
+        ]);
     }
 
     /**
-     * Mostrar detalle de mascota para adopción
+     * Mascotas disponibles para adopción
+     * GET /api/adopciones/disponibles
+     */
+    public function disponibles(Request $request)
+    {
+        $query = Mascota::with('fundacion')
+            ->where('estado', 'En adopcion');
+
+        // Filtros opcionales
+        if ($request->has('especie')) {
+            $query->where('especie', $request->especie);
+        }
+
+        if ($request->has('fundacion_id')) {
+            $query->where('fundacion_id', $request->fundacion_id);
+        }
+
+        if ($request->has('buscar')) {
+            $query->where('nombre_mascota', 'like', '%' . $request->buscar . '%');
+        }
+
+        $mascotas = $query->latest()->paginate($request->get('per_page', 15));
+
+        return response()->json([
+            'success' => true,
+            'data' => $mascotas
+        ]);
+    }
+
+    /**
+     * Detalle de adopción exitosa
+     * GET /api/adopciones/{id}
      */
     public function show($id)
     {
-        $mascota = Mascota::with(['fundacion', 'razas'])->findOrFail($id);
+        $adopcion = Adopcion::with(['mascota', 'fundacion', 'adoptante'])
+            ->where('estado', 'completada')
+            ->findOrFail($id);
 
-        if ($mascota->estado !== 'En adopcion') {
-            return redirect()->route('public.adopciones.index')
-                ->with('error', 'Esta mascota no está disponible para adopción');
-        }
-
-        return view('public.adopciones.show', compact('mascota'));
-    }
-
-    /**
-     * Formulario de solicitud para una mascota específica
-     */
-    public function solicitar($id)
-    {
-        $mascota = Mascota::with(['fundacion', 'razas'])->findOrFail($id);
-
-        if ($mascota->estado !== 'En adopcion') {
-            return redirect()->route('public.adopciones.index')
-                ->with('error', 'Esta mascota no está disponible para adopción');
-        }
-
-        return view('public.adopciones.solicitar', compact('mascota'));
-    }
-
-    /**
-     * Guardar solicitud de adopción
-     */
-    public function solicitarStore(Request $request)
-    {
-        $request->validate([
-            'mascota_id' => 'required|exists:mascotas,id',
-            'nombre' => 'required|string|max:255',
-            'apellido' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'telefono' => 'required|string|max:20',
-            'documento_identidad' => 'required|string|max:20',
-            'direccion' => 'required|string|max:500',
-            'experiencia_mascotas' => 'required|string',
-            'tipo_vivienda' => 'required|string',
-            'motivo_adopcion' => 'required|string|min:20',
-            'compromiso_cuidado' => 'accepted',
-            'compromiso_esterilizacion' => 'accepted',
-            'compromiso_seguimiento' => 'accepted',
-        ], [
-            'compromiso_cuidado.accepted' => 'Debes aceptar el compromiso de cuidado responsable',
-            'compromiso_esterilizacion.accepted' => 'Debes aceptar el compromiso de esterilización',
-            'compromiso_seguimiento.accepted' => 'Debes aceptar el compromiso de seguimiento',
-            'motivo_adopcion.min' => 'El motivo de adopción debe tener al menos 20 caracteres',
+        return response()->json([
+            'success' => true,
+            'data' => $adopcion
         ]);
-
-        $mascota = Mascota::find($request->mascota_id);
-
-        if ($mascota->estado !== 'En adopcion') {
-            return back()->with('error', 'Esta mascota ya no está disponible para adopción');
-        }
-
-        DB::beginTransaction();
-
-        try {
-            // Crear solicitud unificada
-            $solicitud = Solicitud::create([
-                'tipo_solicitud' => 'adopcion',
-                'contenido' => $request->motivo_adopcion,
-                'fecha_solicitud' => now(),
-                'estado' => 'pendiente',
-                'user_id' => auth()->check() ? auth()->id() : null,
-                'nombre_solicitante' => $request->nombre,
-                'email_solicitante' => $request->email,
-                'telefono_solicitante' => $request->telefono,
-                'solicitable_id' => $request->mascota_id,
-                'solicitable_type' => 'App\Models\Mascota',
-            ]);
-
-            // Guardar datos adicionales específicos de adopción en el campo JSON
-            $solicitud->setDatosAdopcion([
-                'apellido_solicitante' => $request->apellido,
-                'documento_identidad' => $request->documento_identidad,
-                'direccion' => $request->direccion,
-                'experiencia_mascotas' => $request->experiencia_mascotas,
-                'tipo_vivienda' => $request->tipo_vivienda,
-                'compromiso_cuidado' => $request->has('compromiso_cuidado'),
-                'compromiso_esterilizacion' => $request->has('compromiso_esterilizacion'),
-                'compromiso_seguimiento' => $request->has('compromiso_seguimiento'),
-            ])->save();
-
-            DB::commit();
-
-            return redirect()->route('public.adopciones.solicitud-exitosa', $solicitud->id)
-                ->with('success', '¡Solicitud enviada con éxito! La fundación revisará tu solicitud y te contactará pronto.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error al crear solicitud de adopción: ' . $e->getMessage());
-
-            return back()->withInput()
-                ->with('error', 'Error al enviar la solicitud. Por favor intenta nuevamente.');
-        }
     }
 
     /**
-     * Página de confirmación de solicitud
+     * Verificar disponibilidad de mascota
+     * GET /api/adopciones/verificar/{mascotaId}
      */
-    public function solicitudExitosa($id)
+    public function verificarDisponibilidad($mascotaId)
     {
-        $solicitud = Solicitud::with('solicitable')->findOrFail($id);
-
-        if ($solicitud->tipo_solicitud !== 'adopcion') {
-            abort(404);
-        }
-
-        return view('public.adopciones.solicitud-exitosa', compact('solicitud'));
-    }
-
-    /**
-     * Verificar disponibilidad de mascota (AJAX)
-     */
-    public function verificarDisponibilidad($id)
-    {
-        $mascota = Mascota::find($id);
+        $mascota = Mascota::find($mascotaId);
 
         if (!$mascota) {
             return response()->json([
-                'disponible' => false,
-                'mensaje' => 'Mascota no encontrada'
+                'success' => false,
+                'message' => 'Mascota no encontrada'
             ], 404);
         }
 
         return response()->json([
-            'disponible' => $mascota->estado === 'En adopcion',
-            'estado' => $mascota->estado,
-            'nombre' => $mascota->nombre_mascota
+            'success' => true,
+            'data' => [
+                'disponible' => $mascota->estado === 'En adopcion',
+                'estado' => $mascota->estado,
+                'nombre' => $mascota->nombre_mascota,
+                'id' => $mascota->id
+            ]
         ]);
     }
 
-
     /**
-     * Mostrar solicitudes del usuario actual
+     * Estadísticas de adopciones
+     * GET /api/adopciones/estadisticas
      */
-    public function misSolicitudes(Request $request)
+    public function estadisticas()
     {
-        $user = auth()->user();
+        $totalAdopciones = Adopcion::where('estado', 'completada')->count();
+        $adopcionesEsteMes = Adopcion::where('estado', 'completada')
+            ->whereMonth('fecha_adopcion', now()->month)
+            ->whereYear('fecha_adopcion', now()->year)
+            ->count();
 
-        if (!$user) {
-            return redirect()->route('login')
-                ->with('error', 'Debes iniciar sesión para ver tus solicitudes');
-        }
+        $adopcionesPorFundacion = Adopcion::where('estado', 'completada')
+            ->with('fundacion')
+            ->select('fundacion_id', DB::raw('count(*) as total'))
+            ->groupBy('fundacion_id')
+            ->orderByDesc('total')
+            ->limit(5)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'fundacion' => $item->fundacion?->Nombre_1 ?? 'Desconocida',
+                    'total' => $item->total
+                ];
+            });
 
-        $solicitudes = Solicitud::where('user_id', $user->id)
-            ->where('tipo_solicitud', 'adopcion')
-            ->with('solicitable')
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
-
-        return view('public.adopciones.mis-solicitudes', compact('solicitudes'));
-    }
-
-    /**
-     * Mostrar solicitudes en proceso (aprobadas pero no completadas)
-     */
-    public function enProceso(Request $request)
-    {
-        $user = auth()->user();
-
-        if (!$user) {
-            return redirect()->route('login')
-                ->with('error', 'Debes iniciar sesión para ver tus procesos');
-        }
-
-        $solicitudes = Solicitud::where('user_id', $user->id)
-            ->where('tipo_solicitud', 'adopcion')
-            ->whereIn('estado', ['aprobada', 'en_revision'])
-            ->with('solicitable')
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
-
-        return view('public.adopciones.en-proceso', compact('solicitudes'));
-    }
-    /**
-     * Mostrar detalle de una solicitud específica
-     */
-    public function solicitudDetalle($id)
-    {
-        $user = auth()->user();
-
-        if (!$user) {
-            return redirect()->route('login');
-        }
-
-        $solicitud = Solicitud::where('id', $id)
-            ->where('user_id', $user->id)
-            ->where('tipo_solicitud', 'adopcion')
-            ->with(['solicitable', 'revisor'])
-            ->firstOrFail();
-
-        return view('public.adopciones.solicitud-detalle', compact('solicitud'));
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total_adopciones' => $totalAdopciones,
+                'adopciones_este_mes' => $adopcionesEsteMes,
+                'top_fundaciones' => $adopcionesPorFundacion
+            ]
+        ]);
     }
 }

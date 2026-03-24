@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileController;
 
+/*
+
 // =========================================================================
 // RUTAS PÚBLICAS (SIN AUTENTICACIÓN - ACCESO LIBRE)
 // =========================================================================
@@ -134,24 +136,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
-    // ✅ CARRITO DE COMPRAS (requiere usuario)
-    Route::prefix('carrito')->name('public.carrito.')->group(function () {
-        Route::get('/', [CarritoController::class, 'index'])->name('index');
-        Route::post('/agregar/{producto}', [CarritoController::class, 'agregar'])->name('agregar');
-        Route::put('/actualizar/{productoId}', [CarritoController::class, 'actualizar'])->name('actualizar');
-        Route::delete('/eliminar/{productoId}', [CarritoController::class, 'eliminar'])->name('eliminar');
-    });
-
-    // ✅ PEDIDOS (requiere usuario)
-    Route::prefix('pedidos')->name('public.pedidos.')->group(function () {
-        Route::get('/', [PublicPedidoController::class, 'index'])->name('index');
-        Route::get('/checkout', [PublicPedidoController::class, 'checkout'])->name('checkout');
-        Route::post('/procesar', [PublicPedidoController::class, 'procesar'])->name('procesar');
-        Route::get('/{id}', [PublicPedidoController::class, 'show'])->name('show');
-        Route::post('/{id}/cancelar', [PublicPedidoController::class, 'cancelar'])->name('cancelar');
-    });
-});
 
 // =========================================================================
 // RUTAS DE ADMIN (tus rutas originales - con middleware admin)
@@ -288,3 +272,6 @@ Route::get('locale/{locale}', function ($locale) {
 // RUTAS DE AUTENTICACIÓN (Breeze)
 // =========================================================================
 require __DIR__ . '/auth.php';
+
+
+*/

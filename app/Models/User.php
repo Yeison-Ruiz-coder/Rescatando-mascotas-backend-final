@@ -77,11 +77,6 @@ class User extends Authenticatable
         return $this->hasMany(User::class, 'created_by');
     }
 
-    // RELACIONES CORREGIDAS Y NUEVAS
-    public function tienda()
-    {
-        return $this->hasOne(Tienda::class, 'user_id');
-    }
 
     public function fundacion()
     {
@@ -91,21 +86,6 @@ class User extends Authenticatable
     public function veterinaria()
     {
         return $this->hasOne(Veterinaria::class, 'user_id'); // IMPORTANTE: veterinarias necesita user_id
-    }
-
-    public function productos()
-    {
-        return $this->hasMany(Producto::class, 'user_id');
-    }
-
-    public function pedidosComoComprador()
-    {
-        return $this->hasMany(Pedido::class, 'comprador_id');
-    }
-
-    public function pedidosComoVendedor()
-    {
-        return $this->hasMany(Pedido::class, 'vendedor_id');
     }
 
     // Relaciones existentes (verifica que los foreign keys sean correctos)
@@ -230,5 +210,10 @@ class User extends Authenticatable
     public function getNombreCompletoAttribute(): string
     {
         return trim($this->nombre . ' ' . $this->apellidos);
+    }
+    public function scopePendientes($query)
+    {
+        return $query->where('estado', 'pendiente')
+            ->whereIn('tipo', ['fundacion', 'veterinaria']);
     }
 }

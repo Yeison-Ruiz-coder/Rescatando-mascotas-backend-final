@@ -1,90 +1,67 @@
 <?php
 
-namespace App\Http\Controllers\Public;
+namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\Donacion;
-use App\Models\Fundacion;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class DonacionController extends Controller
 {
     /**
-     * Listado de donaciones públicas (solo las públicas)
+     * GET /api/donaciones
+     * Listado de donaciones públicas
      */
-    public function index()
+    public function index(Request $request)
     {
-        $donaciones = Donacion::with('usuario', 'fundacion')
-                              ->where('publica', true)
-                              ->latest()
-                              ->paginate(15);
-
-        $totalDonaciones = Donacion::sum('valor_donacion');
-        $totalDonantes = Donacion::distinct('user_id')->count('user_id');
-
-        return view('public.donaciones.index', compact('donaciones', 'totalDonaciones', 'totalDonantes'));
-    }
-
-    /**
-     * Formulario de donación
-     */
-    public function create()
-    {
-        $fundaciones = Fundacion::all();
-        $montosSugeridos = [20000, 50000, 100000, 200000, 500000];
-
-        return view('public.donaciones.create', compact('fundaciones', 'montosSugeridos'));
-    }
-
-    /**
-     * Guardar donación
-     */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'valor_donacion' => 'required|numeric|min:1000',
-            'fundacion_id' => 'required|exists:fundaciones,id',
-            'publica' => 'boolean',
-            'metodo_pago' => 'required|in:nequi,bancolombia,pse,tarjeta',
+        $validator = Validator::make($request->all(), [
+            'per_page' => 'nullable|integer|min:1|max:100',
+            'fundacion_id' => 'nullable|exists:fundaciones,id',
         ]);
 
-        DB::beginTransaction();
-
-        try {
-            $donacion = Donacion::create([
-                'user_id' => auth()->id(),
-                'fundacion_id' => $request->fundacion_id,
-                'valor_donacion' => $request->valor_donacion,
-                'publica' => $request->has('publica'),
-                'fecha_donacion' => now(),
-            ]);
-
-            // Aquí iría la lógica de procesamiento de pago real
-
-            DB::commit();
-
-            return redirect()->route('public.donaciones.show', $donacion->id)
-                            ->with('success', '¡Gracias por tu donación!');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error al procesar la donación');
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
         }
+
+        $query = Donacion::with(['usuario', 'fundacion'])
+            ->where('publica', true);
+
+        if ($request->filled('fundacion_id')) {
+            $query->where('fundacion_id', $request->fundacion_id);
+        }
+
+        $donaciones = $query->latest()->paginate($request->get('per_page', 15));
+
+        $totales = [
+            'total' => Donacion::where('publica', true)->sum('valor_donacion'),
+            'total_donantes' => Donacion::where('publica', true)->distinct('user_id')->count('user_id'),
+            'promedio' => round(Donacion::where('publica', true)->avg('valor_donacion') ?? 0, 2),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $donaciones,
+            'totales' => $totales
+        ]);
     }
 
     /**
-     * Detalle de donación
+     * GET /api/donaciones/{id}
+     * Detalle de donación pública
      */
     public function show($id)
     {
-        $donacion = Donacion::with('usuario', 'fundacion')->findOrFail($id);
+        $donacion = Donacion::with(['usuario', 'fundacion'])
+            ->where('publica', true)
+            ->findOrFail($id);
 
-        // Solo mostrar si es pública o es del usuario
-        if (!$donacion->publica && $donacion->user_id !== auth()->id()) {
-            abort(404);
-        }
-
-        return view('public.donaciones.show', compact('donacion'));
+        return response()->json([
+            'success' => true,
+            'data' => $donacion
+        ]);
     }
 }
