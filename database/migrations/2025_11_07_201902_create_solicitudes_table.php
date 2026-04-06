@@ -17,7 +17,7 @@ return new class extends Migration
             $table->text('razon_rechazo')->nullable();
             $table->text('notas_internas')->nullable(); // Para administradores
 
-            // Solicitante (puede ser un usuario registrado o no)
+            // Solicitante (solo usuarios registrados)
             $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
             $table->string('nombre_solicitante')->nullable(); // Si no es usuario registrado
             $table->string('email_solicitante')->nullable();

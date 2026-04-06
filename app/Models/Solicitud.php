@@ -34,6 +34,31 @@ class Solicitud extends Model
         'created_at'
     ];
 
+    // ✅ CORREGIDO: Solo los campos que existen en la tabla
+    protected $fillable = [
+        'tipo_solicitud',
+        'contenido',
+        'fecha_solicitud',
+        'estado',
+        'razon_rechazo',
+        'notas_internas',
+        'user_id',
+        'nombre_solicitante',
+        'email_solicitante',
+        'telefono_solicitante',
+        'solicitable_type',
+        'solicitable_id',
+        'revisado_por',
+        'fecha_revision',
+        'datos_adicionales'
+    ];
+
+    protected $casts = [
+        'datos_adicionales' => 'array',
+        'fecha_solicitud' => 'datetime',
+        'fecha_revision' => 'datetime',
+    ];
+
     // Constantes para tipos de solicitud
     const TIPO_ADOPCION = 'adopcion';
     const TIPO_RESCATE = 'rescate';
@@ -99,7 +124,7 @@ class Solicitud extends Model
     public function scopePorMascota($query, $mascotaId)
     {
         return $query->where('solicitable_type', Mascota::class)
-                     ->where('solicitable_id', $mascotaId);
+            ->where('solicitable_id', $mascotaId);
     }
 
     // MÉTODOS ÚTILES PARA ADOPCIÓN
@@ -118,6 +143,14 @@ class Solicitud extends Model
             'compromiso_seguimiento' => $datos['compromiso_seguimiento'] ?? false,
             'direccion' => $datos['direccion'] ?? null,
             'apellido_solicitante' => $datos['apellido_solicitante'] ?? null,
+            'documento_identidad' => $datos['documento_identidad'] ?? null,
+            'ciudad' => $datos['ciudad'] ?? null,
+            'departamento' => $datos['departamento'] ?? null,
+            'codigo_postal' => $datos['codigo_postal'] ?? null,
+            'estado_civil' => $datos['estado_civil'] ?? null,
+            'cantidad_hijos' => $datos['cantidad_hijos'] ?? null,
+            'ocupacion' => $datos['ocupacion'] ?? null,
+            'es_propietario' => $datos['es_propietario'] ?? null,
         ]);
 
         $this->datos_adicionales = $datosAdopcion;
@@ -163,7 +196,7 @@ class Solicitud extends Model
     }
 
     /**
-     * Obtiene el nombre completo del solicitante (incluye apellido si existe)
+     * Obtiene el nombre completo del solicitante
      */
     public function getNombreCompletoAttribute(): string
     {
@@ -174,7 +207,6 @@ class Solicitud extends Model
     }
 
     // MÉTODOS DE ESTADO
-
     public function isPendiente(): bool
     {
         return $this->estado === self::ESTADO_PENDIENTE;
@@ -207,7 +239,6 @@ class Solicitud extends Model
         $this->fecha_revision = now();
         $this->save();
 
-        // Si es adopción y está aprobada, actualizar estado de la mascota
         if ($this->esAdopcion() && $this->solicitable_type === Mascota::class) {
             $mascota = $this->solicitable;
             if ($mascota && $mascota->estado === 'En adopcion') {
@@ -234,13 +265,11 @@ class Solicitud extends Model
         $this->save();
     }
 
-    // BOOT - Eventos del modelo
     protected static function boot()
     {
         parent::boot();
 
         static::creating(function ($solicitud) {
-            // Si es adopción y tiene mascota, verificar disponibilidad
             if ($solicitud->tipo_solicitud === self::TIPO_ADOPCION &&
                 $solicitud->solicitable_type === Mascota::class) {
 
