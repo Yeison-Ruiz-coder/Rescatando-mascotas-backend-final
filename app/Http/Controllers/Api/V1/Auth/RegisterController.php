@@ -47,7 +47,7 @@ class RegisterController extends Controller
             'password' => Hash::make($request->password),
             'telefono' => $request->telefono,
             'tipo' => $request->tipo,
-            'estado' => $request->tipo === 'user' ? 'activo' : 'pendiente',
+            'estado' => 'activo', // Por defecto activo, pero se puede cambiar a 'pendiente' si se requiere aprobación
         ]);
 
         // Crear registro según el tipo
@@ -94,5 +94,13 @@ class RegisterController extends Controller
                 'requiere_aprobacion' => $request->tipo !== 'user'
             ]
         ], 201);
+    }
+
+    public function checkEmail(Request $request)
+    {
+        $email = $request->query('email');
+        $exists = User::where('email', $email)->exists();
+
+        return response()->json(['exists' => $exists]);
     }
 }

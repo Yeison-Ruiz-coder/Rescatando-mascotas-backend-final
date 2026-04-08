@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->name('auth.')->group(function () {
     Route::post('/login', [App\Http\Controllers\Api\V1\Auth\LoginController::class, 'login']);
     Route::post('/register', [App\Http\Controllers\Api\V1\Auth\RegisterController::class, 'register']);
+    Route::get('/auth/check-email', [App\Http\Controllers\Api\V1\Auth\RegisterController::class, 'checkEmail']);
     Route::post('/logout', [App\Http\Controllers\Api\V1\Auth\LogoutController::class, 'logout'])
         ->middleware('auth:sanctum');
 });
@@ -84,11 +85,13 @@ Route::middleware(['auth:sanctum'])->prefix('entity')->name('entity.')->group(fu
 
     // Mascotas de la entidad
     Route::prefix('mascotas')->name('mascotas.')->group(function () {
+        Route::get('/mascotas-form-data', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'createFormData']);
         Route::get('/', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'index']);
         Route::post('/', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'store']);
         Route::get('/{id}', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'show']);
         Route::put('/{id}', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'update']);
         Route::delete('/{id}', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'destroy']);
+
     });
 
     // Solicitudes de adopción para la entidad

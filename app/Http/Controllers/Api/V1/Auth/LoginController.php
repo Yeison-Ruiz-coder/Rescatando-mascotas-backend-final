@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Fundacion;
+use App\Models\Veterinaria;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -40,6 +42,41 @@ class LoginController extends Controller
                 'message' => $mensaje,
                 'estado' => $user->estado
             ], 403);
+        }
+
+        // 🔥 AUTO-REPARACIÓN: Si es fundación y no tiene perfil, lo crea automáticamente
+        if ($user->tipo === 'fundacion') {
+            $fundacion = Fundacion::where('user_id', $user->id)->first();
+
+            if (!$fundacion) {
+                // Crear perfil automáticamente con datos del usuario
+                $fundacion = Fundacion::create([
+                    'Nombre_1' => $user->nombre ?? 'Fundación ' . $user->email,
+                    'Direccion' => $user->direccion ?? 'Pendiente de actualizar',
+                    'Telefono' => $user->telefono ?? '000000000',
+                    'Email' => $user->email,
+                    'registro_sanitario' => 'AUTO_' . time() . '_' . $user->id,
+                    'capacidad_maxima' => null,
+                    'user_id' => $user->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
+        // 🔥 AUTO-REPARACIÓN: Si es veterinaria y no tiene perfil, lo crea automáticamente
+        if ($user->tipo === 'veterinaria') {
+            $veterinaria = Veterinaria::where('user_id', $user->id)->first();
+
+            if (!$veterinaria) {
+                $veterinaria = Veterinaria::create([
+                    'Nombre_vet' => $user->nombre ?? 'Veterinaria ' . $user->email,
+                    'Direccion' => $user->direccion ?? 'Pendiente',
+                    'Telefono' => $user->telefono ?? '000000000',
+                    'Email' => $user->email,
+                    'user_id' => $user->id,
+                ]);
+            }
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;

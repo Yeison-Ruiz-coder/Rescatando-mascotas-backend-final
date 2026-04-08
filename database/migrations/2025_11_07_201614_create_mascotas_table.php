@@ -10,24 +10,33 @@ return new class extends Migration
     {
         Schema::create('mascotas', function (Blueprint $table) {
             $table->id();
+
+            // Información básica
             $table->string('nombre_mascota');
-            $table->string('especie')->nullable(); // Perro, Gato, etc.
-            // El campo 'raza' se manejará con la tabla pivote 'mascota_raza'
-            $table->integer('edad_aprox')->nullable();
+            $table->string('especie')->nullable(); // Perro, Gato, Conejo, Ave, Otro
+            $table->decimal('edad_aprox', 4, 1)->nullable(); // Permite 1.5 años, 2.3 años, etc.
             $table->enum('genero', ['Macho', 'Hembra', 'Desconocido'])->nullable();
             $table->enum('estado', ['Adoptado', 'En adopcion', 'Rescatada', 'En acogida'])->default('En adopcion');
+
+            // Ubicación y descripción
             $table->string('lugar_rescate')->nullable();
             $table->text('descripcion')->nullable();
+            $table->text('condiciones_especiales')->nullable(); // Enfermedades crónicas, discapacidades
+
+            // Fotos
             $table->string('foto_principal')->nullable(); // Ruta de la foto principal
-            $table->json('galeria_fotos')->nullable();
+            $table->json('galeria_fotos')->nullable(); // Array de rutas de fotos
+
+            // Características
             $table->boolean('necesita_hogar_temporal')->default(false);
             $table->boolean('apto_con_ninos')->default(true);
             $table->boolean('apto_con_otros_animales')->default(true);
-            $table->text('condiciones_especiales')->nullable(); // Enfermedades crónicas, discapacidades
-            // El campo 'vacunas' se manejará con la tabla pivote 'mascota_vacuna'
+
+            // Fechas
             $table->date('fecha_ingreso')->nullable();
             $table->date('fecha_salida')->nullable();
 
+            // Relación con fundación
             $table->unsignedBigInteger('fundacion_id')->nullable();
             $table->foreign('fundacion_id')
                 ->references('id')

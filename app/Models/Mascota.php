@@ -13,7 +13,6 @@ class Mascota extends Model
 
     protected $table = 'mascotas';
 
-    //Campos permitidos para asignación masiva
     protected $fillable = [
         'nombre_mascota',
         'especie',
@@ -22,16 +21,15 @@ class Mascota extends Model
         'estado',
         'lugar_rescate',
         'descripcion',
+        'condiciones_especiales',
         'foto_principal',
         'galeria_fotos',
         'necesita_hogar_temporal',
         'apto_con_ninos',
         'apto_con_otros_animales',
-        'condiciones_especiales',
         'fecha_ingreso',
         'fecha_salida',
         'fundacion_id',
-        'user_id' // Si tienes este campo
     ];
 
     protected $casts = [
@@ -41,7 +39,7 @@ class Mascota extends Model
         'apto_con_otros_animales' => 'boolean',
         'fecha_ingreso' => 'date',
         'fecha_salida' => 'date',
-        'edad_aprox' => 'integer'
+        'edad_aprox' => 'decimal:1',
     ];
 
     protected $allowIncluded = [
@@ -75,7 +73,8 @@ class Mascota extends Model
 
     public function razas()
     {
-        return $this->belongsToMany(Raza::class, 'mascota_raza', 'mascota_id', 'raza_id');
+        return $this->belongsToMany(Raza::class, 'mascota_raza', 'mascota_id', 'raza_id')
+            ->withTimestamps();
     }
 
     public function vacunas()
@@ -110,45 +109,33 @@ class Mascota extends Model
         return $this->hasMany(HistorialMedico::class, 'mascota_id');
     }
 
-    // Scope para mascotas disponibles para adopción
+    // Scopes
     public function scopeDisponibles($query)
     {
         return $query->where('estado', 'En adopcion');
     }
 
-    // Scope por especie
     public function scopePorEspecie($query, $especie)
     {
         return $query->where('especie', $especie);
     }
 
-    // Verificar si está disponible
+    // Helpers
     public function isDisponible(): bool
     {
         return $this->estado === 'En adopcion';
     }
 
-    // En app/Models/Mascota.php - Agrega esta relación
-
-    /**
-     * Solicitudes de adopción para esta mascota
-     */
     public function solicitudesAdopcion()
     {
         return $this->hasMany(Adopcion::class, 'mascota_id');
     }
 
-    /**
-     * Solicitudes de adopción pendientes
-     */
     public function solicitudesPendientes()
     {
         return $this->solicitudesAdopcion()->where('estado', 'Pendiente');
     }
 
-    /**
-     * Verificar si tiene solicitudes activas
-     */
     public function tieneSolicitudesActivas(): bool
     {
         return $this->solicitudesAdopcion()
