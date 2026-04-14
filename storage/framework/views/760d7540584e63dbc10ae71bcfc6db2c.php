@@ -1,0 +1,1 @@
+<?php /**PATH C:\xampp\htdocs\Rescatando-mascotas-backend-final\resources\views\components\ui\alert.blade.php ENDPATH**/ ?>
