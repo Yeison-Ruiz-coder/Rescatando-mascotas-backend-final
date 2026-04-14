@@ -65,4 +65,19 @@ class Rescate extends Model
     {
         return $query->where('estado', 'completado');
     }
+
+    // Cambiar 'usuario_reporto_id' a 'user_id' para consistencia
+    // O mantenerlo pero crear un accessor
+
+    // Opción recomendada: Agregar un accessor para compatibilidad
+    public function getUserAttribute()
+    {
+        return $this->usuarioReporto;
+    }
+
+    // También agregar relación con nombre unificado
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'usuario_reporto_id');
+    }
 }

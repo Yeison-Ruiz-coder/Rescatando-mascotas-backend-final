@@ -3,90 +3,51 @@
 namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\Mascota;
+use App\Services\Public\MascotaPublicService;
+use App\Traits\ApiResponses;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class MascotaController extends Controller
 {
-    /**
-     * Listado de mascotas en adopción
-     */
+    use ApiResponses;
+
+    protected MascotaPublicService $mascotaService;
+
+    public function __construct(MascotaPublicService $mascotaService)
+    {
+        $this->mascotaService = $mascotaService;
+    }
+
     public function index(Request $request)
     {
-        $query = Mascota::with(['fundacion', 'razas'])
-            ->where('estado', 'En adopcion');
-
-        // Filtros
-        if ($request->has('especie')) {
-            $query->where('especie', $request->especie);
-        }
-
-        if ($request->has('fundacion_id')) {
-            $query->where('fundacion_id', $request->fundacion_id);
-        }
-
-        if ($request->has('genero')) {
-            $query->where('genero', $request->genero);
-        }
-
-        // Búsqueda
-        if ($request->has('buscar')) {
-            $query->where('nombre_mascota', 'like', '%' . $request->buscar . '%');
-        }
-
-        // Paginación
+        $filters = $request->only(['especie', 'fundacion_id', 'genero', 'buscar']);
         $perPage = $request->get('per_page', 15);
-        $mascotas = $query->latest()->paginate($perPage);
 
-        return response()->json([
-            'success' => true,
-            'data' => $mascotas
-        ]);
+        $mascotas = $this->mascotaService->getAll($filters, $perPage);
+
+        return $this->successResponse($mascotas, 'Mascotas obtenidas exitosamente');
     }
 
-    /**
-     * Detalle de mascota
-     */
     public function show($id)
     {
-        $mascota = Mascota::with(['fundacion', 'razas', 'vacunas', 'historialMedico'])
-            ->findOrFail($id);
-
-        return response()->json([
-            'success' => true,
-            'data' => $mascota
-        ]);
+        try {
+            $mascota = $this->mascotaService->findById($id);
+            return $this->successResponse($mascota, 'Mascota obtenida exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Mascota no encontrada');
+        }
     }
 
-    /**
-     * Mascotas por especie
-     */
     public function porEspecie($especie)
     {
-        $mascotas = Mascota::with('fundacion')
-            ->where('especie', $especie)
-            ->where('estado', 'En adopcion')
-            ->paginate(15);
-
-        return response()->json([
-            'success' => true,
-            'data' => $mascotas
-        ]);
+        $mascotas = $this->mascotaService->getPorEspecie($especie);
+        return $this->successResponse($mascotas, 'Mascotas por especie obtenidas exitosamente');
     }
 
-    /**
-     * Mascotas por fundación
-     */
     public function porFundacion($fundacionId)
     {
-        $mascotas = Mascota::with('fundacion')
-            ->where('fundacion_id', $fundacionId)
-            ->where('estado', 'En adopcion')
-            ->paginate(15);
-
-        return response()->json([
-            'success' => true,
-            'data' => $mascotas
-        ]);
+        $mascotas = $this->mascotaService->getPorFundacion($fundacionId);
+        return $this->successResponse($mascotas, 'Mascotas por fundación obtenidas exitosamente');
     }
 }

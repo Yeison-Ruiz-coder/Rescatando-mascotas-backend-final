@@ -9,9 +9,11 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->name('auth.')->group(function () {
     Route::post('/login', [App\Http\Controllers\Api\V1\Auth\LoginController::class, 'login']);
     Route::post('/register', [App\Http\Controllers\Api\V1\Auth\RegisterController::class, 'register']);
-    Route::get('/auth/check-email', [App\Http\Controllers\Api\V1\Auth\RegisterController::class, 'checkEmail']);
+    Route::get('/check-email', [App\Http\Controllers\Api\V1\Auth\RegisterController::class, 'checkEmail']);
     Route::post('/logout', [App\Http\Controllers\Api\V1\Auth\LogoutController::class, 'logout'])
         ->middleware('auth:sanctum');
+    Route::post('/password/email', [App\Http\Controllers\Api\V1\Auth\PasswordResetController::class, 'sendResetLink']);
+    Route::post('/password/reset', [App\Http\Controllers\Api\V1\Auth\PasswordResetController::class, 'resetPassword']);
 });
 
 // Mascotas - Público

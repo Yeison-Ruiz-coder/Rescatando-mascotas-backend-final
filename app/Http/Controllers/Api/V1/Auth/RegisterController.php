@@ -3,15 +3,22 @@
 namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Models\Fundacion;
-use App\Models\Veterinaria;
+use App\Services\Auth\AuthService;
+use App\Traits\ApiResponses;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class RegisterController extends Controller
 {
+    use ApiResponses;
+
+    protected AuthService $authService;
+
+    public function __construct(AuthService $authService)
+    {
+        $this->authService = $authService;
+    }
+
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -21,86 +28,33 @@ class RegisterController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'telefono' => 'nullable|string|max:20',
             'tipo' => 'required|in:user,fundacion,veterinaria',
-
-            // Campos para fundación
             'nombre_entidad' => 'nullable|string|max:255',
             'direccion' => 'nullable|string',
             'registro_sanitario' => 'nullable|string',
             'capacidad' => 'nullable|integer|min:0',
-
-            // Campos para veterinaria
             'servicios' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $validator->errors()
-            ], 422);
+            return $this->errorResponse('Error de validación', $validator->errors(), 422);
         }
 
-        $user = User::create([
-            'nombre' => $request->nombre,
-            'apellidos' => $request->apellidos,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'telefono' => $request->telefono,
-            'tipo' => $request->tipo,
-            'estado' => 'activo', // Por defecto activo, pero se puede cambiar a 'pendiente' si se requiere aprobación
-        ]);
+        try {
+            $result = $this->authService->register($validator->validated());
 
-        // Crear registro según el tipo
-        if ($request->tipo === 'fundacion') {
-            $nombreEntidad = $request->nombre_entidad ?? $request->nombre;
-            Fundacion::create([
-                'Nombre_1' => $nombreEntidad,
-                'Direccion' => $request->direccion,
-                'Telefono' => $request->telefono,
-                'Email' => $request->email,
-                'registro_sanitario' => $request->registro_sanitario,
-                'capacidad_maxima' => $request->capacidad,
-                'user_id' => $user->id,
-            ]);
-        } elseif ($request->tipo === 'veterinaria') {
-            $nombreEntidad = $request->nombre_entidad ?? $request->nombre;
-            Veterinaria::create([
-                'Nombre_vet' => $nombreEntidad,
-                'Direccion' => $request->direccion,
-                'Telefono' => $request->telefono,
-                'Email' => $request->email,
-                'servicios' => $request->servicios ? json_encode($request->servicios) : null,
-                'user_id' => $user->id,
-            ]);
+            $message = $result['requiere_aprobacion']
+                ? 'Tu solicitud de registro ha sido enviada. Un administrador la revisará pronto.'
+                : 'Usuario registrado exitosamente';
+
+            return $this->successResponse($result, $message, 201);
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al registrar usuario', $e->getMessage(), 500);
         }
-
-        // 🔥 IMPORTANTE: Solo generar token si el usuario está ACTIVO
-        $token = null;
-        $message = 'Usuario registrado exitosamente';
-
-        if ($request->tipo === 'user') {
-            $token = $user->createToken('auth_token')->plainTextToken;
-            $message = 'Usuario registrado exitosamente';
-        } else {
-            $message = 'Tu solicitud de registro ha sido enviada. Un administrador la revisará pronto.';
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => $message,
-            'data' => [
-                'token' => $token,
-                'user' => $user->load(['fundacion', 'veterinaria']),
-                'requiere_aprobacion' => $request->tipo !== 'user'
-            ]
-        ], 201);
     }
 
     public function checkEmail(Request $request)
     {
-        $email = $request->query('email');
-        $exists = User::where('email', $email)->exists();
-
-        return response()->json(['exists' => $exists]);
+        $exists = $this->authService->checkEmail($request->query('email'));
+        return $this->successResponse(['exists' => $exists], 'Email verificado');
     }
 }

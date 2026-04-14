@@ -3,62 +3,45 @@
 namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\Veterinaria;
+use App\Services\Public\VeterinariaPublicService;
+use App\Traits\ApiResponses;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class VeterinariaController extends Controller
 {
-    /**
-     * Listado de veterinarias
-     */
+    use ApiResponses;
+
+    protected VeterinariaPublicService $veterinariaService;
+
+    public function __construct(VeterinariaPublicService $veterinariaService)
+    {
+        $this->veterinariaService = $veterinariaService;
+    }
+
     public function index(Request $request)
     {
-        $query = Veterinaria::query();
+        $filters = $request->only(['urgencias', 'ubicacion']);
+        $perPage = $request->get('per_page', 15);
 
-        if ($request->has('urgencias')) {
-            $query->where('urgencias_24h', true);
-        }
+        $veterinarias = $this->veterinariaService->getAll($filters, $perPage);
 
-        if ($request->has('ubicacion')) {
-            $query->where('Direccion', 'like', '%' . $request->ubicacion . '%');
-        }
-
-        $veterinarias = $query->paginate(15);
-
-        return response()->json([
-            'success' => true,
-            'data' => $veterinarias
-        ]);
+        return $this->successResponse($veterinarias, 'Veterinarias obtenidas exitosamente');
     }
 
-    /**
-     * Detalle de veterinaria
-     */
     public function show($id)
     {
-        $veterinaria = Veterinaria::findOrFail($id);
-        $servicios = json_decode($veterinaria->servicios, true) ?? [];
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'veterinaria' => $veterinaria,
-                'servicios' => $servicios
-            ]
-        ]);
+        try {
+            $data = $this->veterinariaService->findById($id);
+            return $this->successResponse($data, 'Veterinaria obtenida exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Veterinaria no encontrada');
+        }
     }
 
-    /**
-     * Mapa de veterinarias con urgencias 24h
-     */
     public function mapa()
     {
-        $veterinarias = Veterinaria::where('urgencias_24h', true)
-            ->get(['id', 'Nombre_vet', 'Direccion', 'Telefono', 'urgencias_24h']);
-
-        return response()->json([
-            'success' => true,
-            'data' => $veterinarias
-        ]);
+        $veterinarias = $this->veterinariaService->getMapa();
+        return $this->successResponse($veterinarias, 'Veterinarias para mapa obtenidas exitosamente');
     }
 }

@@ -39,7 +39,7 @@ class Mascota extends Model
         'apto_con_otros_animales' => 'boolean',
         'fecha_ingreso' => 'date',
         'fecha_salida' => 'date',
-        'edad_aprox' => 'decimal:1',
+        'edad_aprox' => 'decimal:2',
     ];
 
     protected $allowIncluded = [

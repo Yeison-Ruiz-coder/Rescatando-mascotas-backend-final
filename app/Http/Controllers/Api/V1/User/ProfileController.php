@@ -3,32 +3,31 @@
 namespace App\Http\Controllers\Api\V1\User;
 
 use App\Http\Controllers\Controller;
+use App\Services\User\ProfileUserService;
+use App\Traits\ApiResponses;
+use App\Traits\TransactionTrait;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class ProfileController extends Controller
 {
-    /**
-     * Mostrar perfil del usuario autenticado
-     */
-    public function show(Request $request)
-    {
-        $user = $request->user()->load(['solicitudes', 'adopciones', 'donaciones', 'suscripciones']);
+    use ApiResponses, TransactionTrait;
 
-        return response()->json([
-            'success' => true,
-            'data' => $user
-        ]);
+    protected ProfileUserService $profileService;
+
+    public function __construct(ProfileUserService $profileService)
+    {
+        $this->profileService = $profileService;
     }
 
-    /**
-     * Actualizar perfil
-     */
+    public function show(Request $request)
+    {
+        $profile = $this->profileService->getProfile($request->user());
+        return $this->successResponse($profile, 'Perfil obtenido exitosamente');
+    }
+
     public function update(Request $request)
     {
-        $user = $request->user();
-
         $validator = Validator::make($request->all(), [
             'nombre' => 'sometimes|string|max:255',
             'apellidos' => 'nullable|string|max:255',
@@ -39,31 +38,25 @@ class ProfileController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+            return $this->errorResponse('Error de validación', $validator->errors(), 422);
         }
 
-        $data = $request->only(['nombre', 'apellidos', 'telefono', 'direccion', 'fecha_nacimiento']);
+        try {
+            $user = $this->runInTransaction(
+                fn() => $this->profileService->updateProfile(
+                    $request->user(),
+                    $request->only(['nombre', 'apellidos', 'telefono', 'direccion', 'fecha_nacimiento']),
+                    $request->file('avatar')
+                ),
+                'Error al actualizar perfil'
+            );
 
-        if ($request->hasFile('avatar')) {
-            $path = $request->file('avatar')->store('avatars', 'public');
-            $data['avatar'] = $path;
+            return $this->successResponse($user, 'Perfil actualizado exitosamente');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al actualizar perfil', $e->getMessage(), 500);
         }
-
-        $user->update($data);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Perfil actualizado exitosamente',
-            'data' => $user
-        ]);
     }
 
-    /**
-     * Cambiar contraseña
-     */
     public function changePassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -72,62 +65,36 @@ class ProfileController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+            return $this->errorResponse('Error de validación', $validator->errors(), 422);
         }
 
-        $user = $request->user();
+        try {
+            $this->runInTransaction(
+                fn() => $this->profileService->changePassword(
+                    $request->user(),
+                    $request->current_password,
+                    $request->new_password
+                ),
+                'Error al cambiar contraseña'
+            );
 
-        if (!Hash::check($request->current_password, $user->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'La contraseña actual no es correcta'
-            ], 401);
+            return $this->successResponse(null, 'Contraseña actualizada exitosamente');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 401);
         }
-
-        $user->update([
-            'password' => Hash::make($request->new_password)
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Contraseña actualizada exitosamente'
-        ]);
     }
 
-    /**
-     * Eliminar cuenta
-     */
     public function destroy(Request $request)
     {
-        $user = $request->user();
+        try {
+            $this->runInTransaction(
+                fn() => $this->profileService->deleteAccount($request->user()),
+                'Error al eliminar cuenta'
+            );
 
-        // Verificar si tiene relaciones activas
-        if ($user->adopciones()->whereIn('estado', ['en_proceso', 'aprobada'])->exists()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No puedes eliminar tu cuenta mientras tengas adopciones en proceso'
-            ], 400);
+            return $this->successResponse(null, 'Cuenta eliminada exitosamente');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
         }
-
-        if ($user->solicitudes()->whereIn('estado', ['pendiente', 'en_revision'])->exists()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No puedes eliminar tu cuenta mientras tengas solicitudes pendientes'
-            ], 400);
-        }
-
-        // Revocar tokens
-        $user->tokens()->delete();
-
-        // Eliminar usuario (soft delete)
-        $user->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Cuenta eliminada exitosamente'
-        ]);
     }
 }

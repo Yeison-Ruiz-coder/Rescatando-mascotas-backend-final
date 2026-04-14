@@ -3,81 +3,49 @@
 namespace App\Http\Controllers\Api\V1\User;
 
 use App\Http\Controllers\Controller;
-use App\Models\Solicitud;
-use App\Models\Mascota;
+use App\Services\User\SolicitudUserService;
+use App\Traits\ApiResponses;
+use App\Traits\TransactionTrait;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Validation\ValidationException;
 
 class SolicitudController extends Controller
 {
-    /**
-     * Listar solicitudes del usuario autenticado
-     */
-    public function index(Request $request)
+    use ApiResponses, TransactionTrait;
+
+    protected SolicitudUserService $solicitudService;
+
+    public function __construct(SolicitudUserService $solicitudService)
+    {
+        $this->solicitudService = $solicitudService;
+    }
+
+    public function index()
     {
         try {
-            $user = auth()->user();
-
-            if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Usuario no autenticado'
-                ], 401);
-            }
-
-            $solicitudes = Solicitud::with(['solicitable'])
-                ->where('user_id', $user->id)
-                ->where('tipo_solicitud', 'adopcion')
-                ->orderBy('created_at', 'desc')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'data' => $solicitudes
-            ]);
-
+            $solicitudes = $this->solicitudService->getByUser(auth()->id());
+            return $this->successResponse($solicitudes, 'Solicitudes obtenidas exitosamente');
         } catch (\Exception $e) {
-            Log::error('Error al cargar solicitudes: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al cargar las solicitudes: ' . $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Error al cargar las solicitudes', $e->getMessage(), 500);
         }
     }
 
-    /**
-     * Ver detalle de una solicitud
-     */
     public function show($id)
     {
         try {
-            $solicitud = Solicitud::with(['solicitable'])
-                ->where('user_id', auth()->id())
-                ->findOrFail($id);
-
-            return response()->json([
-                'success' => true,
-                'data' => $solicitud
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Solicitud no encontrada'
-            ], 404);
+            $solicitud = $this->solicitudService->findById(auth()->id(), $id);
+            return $this->successResponse($solicitud, 'Solicitud obtenida exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Solicitud no encontrada');
         }
     }
 
-    /**
-     * Crear solicitud de adopción - CORREGIDO
-     */
     public function storeAdopcion(Request $request)
     {
         try {
-            // Validación
-            $validated = $request->validate([
+            $validator = Validator::make($request->all(), [
                 'mascota_id' => 'required|exists:mascotas,id',
                 'nombre' => 'required|string|max:255',
                 'apellido' => 'required|string|max:255',
@@ -100,82 +68,24 @@ class SolicitudController extends Controller
                 'compromiso_seguimiento' => 'required|boolean',
             ]);
 
-            // Verificar mascota
-            $mascota = Mascota::findOrFail($request->mascota_id);
-
-            if ($mascota->estado !== 'En adopcion') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Esta mascota ya no está disponible para adopción'
-                ], 400);
+            if ($validator->fails()) {
+                return $this->errorResponse('Error de validación', $validator->errors(), 422);
             }
 
-            DB::beginTransaction();
+            $solicitud = $this->runInTransaction(
+                fn() => $this->solicitudService->createSolicitudAdopcion(
+                    auth()->id(),
+                    $validator->validated()
+                ),
+                'Error al enviar la solicitud'
+            );
 
-            // Preparar datos adicionales como JSON
-            $datosAdicionales = [
-                'apellido_solicitante' => $request->apellido,
-                'documento_identidad' => $request->documento_identidad,
-                'direccion' => $request->direccion,
-                'ciudad' => $request->ciudad,
-                'departamento' => $request->departamento,
-                'codigo_postal' => $request->codigo_postal,
-                'estado_civil' => $request->estado_civil,
-                'cantidad_hijos' => $request->cantidad_hijos,
-                'ocupacion' => $request->ocupacion,
-                'experiencia_mascotas' => $request->experiencia_mascotas,
-                'tipo_vivienda' => $request->tipo_vivienda,
-                'es_propietario' => $request->es_propietario,
-                'compromiso_cuidado' => $request->compromiso_cuidado,
-                'compromiso_esterilizacion' => $request->compromiso_esterilizacion,
-                'compromiso_seguimiento' => $request->compromiso_seguimiento,
-            ];
+            return $this->successResponse($solicitud, 'Solicitud enviada exitosamente', 201);
 
-            // ✅ CREAR SOLICITUD CON LOS NOMBRES CORRECTOS DE COLUMNAS
-            $solicitud = Solicitud::create([
-                'tipo_solicitud' => 'adopcion',
-                'contenido' => $request->motivo_adopcion,
-                'estado' => 'pendiente',
-                'user_id' => auth()->id(),
-                'nombre_solicitante' => $request->nombre,        // ← IMPORTANTE: nombre_solicitante
-                'email_solicitante' => $request->email,          // ← IMPORTANTE: email_solicitante
-                'telefono_solicitante' => $request->telefono,    // ← IMPORTANTE: telefono_solicitante
-                'solicitable_type' => Mascota::class,            // ← IMPORTANTE: solicitable_type
-                'solicitable_id' => $mascota->id,                // ← IMPORTANTE: solicitable_id
-                'datos_adicionales' => $datosAdicionales,
-            ]);
-
-            DB::commit();
-
-            // Log para depuración
-            Log::info('Solicitud creada exitosamente', [
-                'id' => $solicitud->id,
-                'nombre_solicitante' => $solicitud->nombre_solicitante,
-                'email_solicitante' => $solicitud->email_solicitante,
-                'solicitable_type' => $solicitud->solicitable_type,
-                'solicitable_id' => $solicitud->solicitable_id,
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Solicitud enviada exitosamente',
-                'data' => $solicitud
-            ], 201);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $e->errors()
-            ], 422);
+        } catch (ValidationException $e) {
+            return $this->errorResponse('Error de validación', $e->errors(), 422);
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error al crear solicitud: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al enviar la solicitud: ' . $e->getMessage()
-            ], 500);
+            return $this->errorResponse($e->getMessage(), null, 400);
         }
     }
 }

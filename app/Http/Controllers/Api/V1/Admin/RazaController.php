@@ -3,69 +3,39 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Raza;
+use App\Http\Requests\Admin\RazaRequest;
+use App\Services\RazaService;
+use App\Traits\ApiResponses;
+use App\Traits\TransactionTrait;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class RazaController extends Controller
 {
+    use ApiResponses, TransactionTrait;
+
+    protected RazaService $razaService;
+
+    public function __construct(RazaService $razaService)
+    {
+        $this->razaService = $razaService;
+    }
+
     /**
      * Listado de razas
      */
     public function index(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'especie' => 'nullable|string|max:100',
-            'search' => 'nullable|string|max:100',
-            'per_page' => 'nullable|integer|min:1|max:100',
-        ]);
+        $filters = $request->only(['especie', 'search']);
+        $perPage = $request->get('per_page', 20);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $validator->errors()
-            ], 422);
-        }
+        $razas = $this->razaService->getAll($filters, $perPage);
+        $estadisticas = $this->razaService->getEstadisticas();
 
-        try {
-            $query = Raza::query();
-
-            if ($request->filled('especie')) {
-                $query->where('especie', $request->especie);
-            }
-
-            if ($request->filled('search')) {
-                $query->where('nombre_raza', 'like', "%{$request->search}%");
-            }
-
-            $perPage = $request->get('per_page', 20);
-            $razas = $query->orderBy('especie')->orderBy('nombre_raza')->paginate($perPage);
-
-            // Estadísticas por especie
-            $stats = [
-                'total' => Raza::count(),
-                'perros' => Raza::where('especie', 'Perro')->count(),
-                'gatos' => Raza::where('especie', 'Gato')->count(),
-                'otros' => Raza::whereNotIn('especie', ['Perro', 'Gato'])->orWhereNull('especie')->count(),
-            ];
-
-            return response()->json([
-                'success' => true,
-                'data' => $razas,
-                'estadisticas' => $stats,
-                'message' => 'Razas obtenidas exitosamente'
-            ], 200);
-        } catch (\Exception $e) {
-            Log::error('Error al obtener razas: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al obtener las razas',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return $this->successResponse([
+            'data' => $razas,
+            'estadisticas' => $estadisticas
+        ], 'Razas obtenidas exitosamente');
     }
 
     /**
@@ -74,127 +44,51 @@ class RazaController extends Controller
     public function show($id)
     {
         try {
-            $raza = Raza::with('mascotas')->findOrFail($id);
+            $raza = $this->razaService->findById($id);
+            $estadisticas = $this->razaService->getMascotasEstadisticas($raza);
 
-            // Estadísticas de mascotas por raza
-            $totalMascotas = $raza->mascotas->count();
-            $mascotasAdoptadas = $raza->mascotas->where('estado', 'Adoptado')->count();
-            $mascotasDisponibles = $raza->mascotas->where('estado', 'En adopcion')->count();
-            $mascotasRescatadas = $raza->mascotas->where('estado', 'Rescatada')->count();
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'raza' => $raza,
-                    'estadisticas' => [
-                        'total_mascotas' => $totalMascotas,
-                        'adoptadas' => $mascotasAdoptadas,
-                        'disponibles' => $mascotasDisponibles,
-                        'rescatadas' => $mascotasRescatadas,
-                    ],
-                ],
-                'message' => 'Raza obtenida exitosamente'
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Raza no encontrada'
-            ], 404);
+            return $this->successResponse([
+                'raza' => $raza,
+                'estadisticas' => $estadisticas
+            ], 'Raza obtenida exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Raza no encontrada');
         }
     }
 
     /**
      * Crear nueva raza
      */
-    public function store(Request $request)
+    public function store(RazaRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'nombre_raza' => 'required|string|max:255|unique:razas',
-            'especie' => 'nullable|string|max:100',
-            'descripcion' => 'nullable|string',
-            'tamanio' => 'nullable|in:pequeño,mediano,grande',
-            'esperanza_vida' => 'nullable|integer|min:1|max:30',
-            'pelaje' => 'nullable|string|max:100',
-            'origen' => 'nullable|string|max:255',
-            'cuidados_especiales' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
         try {
-            $raza = Raza::create($request->all());
+            $raza = $this->runInTransaction(
+                fn() => $this->razaService->create($request->validated()),
+                'Error al crear raza'
+            );
 
-            return response()->json([
-                'success' => true,
-                'data' => $raza,
-                'message' => 'Raza creada exitosamente'
-            ], 201);
+            return $this->successResponse($raza, 'Raza creada exitosamente', 201);
         } catch (\Exception $e) {
-            Log::error('Error al crear raza: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al crear la raza',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Error al crear la raza', $e->getMessage(), 500);
         }
     }
 
     /**
      * Actualizar raza
      */
-    public function update(Request $request, $id)
+    public function update(RazaRequest $request, $id)
     {
         try {
-            $raza = Raza::findOrFail($id);
+            $raza = $this->runInTransaction(
+                fn() => $this->razaService->update($id, $request->validated()),
+                'Error al actualizar raza'
+            );
+
+            return $this->successResponse($raza, 'Raza actualizada exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Raza no encontrada');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Raza no encontrada'
-            ], 404);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'nombre_raza' => 'sometimes|required|string|max:255|unique:razas,nombre_raza,' . $id,
-            'especie' => 'nullable|string|max:100',
-            'descripcion' => 'nullable|string',
-            'tamanio' => 'nullable|in:pequeño,mediano,grande',
-            'esperanza_vida' => 'nullable|integer|min:1|max:30',
-            'pelaje' => 'nullable|string|max:100',
-            'origen' => 'nullable|string|max:255',
-            'cuidados_especiales' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $raza->update($request->all());
-
-            return response()->json([
-                'success' => true,
-                'data' => $raza,
-                'message' => 'Raza actualizada exitosamente'
-            ], 200);
-        } catch (\Exception $e) {
-            Log::error('Error al actualizar raza: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al actualizar la raza',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Error al actualizar la raza', $e->getMessage(), 500);
         }
     }
 
@@ -204,37 +98,16 @@ class RazaController extends Controller
     public function destroy($id)
     {
         try {
-            $raza = Raza::findOrFail($id);
+            $this->runInTransaction(
+                fn() => $this->razaService->delete($id),
+                'Error al eliminar raza'
+            );
+
+            return $this->successResponse(null, 'Raza eliminada exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Raza no encontrada');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Raza no encontrada'
-            ], 404);
-        }
-
-        try {
-            // Verificar si tiene mascotas asociadas
-            if ($raza->mascotas()->exists()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No se puede eliminar la raza porque tiene mascotas asociadas'
-                ], 422);
-            }
-
-            $raza->delete();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Raza eliminada exitosamente'
-            ], 200);
-        } catch (\Exception $e) {
-            Log::error('Error al eliminar raza: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al eliminar la raza',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse($e->getMessage(), null, 422);
         }
     }
 
@@ -244,23 +117,10 @@ class RazaController extends Controller
     public function porEspecie($especie)
     {
         try {
-            $razas = Raza::where('especie', $especie)
-                ->orderBy('nombre_raza')
-                ->get(['id', 'nombre_raza']);
-
-            return response()->json([
-                'success' => true,
-                'data' => $razas,
-                'message' => 'Razas obtenidas exitosamente'
-            ], 200);
+            $razas = $this->razaService->getPorEspecie($especie);
+            return $this->successResponse($razas, 'Razas obtenidas exitosamente');
         } catch (\Exception $e) {
-            Log::error('Error al obtener razas por especie: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al obtener razas',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Error al obtener razas', $e->getMessage(), 500);
         }
     }
 
@@ -270,25 +130,10 @@ class RazaController extends Controller
     public function especies()
     {
         try {
-            $especies = Raza::whereNotNull('especie')
-                ->distinct('especie')
-                ->pluck('especie')
-                ->filter()
-                ->values();
-
-            return response()->json([
-                'success' => true,
-                'data' => $especies,
-                'message' => 'Especies obtenidas exitosamente'
-            ], 200);
+            $especies = $this->razaService->getEspecies();
+            return $this->successResponse($especies, 'Especies obtenidas exitosamente');
         } catch (\Exception $e) {
-            Log::error('Error al obtener especies: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al obtener especies',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Error al obtener especies', $e->getMessage(), 500);
         }
     }
 }

@@ -191,8 +191,8 @@ class Solicitud extends Model
         }
 
         return $this->getDatoAdopcion('compromiso_cuidado') &&
-               $this->getDatoAdopcion('compromiso_esterilizacion') &&
-               $this->getDatoAdopcion('compromiso_seguimiento');
+            $this->getDatoAdopcion('compromiso_esterilizacion') &&
+            $this->getDatoAdopcion('compromiso_seguimiento');
     }
 
     /**
@@ -270,8 +270,10 @@ class Solicitud extends Model
         parent::boot();
 
         static::creating(function ($solicitud) {
-            if ($solicitud->tipo_solicitud === self::TIPO_ADOPCION &&
-                $solicitud->solicitable_type === Mascota::class) {
+            if (
+                $solicitud->tipo_solicitud === self::TIPO_ADOPCION &&
+                $solicitud->solicitable_type === Mascota::class
+            ) {
 
                 $mascota = Mascota::find($solicitud->solicitable_id);
                 if ($mascota && $mascota->estado !== 'En adopcion') {
@@ -279,5 +281,14 @@ class Solicitud extends Model
                 }
             }
         });
+    }
+
+    // Agregar relación con mascota (helper)
+    public function mascota()
+    {
+        if ($this->solicitable_type === Mascota::class) {
+            return $this->belongsTo(Mascota::class, 'solicitable_id');
+        }
+        return null;
     }
 }

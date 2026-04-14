@@ -3,68 +3,45 @@
 namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\Evento;
+use App\Services\Public\EventoPublicService;
+use App\Traits\ApiResponses;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class EventoController extends Controller
 {
-    /**
-     * Listado de eventos
-     */
+    use ApiResponses;
+
+    protected EventoPublicService $eventoService;
+
+    public function __construct(EventoPublicService $eventoService)
+    {
+        $this->eventoService = $eventoService;
+    }
+
     public function index(Request $request)
     {
-        $query = Evento::where('fecha_evento', '>=', now());
+        $filters = $request->only(['mes', 'anio']);
+        $perPage = $request->get('per_page', 15);
 
-        if ($request->has('mes')) {
-            $query->whereMonth('fecha_evento', $request->mes);
-        }
+        $eventos = $this->eventoService->getAll($filters, $perPage);
 
-        if ($request->has('anio')) {
-            $query->whereYear('fecha_evento', $request->anio);
-        }
-
-        $eventos = $query->orderBy('fecha_evento', 'asc')->paginate(15);
-
-        return response()->json([
-            'success' => true,
-            'data' => $eventos
-        ]);
+        return $this->successResponse($eventos, 'Eventos obtenidos exitosamente');
     }
 
-    /**
-     * Detalle de evento
-     */
     public function show($id)
     {
-        $evento = Evento::with('creadoPor')->findOrFail($id);
-
-        return response()->json([
-            'success' => true,
-            'data' => $evento
-        ]);
+        try {
+            $evento = $this->eventoService->findById($id);
+            return $this->successResponse($evento, 'Evento obtenido exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Evento no encontrado');
+        }
     }
 
-    /**
-     * Datos para calendario
-     */
     public function calendario()
     {
-        $eventos = Evento::where('fecha_evento', '>=', now())
-            ->orderBy('fecha_evento', 'asc')
-            ->get()
-            ->map(function ($evento) {
-                return [
-                    'id' => $evento->id,
-                    'title' => $evento->nombre_evento,
-                    'start' => $evento->fecha_evento,
-                    'description' => $evento->descripcion,
-                    'location' => $evento->lugar_evento,
-                ];
-            });
-
-        return response()->json([
-            'success' => true,
-            'data' => $eventos
-        ]);
+        $eventos = $this->eventoService->getCalendario();
+        return $this->successResponse($eventos, 'Datos de calendario obtenidos exitosamente');
     }
 }

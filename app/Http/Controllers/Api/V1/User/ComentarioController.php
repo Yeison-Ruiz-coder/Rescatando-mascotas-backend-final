@@ -3,77 +3,69 @@
 namespace App\Http\Controllers\Api\V1\User;
 
 use App\Http\Controllers\Controller;
-use App\Models\Comentario;
+use App\Services\User\ComentarioUserService;
+use App\Traits\ApiResponses;
+use App\Traits\TransactionTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class ComentarioController extends Controller
 {
-    /**
-     * Listado de comentarios del usuario
-     */
-    public function index(Request $request)
+    use ApiResponses, TransactionTrait;
+
+    protected ComentarioUserService $comentarioService;
+
+    public function __construct(ComentarioUserService $comentarioService)
     {
-        $user = $request->user();
-
-        $comentarios = Comentario::with('comentable')
-            ->where('user_id', $user->id)
-            ->latest()
-            ->paginate(15);
-
-        return response()->json([
-            'success' => true,
-            'data' => $comentarios
-        ]);
+        $this->comentarioService = $comentarioService;
     }
 
-    /**
-     * Actualizar comentario propio
-     */
+    public function index(Request $request)
+    {
+        $perPage = $request->get('per_page', 15);
+        $comentarios = $this->comentarioService->getByUser($request->user()->id, $perPage);
+
+        return $this->successResponse($comentarios, 'Comentarios obtenidos exitosamente');
+    }
+
     public function update(Request $request, $id)
     {
-        $user = $request->user();
-
-        $comentario = Comentario::where('user_id', $user->id)
-            ->findOrFail($id);
-
         $validator = Validator::make($request->all(), [
             'contenido' => 'required|string|min:3|max:1000',
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+            return $this->errorResponse('Error de validación', $validator->errors(), 422);
         }
 
-        $comentario->update([
-            'contenido' => $request->contenido
-        ]);
+        try {
+            $comentario = $this->runInTransaction(
+                fn() => $this->comentarioService->updateComentario(
+                    $request->user()->id,
+                    $id,
+                    ['contenido' => $request->contenido]
+                ),
+                'Error al actualizar comentario'
+            );
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Comentario actualizado',
-            'data' => $comentario
-        ]);
+            return $this->successResponse($comentario, 'Comentario actualizado');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Comentario no encontrado');
+        }
     }
 
-    /**
-     * Eliminar comentario propio
-     */
     public function destroy($id)
     {
-        $user = request()->user();
+        try {
+            $this->runInTransaction(
+                fn() => $this->comentarioService->deleteComentario(request()->user()->id, $id),
+                'Error al eliminar comentario'
+            );
 
-        $comentario = Comentario::where('user_id', $user->id)
-            ->findOrFail($id);
-
-        $comentario->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Comentario eliminado'
-        ]);
+            return $this->successResponse(null, 'Comentario eliminado');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Comentario no encontrado');
+        }
     }
 }

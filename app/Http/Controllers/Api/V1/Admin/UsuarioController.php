@@ -3,230 +3,133 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Http\Requests\Admin\UsuarioRequest;
+use App\Http\Requests\Admin\CambiarEstadoUsuarioRequest;
+use App\Services\UsuarioService;
+use App\Traits\ApiResponses;
+use App\Traits\TransactionTrait;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class UsuarioController extends Controller
 {
-    /**
-     * Listado de usuarios con filtros
-     */
+    use ApiResponses, TransactionTrait;
+
+    protected UsuarioService $usuarioService;
+
+    public function __construct(UsuarioService $usuarioService)
+    {
+        $this->usuarioService = $usuarioService;
+    }
+
     public function index(Request $request)
     {
-        $query = User::query();
+        $filters = $request->only(['tipo', 'estado', 'buscar']);
+        $perPage = $request->get('per_page', 15);
 
-        // Filtros
-        if ($request->has('tipo')) {
-            $query->where('tipo', $request->tipo);
-        }
+        $usuarios = $this->usuarioService->getAll($filters, $perPage);
 
-        if ($request->has('estado')) {
-            $query->where('estado', $request->estado);
-        }
-
-        if ($request->has('buscar')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('nombre', 'like', '%' . $request->buscar . '%')
-                    ->orWhere('apellidos', 'like', '%' . $request->buscar . '%')
-                    ->orWhere('email', 'like', '%' . $request->buscar . '%');
-            });
-        }
-
-        $usuarios = $query->latest()->paginate($request->get('per_page', 15));
-
-        return response()->json([
-            'success' => true,
-            'data' => $usuarios
-        ]);
+        return $this->successResponse($usuarios, 'Usuarios obtenidos exitosamente');
     }
 
-    /**
-     * Crear usuario
-     */
-    public function store(Request $request)
+    public function store(UsuarioRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'nombre' => 'required|string|max:255',
-            'apellidos' => 'nullable|string|max:255',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|string|min:8',
-            'tipo' => 'required|in:admin,user,veterinaria,fundacion',
-            'estado' => 'required|in:activo,inactivo,suspendido,pendiente',
-            'telefono' => 'nullable|string|max:20',
-            'direccion' => 'nullable|string',
-            'avatar' => 'nullable|image|max:2048',
-        ]);
+        try {
+            $usuario = $this->runInTransaction(
+                fn() => $this->usuarioService->create(
+                    $request->validated(),
+                    $request->file('avatar')
+                ),
+                'Error al crear usuario'
+            );
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+            return $this->successResponse($usuario, 'Usuario creado exitosamente', 201);
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al crear el usuario', $e->getMessage(), 500);
         }
-
-        $data = $request->except('avatar');
-        $data['password'] = Hash::make($request->password);
-        $data['created_by'] = auth()->id();
-
-        if ($request->hasFile('avatar')) {
-            $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
-        }
-
-        $user = User::create($data);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Usuario creado exitosamente',
-            'data' => $user
-        ], 201);
     }
 
-    /**
-     * Mostrar usuario
-     */
     public function show($id)
     {
-        $user = User::with(['solicitudes', 'adopciones', 'donaciones', 'suscripciones'])
-            ->findOrFail($id);
-
-        return response()->json([
-            'success' => true,
-            'data' => $user
-        ]);
+        try {
+            $usuario = $this->usuarioService->findById($id);
+            return $this->successResponse($usuario, 'Usuario obtenido exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Usuario no encontrado');
+        }
     }
 
-    /**
-     * Actualizar usuario
-     */
-    public function update(Request $request, $id)
+    public function update(UsuarioRequest $request, $id)
     {
-        $user = User::findOrFail($id);
+        try {
+            $usuario = $this->runInTransaction(
+                fn() => $this->usuarioService->update(
+                    $id,
+                    $request->validated(),
+                    $request->file('avatar')
+                ),
+                'Error al actualizar usuario'
+            );
 
-        $validator = Validator::make($request->all(), [
-            'nombre' => 'sometimes|string|max:255',
-            'apellidos' => 'nullable|string|max:255',
-            'email' => 'sometimes|email|unique:users,email,' . $id,
-            'tipo' => 'sometimes|in:admin,user,veterinaria,fundacion',
-            'estado' => 'sometimes|in:activo,inactivo,suspendido,pendiente',
-            'telefono' => 'nullable|string|max:20',
-            'direccion' => 'nullable|string',
-            'avatar' => 'nullable|image|max:2048',
-            'password' => 'nullable|string|min:8',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+            return $this->successResponse($usuario, 'Usuario actualizado exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Usuario no encontrado');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al actualizar el usuario', $e->getMessage(), 500);
         }
-
-        $data = $request->except(['avatar', 'password']);
-        $data['updated_by'] = auth()->id();
-
-        if ($request->has('password')) {
-            $data['password'] = Hash::make($request->password);
-        }
-
-        if ($request->hasFile('avatar')) {
-            if ($user->avatar) {
-                Storage::disk('public')->delete($user->avatar);
-            }
-            $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
-        }
-
-        $user->update($data);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Usuario actualizado',
-            'data' => $user
-        ]);
     }
 
-    /**
-     * Eliminar usuario
-     */
     public function destroy($id)
     {
-        $user = User::findOrFail($id);
+        try {
+            $this->runInTransaction(
+                fn() => $this->usuarioService->delete($id),
+                'Error al eliminar usuario'
+            );
 
-        // Verificar relaciones
-        if ($user->adopciones()->exists() ||
-            $user->solicitudes()->exists() ||
-            $user->donaciones()->exists()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No se puede eliminar: tiene registros asociados'
-            ], 400);
+            return $this->successResponse(null, 'Usuario eliminado exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Usuario no encontrado');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 422);
         }
-
-        if ($user->avatar) {
-            Storage::disk('public')->delete($user->avatar);
-        }
-
-        $user->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Usuario eliminado'
-        ]);
     }
 
-    /**
-     * Cambiar estado de usuario
-     */
-    public function cambiarEstado(Request $request, $id)
+    public function cambiarEstado(CambiarEstadoUsuarioRequest $request, $id)
     {
-        $request->validate([
-            'estado' => 'required|in:activo,inactivo,suspendido,pendiente'
-        ]);
+        try {
+            $usuario = $this->runInTransaction(
+                fn() => $this->usuarioService->cambiarEstado($id, $request->estado),
+                'Error al cambiar estado'
+            );
 
-        $user = User::findOrFail($id);
-        $user->update([
-            'estado' => $request->estado,
-            'updated_by' => auth()->id()
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Estado actualizado',
-            'data' => $user
-        ]);
+            return $this->successResponse($usuario, 'Estado actualizado exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Usuario no encontrado');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al cambiar el estado', $e->getMessage(), 500);
+        }
     }
 
-
-    /**
-     * Usuario Pendiente
-     */
     public function pendientesCount()
     {
-        $count = User::where('estado', 'pendiente')
-            ->whereIn('tipo', ['fundacion', 'veterinaria'])
-            ->count();
-
-        return response()->json([
-            'success' => true,
-            'count' => $count
-        ]);
+        $count = $this->usuarioService->getPendientesCount();
+        return $this->successResponse(['count' => $count], 'Conteo obtenido exitosamente');
     }
-    /**
-     * Verificar email
-     */
+
     public function verificarEmail($id)
     {
-        $user = User::findOrFail($id);
-        $user->update([
-            'email_verified_at' => now(),
-            'updated_by' => auth()->id()
-        ]);
+        try {
+            $usuario = $this->runInTransaction(
+                fn() => $this->usuarioService->verificarEmail($id),
+                'Error al verificar email'
+            );
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Email verificado'
-        ]);
+            return $this->successResponse($usuario, 'Email verificado exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Usuario no encontrado');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al verificar el email', $e->getMessage(), 500);
+        }
     }
 }

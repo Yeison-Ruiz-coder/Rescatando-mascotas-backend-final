@@ -12,11 +12,11 @@ trait HasScopes
      */
     public function scopeIncluded(Builder $query)
     {
-        if (empty($this->allowIncluded) || empty(request('included'))) {
+        if (empty($this->allowIncluded) || empty(request('include'))) {  // ← Cambiado
             return;
         }
 
-        $relations = explode(',', request('included'));
+        $relations = explode(',', request('include'));  // ← Cambiado
         $allowIncluded = collect($this->allowIncluded);
 
         foreach ($relations as $key => $relationship) {
@@ -27,7 +27,6 @@ trait HasScopes
 
         $query->with($relations);
     }
-
     /**
      * Scope para filtrar por campos
      */

@@ -3,72 +3,53 @@
 namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\Mascota;
-use App\Models\Solicitud;
+use App\Services\Public\AdopcionPublicService;
+use App\Traits\ApiResponses;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class AdopcionController extends Controller
 {
-    /**
-     * Listado de mascotas disponibles para adopción
-     */
+    use ApiResponses;
+
+    protected AdopcionPublicService $adopcionService;
+
+    public function __construct(AdopcionPublicService $adopcionService)
+    {
+        $this->adopcionService = $adopcionService;
+    }
+
     public function index(Request $request)
     {
-        $mascotas = Mascota::with('fundacion')
-            ->where('estado', 'En adopcion')
-            ->paginate(15);
+        $perPage = $request->get('per_page', 15);
+        $mascotas = $this->adopcionService->getMascotasDisponibles($perPage);
 
-        return response()->json([
-            'success' => true,
-            'data' => $mascotas
-        ]);
+        return $this->successResponse($mascotas, 'Mascotas disponibles obtenidas exitosamente');
     }
 
-    /**
-     * Mascotas disponibles (alias de index)
-     */
-    public function disponibles()
+    public function disponibles(Request $request)
     {
-        return $this->index(request());
+        return $this->index($request);
     }
 
-    /**
-     * Detalle de mascota para adopción
-     */
     public function show($id)
     {
-        $mascota = Mascota::with(['fundacion', 'razas'])
-            ->where('estado', 'En adopcion')
-            ->findOrFail($id);
-
-        return response()->json([
-            'success' => true,
-            'data' => $mascota
-        ]);
+        try {
+            $mascota = $this->adopcionService->findMascotaDisponible($id);
+            return $this->successResponse($mascota, 'Mascota obtenida exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Mascota no encontrada');
+        }
     }
 
-    /**
-     * Verificar disponibilidad de mascota
-     */
     public function verificarDisponibilidad($id)
     {
-        $mascota = Mascota::find($id);
+        $resultado = $this->adopcionService->verificarDisponibilidad($id);
 
-        if (!$mascota) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Mascota no encontrada'
-            ], 404);
+        if (!$resultado['success']) {
+            return $this->notFoundResponse($resultado['message']);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'disponible' => $mascota->estado === 'En adopcion',
-                'estado' => $mascota->estado,
-                'nombre' => $mascota->nombre_mascota
-            ]
-        ]);
+        return $this->successResponse($resultado['data'], 'Disponibilidad verificada');
     }
 }

@@ -22,7 +22,6 @@ class User extends Authenticatable
         'suscripciones',
         'comentarios',
         'notificaciones',
-        'tienda', // NUEVA
         'fundacion', // NUEVA
         'veterinaria' // NUEVA
     ];

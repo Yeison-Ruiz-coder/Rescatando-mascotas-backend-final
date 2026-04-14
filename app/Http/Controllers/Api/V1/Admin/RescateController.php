@@ -3,106 +3,72 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Rescate;
-use App\Models\Fundacion;
-use App\Models\Veterinaria;
+use App\Http\Requests\Admin\RescateRequest;
+use App\Http\Requests\Admin\AsignarRescateRequest;
+use App\Services\RescateService;
+use App\Traits\ApiResponses;
+use App\Traits\TransactionTrait;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class RescateController extends Controller
 {
-    /**
-     * Listar todos los rescates
-     */
+    use ApiResponses, TransactionTrait;
+
+    protected RescateService $rescateService;
+
+    public function __construct(RescateService $rescateService)
+    {
+        $this->rescateService = $rescateService;
+    }
+
     public function index(Request $request)
     {
-        $rescates = Rescate::with(['usuarioReporto', 'entidadResponsable', 'mascota'])
-            ->when($request->estado, function($query, $estado) {
-                return $query->where('estado', $estado);
-            })
-            ->when($request->tipo_emergencia, function($query, $tipo) {
-                return $query->where('tipo_emergencia', $tipo);
-            })
-            ->orderByRaw("FIELD(prioridad, 'alta', 'media', 'baja')")
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        $filters = $request->only(['estado', 'tipo_emergencia', 'prioridad']);
+        $perPage = $request->get('per_page', 20);
 
-        return response()->json([
-            'success' => true,
-            'data' => $rescates
-        ]);
+        $rescates = $this->rescateService->getAll($filters, $perPage);
+
+        return $this->successResponse($rescates, 'Rescates obtenidos exitosamente');
     }
 
-    /**
-     * Ver detalle de un rescate
-     */
     public function show($id)
     {
-        $rescate = Rescate::with(['usuarioReporto', 'entidadResponsable', 'mascota'])
-            ->findOrFail($id);
-
-        return response()->json([
-            'success' => true,
-            'data' => $rescate
-        ]);
-    }
-
-    /**
-     * Asignar rescate manualmente
-     */
-    public function asignar(Request $request, $id)
-    {
-        $validated = $request->validate([
-            'entidad_tipo' => 'required|in:fundacion,veterinaria',
-            'entidad_id' => 'required|integer',
-        ]);
-
-        $rescate = Rescate::findOrFail($id);
-
-        $entidad = null;
-        if ($validated['entidad_tipo'] === 'fundacion') {
-            $entidad = Fundacion::findOrFail($validated['entidad_id']);
-            $rescate->entidad_responsable_type = Fundacion::class;
-        } else {
-            $entidad = Veterinaria::findOrFail($validated['entidad_id']);
-            $rescate->entidad_responsable_type = Veterinaria::class;
+        try {
+            $rescate = $this->rescateService->findById($id);
+            return $this->successResponse($rescate, 'Rescate obtenido exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Rescate no encontrado');
         }
-
-        $rescate->entidad_responsable_id = $entidad->id;
-        $rescate->estado = 'en_proceso';
-        $rescate->save();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Rescate asignado exitosamente',
-            'data' => $rescate
-        ]);
     }
 
-    /**
-     * Estadísticas de rescates
-     */
+    public function asignar(AsignarRescateRequest $request, $id)
+    {
+        try {
+            $rescate = $this->runInTransaction(
+                fn() => $this->rescateService->asignar(
+                    $id,
+                    $request->entidad_tipo,
+                    $request->entidad_id
+                ),
+                'Error al asignar rescate'
+            );
+
+            return $this->successResponse($rescate, 'Rescate asignado exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Rescate o entidad no encontrada');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al asignar rescate', $e->getMessage(), 500);
+        }
+    }
+
     public function estadisticas()
     {
-        $stats = [
-            'pendientes' => Rescate::where('estado', 'pendiente')->count(),
-            'en_proceso' => Rescate::where('estado', 'en_proceso')->count(),
-            'completados' => Rescate::where('estado', 'completado')->count(),
-            'por_tipo' => [
-                'herido' => Rescate::where('tipo_emergencia', 'herido')->count(),
-                'abandonado' => Rescate::where('tipo_emergencia', 'abandonado')->count(),
-                'urgente' => Rescate::where('tipo_emergencia', 'urgente')->count(),
-                'otro' => Rescate::where('tipo_emergencia', 'otro')->count(),
-            ],
-            'por_prioridad' => [
-                'alta' => Rescate::where('prioridad', 'alta')->count(),
-                'media' => Rescate::where('prioridad', 'media')->count(),
-                'baja' => Rescate::where('prioridad', 'baja')->count(),
-            ]
-        ];
-
-        return response()->json([
-            'success' => true,
-            'data' => $stats
-        ]);
+        try {
+            $estadisticas = $this->rescateService->getEstadisticas();
+            return $this->successResponse($estadisticas, 'Estadísticas obtenidas exitosamente');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al obtener estadísticas', $e->getMessage(), 500);
+        }
     }
 }

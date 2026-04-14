@@ -14,7 +14,7 @@ return new class extends Migration
             // Información básica
             $table->string('nombre_mascota');
             $table->string('especie')->nullable(); // Perro, Gato, Conejo, Ave, Otro
-            $table->decimal('edad_aprox', 4, 1)->nullable(); // Permite 1.5 años, 2.3 años, etc.
+            $table->decimal('edad_aprox', 5, 2)->nullable(); // Permite 1.5 años, 2.3 años, etc.
             $table->enum('genero', ['Macho', 'Hembra', 'Desconocido'])->nullable();
             $table->enum('estado', ['Adoptado', 'En adopcion', 'Rescatada', 'En acogida'])->default('En adopcion');
 

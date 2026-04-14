@@ -3,52 +3,39 @@
 namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\Fundacion;
+use App\Services\Public\FundacionPublicService;
+use App\Traits\ApiResponses;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class FundacionController extends Controller
 {
-    /**
-     * Listado de fundaciones
-     */
-    public function index(Request $request)
+    use ApiResponses;
+
+    protected FundacionPublicService $fundacionService;
+
+    public function __construct(FundacionPublicService $fundacionService)
     {
-        $query = Fundacion::withCount('mascotas');
-
-        if ($request->has('recibe_voluntarios')) {
-            $query->where('recibe_voluntarios', true);
-        }
-
-        if ($request->has('buscar')) {
-            $query->where('Nombre_1', 'like', '%' . $request->buscar . '%');
-        }
-
-        $fundaciones = $query->paginate(15);
-
-        return response()->json([
-            'success' => true,
-            'data' => $fundaciones
-        ]);
+        $this->fundacionService = $fundacionService;
     }
 
-    /**
-     * Detalle de fundación
-     */
+    public function index(Request $request)
+    {
+        $filters = $request->only(['recibe_voluntarios', 'buscar']);
+        $perPage = $request->get('per_page', 15);
+
+        $fundaciones = $this->fundacionService->getAll($filters, $perPage);
+
+        return $this->successResponse($fundaciones, 'Fundaciones obtenidas exitosamente');
+    }
+
     public function show($id)
     {
-        $fundacion = Fundacion::with('mascotas')
-            ->withCount('mascotas')
-            ->findOrFail($id);
-
-        $necesidades = json_decode($fundacion->necesidades_actuales, true) ?? [];
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'fundacion' => $fundacion,
-                'necesidades' => $necesidades,
-                'mascotas' => $fundacion->mascotas()->where('estado', 'En adopcion')->get()
-            ]
-        ]);
+        try {
+            $data = $this->fundacionService->findById($id);
+            return $this->successResponse($data, 'Fundación obtenida exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Fundación no encontrada');
+        }
     }
 }

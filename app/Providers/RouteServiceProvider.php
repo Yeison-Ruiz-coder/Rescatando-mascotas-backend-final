@@ -10,16 +10,20 @@ use Illuminate\Support\Facades\Route;
 
 class RouteServiceProvider extends ServiceProvider
 {
+    // Solo mantener HOME si usas redirección web
     public const HOME = '/';
-    public const ADMIN_DASHBOARD = '/admin/dashboard';
-    public const FUNDACION_DASHBOARD = '/admin/dashboard';
-    public const VETERINARIA_DASHBOARD = '/admin/dashboard';
+
+    // Estas no se usan en API, pueden ser null
+    public const ADMIN_DASHBOARD = null;
+    public const FUNDACION_DASHBOARD = null;
+    public const VETERINARIA_DASHBOARD = null;
 
     public function boot(): void
     {
         $this->configureRateLimiting();
 
         $this->routes(function () {
+            // Si NO usas web, puedes comentar esta línea
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
 
