@@ -1,5 +1,4 @@
-@'
-{
+﻿{
   "build": {
     "builder": "NIXPACKS",
     "nixpacksConfig": {
@@ -13,4 +12,3 @@
     "healthcheckTimeout": 100
   }
 }
-'@ | Out-File -FilePath railway.json -Encoding utf8
