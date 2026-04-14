@@ -1,1 +1,0 @@
-<?php /**PATH C:\xampp\htdocs\Rescatando-mascotas-backend-final\resources\views\components\modules\mascotas\gallery.blade.php ENDPATH**/ ?>

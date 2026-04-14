@@ -1,2 +1,0 @@
-
-<?php echo $__env->make('public.layouts.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\xampp\htdocs\Rescatando-mascotas-backend-final\resources\views\public\tiendas\edit.blade.php ENDPATH**/ ?>
