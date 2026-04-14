@@ -17,15 +17,19 @@ class Evento extends Model
         'descripcion',
         'fecha_evento',
         'imagen_url',
-        'creado_por_id',
+        'fundacion_id',
+        'tipo',
+        'likes'
     ];
 
     protected $casts = [
-        'fecha_evento' => 'date',
+        'fecha_evento' => 'datetime',
+        'likes' => 'integer'
     ];
 
-    public function creadoPor()
+    // Relación con fundación
+    public function fundacion()
     {
-        return $this->belongsTo(User::class, 'creado_por_id');
+        return $this->belongsTo(Fundacion::class, 'fundacion_id');
     }
 }

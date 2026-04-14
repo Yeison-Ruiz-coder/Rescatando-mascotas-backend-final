@@ -1,6 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V1\Entity\EventoController as EntityEventoController;
+use App\Http\Controllers\Api\V1\Admin\EventoController as AdminEventoController;
+use App\Http\Controllers\Api\V1\Public\EventoController as PublicEventoController;
 
 // =========================================================================
 // API V1 - RUTAS PÚBLICAS (SIN AUTENTICACIÓN)
@@ -45,10 +48,15 @@ Route::apiResource('veterinarias', App\Http\Controllers\Api\V1\Public\Veterinari
     ->only(['index', 'show']);
 Route::get('/veterinarias/urgencias/mapa', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'mapa']);
 
-// Eventos - Público
-Route::apiResource('eventos', App\Http\Controllers\Api\V1\Public\EventoController::class)
-    ->only(['index', 'show']);
-Route::get('/eventos/calendario/data', [App\Http\Controllers\Api\V1\Public\EventoController::class, 'calendario']);
+// =========================================================================
+// RUTAS PÚBLICAS - EVENTOS (cualquier usuario puede ver)
+// =========================================================================
+Route::prefix('eventos')->name('eventos.')->group(function () {
+    Route::get('/', [PublicEventoController::class, 'index']);
+    Route::get('/{id}', [PublicEventoController::class, 'show']);
+    Route::get('/calendario/data', [PublicEventoController::class, 'calendario']);
+    Route::post('/{id}/like', [PublicEventoController::class, 'like']);
+});
 
 // =========================================================================
 // API V1 - RUTAS DE USUARIO (REQUIEREN AUTENTICACIÓN)
@@ -93,7 +101,6 @@ Route::middleware(['auth:sanctum'])->prefix('entity')->name('entity.')->group(fu
         Route::get('/{id}', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'show']);
         Route::put('/{id}', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'update']);
         Route::delete('/{id}', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'destroy']);
-
     });
 
     // Solicitudes de adopción para la entidad
@@ -103,6 +110,9 @@ Route::middleware(['auth:sanctum'])->prefix('entity')->name('entity.')->group(fu
         Route::put('/{id}/aprobar', [App\Http\Controllers\Api\V1\Entity\SolicitudController::class, 'aprobar']);
         Route::put('/{id}/rechazar', [App\Http\Controllers\Api\V1\Entity\SolicitudController::class, 'rechazar']);
     });
+
+    // ✅ EVENTOS PARA ENTIDADES (Fundación) - CRUD completo
+    Route::apiResource('eventos', EntityEventoController::class);
 });
 
 // =========================================================================
@@ -189,8 +199,8 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     Route::apiResource('veterinarias', App\Http\Controllers\Api\V1\Admin\VeterinariaController::class);
     Route::get('/veterinarias/cercanas', [App\Http\Controllers\Api\V1\Admin\VeterinariaController::class, 'cercanas']);
 
-    // Eventos
-    Route::apiResource('eventos', App\Http\Controllers\Api\V1\Admin\EventoController::class);
-    Route::get('/eventos/calendario/data', [App\Http\Controllers\Api\V1\Admin\EventoController::class, 'calendarData']);
-    Route::get('/eventos/proximos', [App\Http\Controllers\Api\V1\Admin\EventoController::class, 'proximos']);
+    // ✅ EVENTOS PARA ADMIN - CRUD completo
+    Route::apiResource('eventos', AdminEventoController::class);
+    Route::get('/eventos/calendario/data', [AdminEventoController::class, 'calendarData']);
+    Route::get('/eventos/proximos', [AdminEventoController::class, 'proximos']);
 });
