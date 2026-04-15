@@ -1,9 +1,14 @@
 FROM php:8.2-apache
 
-# Instalar extensiones de PHP
-RUN docker-php-ext-install pdo pdo_mysql mysqli
+# Instalar dependencias del sistema necesarias
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    libzip-dev \
+    && docker-php-ext-install zip pdo pdo_mysql mysqli \
+    && apt-get clean
 
-# Instalar Composer (gestor de dependencias de PHP)
+# Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Habilitar mod_rewrite
@@ -21,8 +26,8 @@ WORKDIR /var/www/html
 # Copiar todo el proyecto
 COPY . .
 
-# Instalar dependencias de Composer (IMPORTANTE)
-RUN composer install --no-interaction --no-progress --optimize-autoloader
+# Instalar dependencias de Composer
+RUN composer install --no-interaction --no-progress --optimize-autoloader --no-dev
 
 # Crear vista por defecto si no existe
 RUN if [ ! -f resources/views/welcome.blade.php ]; then \
