@@ -1,12 +1,15 @@
 FROM php:8.2-apache
 
-# Instalar extensiones de PHP (incluyendo MySQL)
+# Instalar extensiones de PHP
 RUN docker-php-ext-install pdo pdo_mysql mysqli
+
+# Instalar Composer (gestor de dependencias de PHP)
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Habilitar mod_rewrite
 RUN a2enmod rewrite
 
-# Crear todas las carpetas necesarias para Laravel
+# Crear carpetas necesarias
 RUN mkdir -p /var/www/html/resources/views
 RUN mkdir -p /var/www/html/storage/framework/cache
 RUN mkdir -p /var/www/html/storage/framework/sessions
@@ -18,9 +21,12 @@ WORKDIR /var/www/html
 # Copiar todo el proyecto
 COPY . .
 
+# Instalar dependencias de Composer (IMPORTANTE)
+RUN composer install --no-interaction --no-progress --optimize-autoloader
+
 # Crear vista por defecto si no existe
 RUN if [ ! -f resources/views/welcome.blade.php ]; then \
-    echo '<!DOCTYPE html><html><head><title>API</title></head><body><h1>API Funcionando</h1></body></html>' > resources/views/welcome.blade.php; \
+    echo '<!DOCTYPE html><html><body><h1>API Funcionando</h1></body></html>' > resources/views/welcome.blade.php; \
     fi
 
 # Dar permisos
