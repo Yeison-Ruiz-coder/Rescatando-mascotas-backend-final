@@ -215,4 +215,13 @@ class User extends Authenticatable
         return $query->where('estado', 'pendiente')
             ->whereIn('tipo', ['fundacion', 'veterinaria']);
     }
+    // app/Models/User.php
+
+// Relación con eventos donde el usuario confirma asistencia
+    public function eventosAsistencia()
+    {
+        return $this->belongsToMany(Evento::class, 'evento_asistentes', 'user_id', 'evento_id')
+                    ->withPivot('estado', 'created_at')
+                    ->withTimestamps();
+    }
 }

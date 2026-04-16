@@ -40,8 +40,15 @@ Route::prefix('rescates')->name('rescates.')->group(function () {
 });
 
 // Fundaciones - Público
-Route::apiResource('fundaciones', App\Http\Controllers\Api\V1\Public\FundacionController::class)
-    ->only(['index', 'show']);
+Route::prefix('fundaciones')->name('fundaciones.')->group(function () {
+    Route::get('/', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'index']);
+    Route::get('/estadisticas', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'estadisticas']);
+    Route::get('/verificadas', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'verificadas']);
+    Route::get('/reciben-voluntarios', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'recibenVoluntarios']);
+    Route::get('/ciudad/{ciudad}', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'porCiudad']);
+    Route::get('/search', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'search']);
+    Route::get('/{id}', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'show']);
+});
 
 // Veterinarias - Público
 Route::apiResource('veterinarias', App\Http\Controllers\Api\V1\Public\VeterinariaController::class)
@@ -52,10 +59,20 @@ Route::get('/veterinarias/urgencias/mapa', [App\Http\Controllers\Api\V1\Public\V
 // RUTAS PÚBLICAS - EVENTOS (cualquier usuario puede ver)
 // =========================================================================
 Route::prefix('eventos')->name('eventos.')->group(function () {
+    // Rutas públicas (sin autenticación)
     Route::get('/', [PublicEventoController::class, 'index']);
+    Route::get('/proximos', [PublicEventoController::class, 'proximos']);
+    Route::get('/tipo/{tipo}', [PublicEventoController::class, 'porTipo']);
     Route::get('/{id}', [PublicEventoController::class, 'show']);
     Route::get('/calendario/data', [PublicEventoController::class, 'calendario']);
     Route::post('/{id}/like', [PublicEventoController::class, 'like']);
+
+    // Rutas que requieren autenticación
+    Route::middleware(['auth:sanctum'])->group(function () {
+        Route::get('/mis-eventos', [PublicEventoController::class, 'misEventos']);
+        Route::post('/{id}/confirmar-asistencia', [PublicEventoController::class, 'confirmarAsistencia']);
+        Route::delete('/{id}/cancelar-asistencia', [PublicEventoController::class, 'cancelarAsistencia']);
+    });
 });
 
 // =========================================================================
