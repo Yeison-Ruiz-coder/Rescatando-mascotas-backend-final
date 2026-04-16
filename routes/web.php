@@ -15,11 +15,17 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return response()->json([
+        'message' => 'Rescatando Mascotas API',
+        'status' => 'running'
+    ]);
 });
 
 Route::get('/dashboard', function () {
-    return view('dashboard');
+    return response()->json([
+        'message' => 'Dashboard',
+        'status' => 'running'
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
