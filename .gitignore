@@ -19,8 +19,6 @@ yarn-error.log
 /.vscode
 
 
-echo "" >> .gitignore
-echo "# Logs" >> .gitignore
-echo "storage/logs/" >> .gitignore
-echo "*.log" >> .gitignore
-echo "laravel.log" >> .gitignore
+storage/logs/
+*.log
+laravel.log
