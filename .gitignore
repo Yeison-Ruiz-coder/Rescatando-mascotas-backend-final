@@ -17,3 +17,10 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+
+echo "" >> .gitignore
+echo "# Logs" >> .gitignore
+echo "storage/logs/" >> .gitignore
+echo "*.log" >> .gitignore
+echo "laravel.log" >> .gitignore
