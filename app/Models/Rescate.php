@@ -1,4 +1,5 @@
 <?php
+// app/Models/Rescate.php
 
 namespace App\Models;
 
@@ -16,27 +17,36 @@ class Rescate extends Model
         'lugar_rescate',
         'descripcion_rescate',
         'estado',
+        'tipo_emergencia',
+        'prioridad',
+        'lat',
+        'lng',
+        'nombre_reportante',
+        'email_reportante',
+        'telefono_reportante',
         'mascota_id',
         'reporte_id',
         'usuario_reporto_id',
-        'entidad_responsable_id',    // IMPORTANTE: debe coincidir con morph
-        'entidad_responsable_type',  // IMPORTANTE: debe coincidir con morph
+        'entidad_responsable_id',
+        'entidad_responsable_type',
         'gestionado_por',
     ];
 
     protected $casts = [
         'fecha_rescate' => 'date',
+        'lat' => 'decimal:8',
+        'lng' => 'decimal:8',
     ];
 
     // Relaciones
     public function mascota()
     {
-        return $this->belongsTo(Mascota::class, 'mascota_id');
+        return $this->belongsTo(Mascota::class);
     }
 
     public function reporte()
     {
-        return $this->belongsTo(Reporte::class, 'reporte_id');
+        return $this->belongsTo(Reporte::class);
     }
 
     public function usuarioReporto()
@@ -44,10 +54,10 @@ class Rescate extends Model
         return $this->belongsTo(User::class, 'usuario_reporto_id');
     }
 
-    // CORREGIDO: nombre del método debe coincidir con los campos en la BD
+    // Relación polimórfica
     public function entidadResponsable()
     {
-        return $this->morphTo('entidad_responsable'); // Especificamos el nombre del morph
+        return $this->morphTo('entidad_responsable');
     }
 
     public function gestionadoPor()
@@ -55,7 +65,18 @@ class Rescate extends Model
         return $this->belongsTo(User::class, 'gestionado_por');
     }
 
+    // Aliado para mantener compatibilidad con código existente
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'usuario_reporto_id');
+    }
+
     // Scopes útiles
+    public function scopePendientes($query)
+    {
+        return $query->where('estado', 'pendiente');
+    }
+
     public function scopeEnProceso($query)
     {
         return $query->where('estado', 'en_proceso');
@@ -66,18 +87,8 @@ class Rescate extends Model
         return $query->where('estado', 'completado');
     }
 
-    // Cambiar 'usuario_reporto_id' a 'user_id' para consistencia
-    // O mantenerlo pero crear un accessor
-
-    // Opción recomendada: Agregar un accessor para compatibilidad
-    public function getUserAttribute()
+    public function scopePorPrioridad($query, $prioridad)
     {
-        return $this->usuarioReporto;
-    }
-
-    // También agregar relación con nombre unificado
-    public function user()
-    {
-        return $this->belongsTo(User::class, 'usuario_reporto_id');
+        return $query->where('prioridad', $prioridad);
     }
 }

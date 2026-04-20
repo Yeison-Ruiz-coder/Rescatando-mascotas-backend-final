@@ -7,6 +7,7 @@ use App\Http\Requests\Entity\MascotaRequest;
 use App\Services\Entity\MascotaEntityService;
 use App\Traits\ApiResponses;
 use App\Traits\TransactionTrait;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class MascotaController extends Controller
@@ -29,14 +30,24 @@ class MascotaController extends Controller
             return $this->errorResponse($e->getMessage(), null, 403);
         }
     }
-
     public function store(MascotaRequest $request)
     {
         try {
+            // Preparar los archivos para enviar al servicio
+            $files = [];
+
+            if ($request->hasFile('foto_principal')) {
+                $files['foto_principal'] = $request->file('foto_principal');
+            }
+
+            if ($request->hasFile('galeria_fotos')) {
+                $files['galeria_fotos'] = $request->file('galeria_fotos');
+            }
+
             $mascota = $this->runInTransaction(
                 fn() => $this->mascotaService->createMascota(
                     $request->validated(),
-                    $request->only(['foto_principal', 'galeria_fotos'])
+                    $files
                 ),
                 'Error al registrar mascota'
             );
@@ -47,10 +58,37 @@ class MascotaController extends Controller
                 201
             );
         } catch (\Exception $e) {
+            Log::error('Error en store mascota: ' . $e->getMessage());
             return $this->errorResponse('Error al registrar mascota', $e->getMessage(), 500);
         }
     }
 
+    public function update(MascotaRequest $request, $id)
+    {
+        try {
+            $files = [];
+
+            if ($request->hasFile('foto_principal')) {
+                $files['foto_principal'] = $request->file('foto_principal');
+            }
+
+            $mascota = $this->runInTransaction(
+                fn() => $this->mascotaService->updateMascota(
+                    $id,
+                    $request->validated(),
+                    $files
+                ),
+                'Error al actualizar mascota'
+            );
+
+            return $this->successResponse($mascota, 'Mascota actualizada exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Mascota no encontrada');
+        } catch (\Exception $e) {
+            Log::error('Error en update mascota: ' . $e->getMessage());
+            return $this->errorResponse('Error al actualizar', $e->getMessage(), 500);
+        }
+    }
     public function show($id)
     {
         try {
@@ -63,25 +101,6 @@ class MascotaController extends Controller
         }
     }
 
-    public function update(MascotaRequest $request, $id)
-    {
-        try {
-            $mascota = $this->runInTransaction(
-                fn() => $this->mascotaService->updateMascota(
-                    $id,
-                    $request->validated(),
-                    $request->only(['foto_principal'])
-                ),
-                'Error al actualizar mascota'
-            );
-
-            return $this->successResponse($mascota, 'Mascota actualizada exitosamente');
-        } catch (ModelNotFoundException $e) {
-            return $this->notFoundResponse('Mascota no encontrada');
-        } catch (\Exception $e) {
-            return $this->errorResponse('Error al actualizar', $e->getMessage(), 500);
-        }
-    }
 
     public function destroy($id)
     {
