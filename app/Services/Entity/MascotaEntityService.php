@@ -7,6 +7,7 @@ use App\Models\Fundacion;
 use App\Traits\ImageUploadTrait;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Log;
 
 class MascotaEntityService
 {
@@ -102,16 +103,36 @@ class MascotaEntityService
         $mascota->apto_con_otros_animales = $data['apto_con_otros_animales'] ?? true;
         $mascota->fecha_ingreso = $data['fecha_ingreso'] ?? now();
 
-        if (!empty($files['foto_principal'])) {
+        // Guardar foto principal
+        if (!empty($files['foto_principal']) && $files['foto_principal']->isValid()) {
             $mascota->foto_principal = $this->uploadImage($files['foto_principal'], 'mascotas');
         }
 
         $mascota->save();
 
+        // Guardar galería de fotos
+        if (!empty($files['galeria_fotos']) && is_array($files['galeria_fotos'])) {
+            $galeriaPaths = [];
+            foreach ($files['galeria_fotos'] as $foto) {
+                if ($foto && $foto->isValid()) {
+                    $path = $this->uploadImage($foto, 'mascotas/galeria');
+                    $galeriaPaths[] = $path;
+                    Log::info('Foto de galería guardada', ['path' => $path]);
+                }
+            }
+            if (!empty($galeriaPaths)) {
+                $mascota->galeria_fotos = json_encode($galeriaPaths);
+                $mascota->save();
+                Log::info('Galería guardada', ['count' => count($galeriaPaths)]);
+            }
+        }
+
+        // Sincronizar razas
         if (!empty($data['razas'])) {
             $mascota->razas()->sync($data['razas']);
         }
 
+        // Sincronizar vacunas
         if (!empty($data['vacunas'])) {
             $vacunasData = [];
             foreach ($data['vacunas'] as $vacunaId) {
@@ -120,7 +141,7 @@ class MascotaEntityService
             $mascota->vacunas()->sync($vacunasData);
         }
 
-        return $mascota;
+        return $mascota->load(['razas', 'vacunas']);
     }
 
     public function updateMascota(int $id, array $data, $files = null)
@@ -129,7 +150,8 @@ class MascotaEntityService
 
         $mascota->update($data);
 
-        if (!empty($files['foto_principal'])) {
+        // Actualizar foto principal
+        if (!empty($files['foto_principal']) && $files['foto_principal']->isValid()) {
             if ($mascota->foto_principal) {
                 $this->deleteImage($mascota->foto_principal);
             }
@@ -137,10 +159,12 @@ class MascotaEntityService
             $mascota->save();
         }
 
+        // Sincronizar razas
         if (!empty($data['razas'])) {
             $mascota->razas()->sync($data['razas']);
         }
 
+        // Sincronizar vacunas
         if (!empty($data['vacunas'])) {
             $vacunasData = [];
             foreach ($data['vacunas'] as $vacunaId) {
@@ -160,6 +184,21 @@ class MascotaEntityService
             $this->deleteImage($mascota->foto_principal);
         }
 
+        // Eliminar imágenes de galería
+        if ($mascota->galeria_fotos) {
+            $galeria = is_string($mascota->galeria_fotos)
+                ? json_decode($mascota->galeria_fotos, true)
+                : $mascota->galeria_fotos;
+
+            if (is_array($galeria)) {
+                foreach ($galeria as $foto) {
+                    $this->deleteImage($foto);
+                }
+            }
+        }
+
+        $mascota->razas()->detach();
+        $mascota->vacunas()->detach();
         $mascota->delete();
     }
 }

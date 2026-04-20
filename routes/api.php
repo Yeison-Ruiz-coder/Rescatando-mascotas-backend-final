@@ -105,8 +105,10 @@ Route::middleware(['auth:sanctum'])->prefix('entity')->name('entity.')->group(fu
     Route::prefix('rescates')->name('rescates.')->group(function () {
         Route::get('/disponibles', [App\Http\Controllers\Api\V1\Entity\RescateController::class, 'disponibles']);
         Route::get('/mis-rescates', [App\Http\Controllers\Api\V1\Entity\RescateController::class, 'misRescates']);
+        Route::get('/{id}', [App\Http\Controllers\Api\V1\Entity\RescateController::class, 'show']);
         Route::put('/{id}/aceptar', [App\Http\Controllers\Api\V1\Entity\RescateController::class, 'aceptar']);
         Route::put('/{id}/rechazar', [App\Http\Controllers\Api\V1\Entity\RescateController::class, 'rechazar']);
+        Route::put('/{id}/completar', [App\Http\Controllers\Api\V1\Entity\RescateController::class, 'completar']);
         Route::post('/{id}/registrar-mascota', [App\Http\Controllers\Api\V1\Entity\RescateController::class, 'registrarMascota']);
     });
 
@@ -127,6 +129,15 @@ Route::middleware(['auth:sanctum'])->prefix('entity')->name('entity.')->group(fu
         Route::put('/{id}/aprobar', [App\Http\Controllers\Api\V1\Entity\SolicitudController::class, 'aprobar']);
         Route::put('/{id}/rechazar', [App\Http\Controllers\Api\V1\Entity\SolicitudController::class, 'rechazar']);
     });
+
+    // Razas para entidades
+    Route::apiResource('razas', App\Http\Controllers\Api\V1\Entity\RazaController::class);
+    Route::get('/razas/especie/{especie}', [App\Http\Controllers\Api\V1\Entity\RazaController::class, 'porEspecie']);
+    Route::get('/razas-especies/todas', [App\Http\Controllers\Api\V1\Entity\RazaController::class, 'especies']);
+
+    // Tipos de Vacuna para entidades
+    Route::apiResource('tipos-vacunas', App\Http\Controllers\Api\V1\Entity\TipoVacunaController::class);
+    Route::get('/tipos-vacunas/recomendadas', [App\Http\Controllers\Api\V1\Entity\TipoVacunaController::class, 'recomendadas']);
 
     // ✅ EVENTOS PARA ENTIDADES (Fundación) - CRUD completo
     Route::apiResource('eventos', EntityEventoController::class);

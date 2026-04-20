@@ -12,7 +12,6 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             RazaSeeder::class,
             TipoVacunaSeeder::class,
-            FundacionSeeder::class,
         ]);
     }
 }

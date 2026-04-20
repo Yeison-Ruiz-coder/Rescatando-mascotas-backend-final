@@ -1,4 +1,5 @@
 <?php
+// app/Services/Public/RescatePublicService.php
 
 namespace App\Services\Public;
 
@@ -13,7 +14,7 @@ class RescatePublicService
     public function getAll(int $perPage = 15)
     {
         return Rescate::with(['usuarioReporto', 'entidadResponsable'])
-            ->where('estado', 'en_proceso')
+            ->where('estado', 'pendiente')
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
@@ -24,24 +25,35 @@ class RescatePublicService
             ->findOrFail($id);
     }
 
-    public function reportar(array $data, int $userId): Rescate
+    public function reportar(array $data): Rescate
     {
-        $tipoEmergencia = $this->analizarEmergencia($data['descripcion_rescate']);
-        $prioridad = $this->calcularPrioridad($tipoEmergencia);
+        // Si el frontend ya envió tipo_emergencia y prioridad, usarlos
+        // Si no, analizar automáticamente
+        if (isset($data['tipo_emergencia']) && !empty($data['tipo_emergencia'])) {
+            $tipoEmergencia = $data['tipo_emergencia'];
+            $prioridad = $data['prioridad'] ?? $this->calcularPrioridad($tipoEmergencia);
+        } else {
+            $tipoEmergencia = $this->analizarEmergencia($data['descripcion_rescate']);
+            $prioridad = $this->calcularPrioridad($tipoEmergencia);
+        }
 
         $rescate = Rescate::create([
-            'lugar_rescate' => $data['lugar_rescate'],
+            'lugar_rescate'       => $data['lugar_rescate'],
             'descripcion_rescate' => $data['descripcion_rescate'],
-            'fecha_rescate' => $data['fecha_rescate'],
-            'tipo_emergencia' => $tipoEmergencia,
-            'prioridad' => $prioridad,
-            'lat' => $data['lat'] ?? null,
-            'lng' => $data['lng'] ?? null,
-            'estado' => 'pendiente',
-            'usuario_reporto_id' => $userId,
+            'fecha_rescate'       => $data['fecha_rescate'],
+            'tipo_emergencia'     => $tipoEmergencia,
+            'prioridad'           => $prioridad,
+            'lat'                 => $data['lat'] ?? null,
+            'lng'                 => $data['lng'] ?? null,
+            'estado'              => 'pendiente',
+            'nombre_reportante'   => $data['nombre_reportante'] ?? null,
+            'email_reportante'    => $data['email_reportante'] ?? null,
+            'telefono_reportante' => $data['telefono_reportante'] ?? null,
+            'usuario_reporto_id'  => auth()->id(),
         ]);
 
         $this->notificarEntidadesCercanas($rescate);
+        $this->verificarEscalamientoAutomatico($rescate);
 
         return $rescate;
     }
@@ -49,7 +61,6 @@ class RescatePublicService
     private function analizarEmergencia(string $descripcion): string
     {
         $descripcion = strtolower($descripcion);
-
         $palabrasClave = [
             'herido' => ['herido', 'sangra', 'sangrando', 'golpe', 'lastimado', 'fractura', 'hueso roto', 'cojea', 'malherido'],
             'abandonado' => ['abandonado', 'cachorros', 'solo', 'sin dueño', 'vagando', 'callejero', 'botaron', 'dejaron'],
@@ -57,29 +68,20 @@ class RescatePublicService
         ];
 
         foreach ($palabrasClave['urgente'] as $palabra) {
-            if (str_contains($descripcion, $palabra)) {
-                return 'urgente';
-            }
+            if (str_contains($descripcion, $palabra)) return 'urgente';
         }
-
         foreach ($palabrasClave['herido'] as $palabra) {
-            if (str_contains($descripcion, $palabra)) {
-                return 'herido';
-            }
+            if (str_contains($descripcion, $palabra)) return 'herido';
         }
-
         foreach ($palabrasClave['abandonado'] as $palabra) {
-            if (str_contains($descripcion, $palabra)) {
-                return 'abandonado';
-            }
+            if (str_contains($descripcion, $palabra)) return 'abandonado';
         }
-
         return 'otro';
     }
 
     private function calcularPrioridad(string $tipoEmergencia): string
     {
-        return match($tipoEmergencia) {
+        return match ($tipoEmergencia) {
             'urgente', 'herido' => 'alta',
             'abandonado' => 'media',
             default => 'baja',
@@ -91,23 +93,26 @@ class RescatePublicService
         $tipo = $rescate->tipo_emergencia;
         $lat = $rescate->lat;
         $lng = $rescate->lng;
-        $radio = 10;
+        $radio = 10; // km
 
-        $entidades = [];
 
-        if ($tipo === 'urgente' || $tipo === 'herido') {
-            $entidades = array_merge($entidades, $this->buscarVeterinariasCercanas($lat, $lng, $radio));
+        $entidades = collect(); // usar colección
+        if (in_array($tipo, ['urgente', 'herido'])) {
+            $entidades = $entidades->concat($this->buscarVeterinariasCercanas($lat, $lng, $radio));
+        }
+        if (in_array($tipo, ['urgente', 'abandonado'])) {
+            $entidades = $entidades->concat($this->buscarFundacionesCercanas($lat, $lng, $radio));
         }
 
-        if ($tipo === 'urgente' || $tipo === 'abandonado') {
-            $entidades = array_merge($entidades, $this->buscarFundacionesCercanas($lat, $lng, $radio));
+        foreach ($entidades as $entidad) {
+            // ... resto igual
         }
 
         foreach ($entidades as $entidad) {
             if ($entidad->user_id) {
                 Notificacion::create([
-                    'user_id' => $entidad->user_id,
-                    'contenido' => "Nuevo rescate {$rescate->tipo_emergencia} cerca de ti: {$rescate->lugar_rescate}",
+                    'user_id'      => $entidad->user_id,
+                    'contenido'    => "Nuevo rescate {$rescate->tipo_emergencia} cerca de ti: {$rescate->lugar_rescate}",
                     'creado_por_id' => 1,
                 ]);
             }
@@ -118,27 +123,55 @@ class RescatePublicService
 
     private function buscarVeterinariasCercanas($lat, $lng, $radio)
     {
-        if (!$lat || !$lng) {
-            return Veterinaria::where('urgencias_24h', true)->get();
+        $query = Veterinaria::where('urgencias_24h', true);
+        if ($lat && $lng) {
+            return $query->selectRaw("*, (6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distance", [$lat, $lng, $lat])
+                ->having('distance', '<', $radio)
+                ->orderBy('distance')
+                ->get();
         }
-
-        return Veterinaria::where('urgencias_24h', true)
-            ->selectRaw("*, (6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distance", [$lat, $lng, $lat])
-            ->having('distance', '<', $radio)
-            ->orderBy('distance')
-            ->get();
+        return $query->get();
     }
 
     private function buscarFundacionesCercanas($lat, $lng, $radio)
     {
-        if (!$lat || !$lng) {
-            return Fundacion::where('capacidad_maxima', '>', 0)->get();
+        $query = Fundacion::where('capacidad_maxima', '>', 0);
+        if ($lat && $lng) {
+            return $query->selectRaw("*, (6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distance", [$lat, $lng, $lat])
+                ->having('distance', '<', $radio)
+                ->orderBy('distance')
+                ->get();
+        }
+        return $query->get();
+    }
+
+    /**
+     * Si no hay entidades cercanas, escala automáticamente a admin.
+     */
+    private function verificarEscalamientoAutomatico(Rescate $rescate): void
+    {
+        // Verificar si hay alguna entidad que pueda atender este tipo de rescate
+        $tipo = $rescate->tipo_emergencia;
+        $hayEntidades = false;
+
+        if (in_array($tipo, ['urgente', 'herido'])) {
+            $hayEntidades = Veterinaria::where('urgencias_24h', true)->exists();
+        }
+        if (!$hayEntidades && in_array($tipo, ['urgente', 'abandonado'])) {
+            $hayEntidades = Fundacion::where('capacidad_maxima', '>', 0)->exists();
         }
 
-        return Fundacion::where('capacidad_maxima', '>', 0)
-            ->selectRaw("*, (6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distance", [$lat, $lng, $lat])
-            ->having('distance', '<', $radio)
-            ->orderBy('distance')
-            ->get();
+        if (!$hayEntidades) {
+            // Notificar a todos los administradores
+            $admins = \App\Models\User::where('tipo', 'admin', true)->get();
+            foreach ($admins as $admin) {
+                Notificacion::create([
+                    'user_id'      => $admin->id,
+                    'contenido'    => "Rescate #{$rescate->id} (tipo {$tipo}) no tiene entidades cercanas. Requiere asignación manual.",
+                    'creado_por_id' => 1,
+                ]);
+            }
+            Log::warning("Rescate #{$rescate->id} escalado a admin por falta de entidades.");
+        }
     }
 }

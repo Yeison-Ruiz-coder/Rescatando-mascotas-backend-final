@@ -7,15 +7,14 @@ use Illuminate\Http\UploadedFile;
 
 trait ImageUploadTrait
 {
-    protected function uploadImage(?UploadedFile $file, string $path, ?string $oldPath = null): ?string
+    protected function uploadImage(UploadedFile $file, string $path, ?string $oldPath = null): string
     {
-        if (!$file) return $oldPath;
-
         if ($oldPath && Storage::disk('public')->exists($oldPath)) {
             Storage::disk('public')->delete($oldPath);
         }
 
-        return $file->store($path, 'public');
+        $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+        return $file->storeAs($path, $fileName, 'public');
     }
 
     protected function uploadMultipleImages(array $files, string $path): array
@@ -23,7 +22,8 @@ trait ImageUploadTrait
         $paths = [];
         foreach ($files as $file) {
             if ($file instanceof UploadedFile) {
-                $paths[] = $file->store($path, 'public');
+                $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $paths[] = $file->storeAs($path, $fileName, 'public');
             }
         }
         return $paths;

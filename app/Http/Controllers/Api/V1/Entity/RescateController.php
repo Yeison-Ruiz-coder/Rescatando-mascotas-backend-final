@@ -20,6 +20,30 @@ class RescateController extends Controller
     {
         $this->rescateService = $rescateService;
     }
+    public function show($id)
+    {
+        try {
+            $rescate = $this->rescateService->findById($id);
+            return $this->successResponse($rescate, 'Rescate obtenido exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Rescate no encontrado');
+        }
+    }
+
+    public function completar($id)
+    {
+        try {
+            $rescate = $this->runInTransaction(
+                fn() => $this->rescateService->completarRescate($id),
+                'Error al completar rescate'
+            );
+            return $this->successResponse($rescate, 'Rescate completado exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Rescate no encontrado');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 403);
+        }
+    }
 
     public function disponibles(Request $request)
     {

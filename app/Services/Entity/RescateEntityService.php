@@ -27,6 +27,30 @@ class RescateEntityService
         return null;
     }
 
+    public function findById(int $id): Rescate
+    {
+        return Rescate::with(['usuarioReporto', 'mascota', 'entidadResponsable'])
+            ->findOrFail($id);
+    }
+
+    public function completarRescate(int $id)
+    {
+        $entidad = $this->getEntidad();
+
+        if (!$entidad) {
+            throw new \Exception('No se encontró la entidad asociada');
+        }
+
+        $rescate = Rescate::where('entidad_responsable_type', get_class($entidad))
+            ->where('entidad_responsable_id', $entidad->id)
+            ->where('estado', 'en_proceso')
+            ->findOrFail($id);
+
+        $rescate->update(['estado' => 'completado']);
+
+        return $rescate;
+    }
+
     public function getRescatesDisponibles(Request $request)
     {
         $user = Auth::user();
@@ -43,7 +67,7 @@ class RescateEntityService
         $userTipo = $user->tipo;
 
         $rescates = Rescate::where('estado', 'pendiente')
-            ->where(function($query) use ($userTipo) {
+            ->where(function ($query) use ($userTipo) {
                 if ($userTipo === 'veterinaria') {
                     $query->whereIn('tipo_emergencia', ['herido', 'urgente']);
                 } else {

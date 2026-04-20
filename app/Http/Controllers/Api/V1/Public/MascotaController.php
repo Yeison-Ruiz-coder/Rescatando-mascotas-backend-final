@@ -50,4 +50,5 @@ class MascotaController extends Controller
         $mascotas = $this->mascotaService->getPorFundacion($fundacionId);
         return $this->successResponse($mascotas, 'Mascotas por fundación obtenidas exitosamente');
     }
+    
 }

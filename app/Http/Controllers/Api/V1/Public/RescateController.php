@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Api/V1/Public/RescateController.php
 
 namespace App\Http\Controllers\Api\V1\Public;
 
@@ -9,6 +10,7 @@ use App\Traits\TransactionTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+
 
 class RescateController extends Controller
 {
@@ -25,7 +27,6 @@ class RescateController extends Controller
     {
         $perPage = $request->get('per_page', 15);
         $rescates = $this->rescateService->getAll($perPage);
-
         return $this->successResponse($rescates, 'Rescates obtenidos exitosamente');
     }
 
@@ -42,11 +43,15 @@ class RescateController extends Controller
     public function reportar(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'lugar_rescate' => 'required|string',
-            'descripcion_rescate' => 'required|string',
-            'fecha_rescate' => 'required|date',
-            'lat' => 'nullable|numeric',
-            'lng' => 'nullable|numeric',
+            'lugar_rescate'      => 'required|string',
+            'descripcion_rescate'=> 'required|string',
+            'fecha_rescate'      => 'required|date',
+            'lat'                => 'nullable|numeric',
+            'lng'                => 'nullable|numeric',
+            // Datos opcionales del reportante (soporte anónimo)
+            'nombre_reportante'  => 'nullable|string|max:255',
+            'email_reportante'   => 'nullable|email|max:255',
+            'telefono_reportante'=> 'nullable|string|max:20',
         ]);
 
         if ($validator->fails()) {
@@ -55,10 +60,7 @@ class RescateController extends Controller
 
         try {
             $rescate = $this->runInTransaction(
-                fn() => $this->rescateService->reportar(
-                    $request->only(['lugar_rescate', 'descripcion_rescate', 'fecha_rescate', 'lat', 'lng']),
-                    auth()->id()
-                ),
+                fn() => $this->rescateService->reportar($request->all()),
                 'Error al reportar rescate'
             );
 
