@@ -142,4 +142,36 @@ class Mascota extends Model
             ->whereIn('estado', ['Pendiente', 'En revisión'])
             ->exists();
     }
+
+     public function getEdadAproxAttribute($value)
+    {
+        if (is_null($value)) {
+            return null;
+        }
+
+        // Convertir a número y redondear
+        $edadNum = (float) $value;
+
+        // Si es 0, devolver null
+        if ($edadNum == 0) {
+            return null;
+        }
+
+        // Redondear al entero más cercano
+        return (int) round($edadNum);
+    }
+
+    /**
+     * Mutator para la edad - Guarda siempre como entero
+     */
+    public function setEdadAproxAttribute($value)
+    {
+        if (is_null($value) || $value === '') {
+            $this->attributes['edad_aprox'] = null;
+            return;
+        }
+
+        // Convertir a entero
+        $this->attributes['edad_aprox'] = (int) round((float) $value);
+    }
 }
