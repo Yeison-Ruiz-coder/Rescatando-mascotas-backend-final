@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
+use App\Models\Mascota;
 
 class Suscripcion extends Model
 {
@@ -28,16 +30,19 @@ class Suscripcion extends Model
         'monto_mensual' => 'decimal:2',
     ];
 
-    public function usuario()
+    // 👤 relación usuario (MEJOR NOMBRE)
+    public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    // 🐶 relación mascota
     public function mascota()
     {
         return $this->belongsTo(Mascota::class, 'mascota_id');
     }
 
+    // 🔥 scope
     public function scopeActivas($query)
     {
         return $query->where('estado', 'activo');

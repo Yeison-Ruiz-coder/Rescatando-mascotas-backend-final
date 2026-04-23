@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Entity\EventoController as EntityEventoController;
 use App\Http\Controllers\Api\V1\Admin\EventoController as AdminEventoController;
 use App\Http\Controllers\Api\V1\Public\EventoController as PublicEventoController;
+use App\Http\Controllers\Api\V1\Admin\SuscripcionController as SuscripcionController;
 
 // =========================================================================
 // API V1 - RUTAS PÚBLICAS (SIN AUTENTICACIÓN)
@@ -231,4 +232,11 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     Route::apiResource('eventos', AdminEventoController::class);
     Route::get('/eventos/calendario/data', [AdminEventoController::class, 'calendarData']);
     Route::get('/eventos/proximos', [AdminEventoController::class, 'proximos']);
+
+    // ✅ SUSCRIPCIONES PARA ADMIN - CRUD completo
+    Route::get('/suscripciones', [SuscripcionController::class, 'index']);
+    Route::post('/suscripciones', [SuscripcionController::class, 'store']);
+    Route::get('/suscripciones/{id}', [SuscripcionController::class, 'show']);
+    Route::put('/suscripciones/{id}', [SuscripcionController::class, 'update']);
+    Route::delete('/suscripciones/{id}', [SuscripcionController::class, 'destroy']);
 });
