@@ -2,8 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Entity\EventoController as EntityEventoController;
+use App\Http\Controllers\Api\V1\Entity\SuscripcionController as EntitySuscripcionController;
 use App\Http\Controllers\Api\V1\Admin\EventoController as AdminEventoController;
 use App\Http\Controllers\Api\V1\Public\EventoController as PublicEventoController;
+use App\Http\Controllers\Api\V1\Public\SuscripcionController as PublicSuscripcionController;
 use App\Http\Controllers\Api\V1\Admin\SuscripcionController as SuscripcionController;
 
 // =========================================================================
@@ -68,6 +70,16 @@ Route::prefix('eventos')->name('eventos.')->group(function () {
     Route::get('/calendario/data', [PublicEventoController::class, 'calendario']);
     Route::post('/{id}/like', [PublicEventoController::class, 'like']);
 
+
+    Route::prefix('suscripciones')->name('suscripciones.')->group(function () {
+    // Rutas públicas (sin autenticación)
+    Route::get('/', [SuscripcionController::class, 'index']);
+    Route::get('/proximos', [SuscripcionController::class, 'proximos']);
+    Route::get('/tipo/{tipo}', [SuscripcionController::class, 'porTipo']);
+    Route::get('/{id}', [SuscripcionController::class, 'show']);
+    Route::get('/calendario/data', [SuscripcionController::class, 'calendario']);
+    Route::post('/{id}/like', [SuscripcionController::class, 'like']);
+});
     // Rutas que requieren autenticación
     Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/mis-eventos', [PublicEventoController::class, 'misEventos']);
@@ -142,6 +154,11 @@ Route::middleware(['auth:sanctum'])->prefix('entity')->name('entity.')->group(fu
 
     // ✅ EVENTOS PARA ENTIDADES (Fundación) - CRUD completo
     Route::apiResource('eventos', EntityEventoController::class);
+
+    // ✅ SUSCRIPCIONES PARA ENTIDADES (Fundación) - CRUD completo
+
+    
+    Route::apiResource('suscripciones', EntitySuscripcionController::class);
 });
 
 // =========================================================================

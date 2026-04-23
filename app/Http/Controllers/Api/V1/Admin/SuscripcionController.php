@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api\V1\Admin;  // ← CAMBIA ESTO
 
+use App\Http\Controllers\Controller;  // ← AJUSTA ESTA RUTA
 use App\Models\Suscripcion;
 use Illuminate\Http\Request;
 
@@ -20,16 +21,10 @@ class SuscripcionController extends Controller
             'user_id' => 'required|exists:users,id',
             'mascota_id' => 'required|exists:mascotas,id',
             'monto_mensual' => 'required|numeric|min:1',
-
-            // 🔥 AJUSTADO A TU MIGRACIÓN
             'frecuencia' => 'required|in:unica,mensual,trimestral,anual',
-
             'fecha_inicio' => 'required|date',
             'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
-
             'mensaje_apoyo' => 'nullable|string',
-
-            // 🔥 AJUSTADO A TU MIGRACIÓN
             'estado' => 'required|in:activo,pausado,cancelado,finalizado',
         ]);
 
@@ -51,7 +46,6 @@ class SuscripcionController extends Controller
     public function update(Request $request, $id)
     {
         $suscripcion = Suscripcion::findOrFail($id);
-
         $suscripcion->update($request->all());
 
         return response()->json([
