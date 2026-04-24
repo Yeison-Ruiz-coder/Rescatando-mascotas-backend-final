@@ -24,3 +24,7 @@ Stack trace:
 [stacktrace]
 #0 {main}
 "} 
+[2026-04-23 22:02:02] local.ERROR: Error en traducción automática: foreach() argument must be of type array|object, null given  
+[2026-04-23 22:02:02] local.INFO: Foto de galería guardada {"path":"mascotas/galeria/1776981722_69ea96da8846e.jpg"} 
+[2026-04-23 22:02:02] local.INFO: Galería guardada {"count":1} 
+[2026-04-24 18:45:46] local.INFO: Solicitud creada exitosamente {"id":1,"nombre_solicitante":"María","email_solicitante":"maria@email.com"} 
