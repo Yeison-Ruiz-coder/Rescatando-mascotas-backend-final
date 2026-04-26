@@ -6272,3 +6272,4 @@ Stack trace:
 #26 {main}
 "} 
 [2026-04-24 20:10:03] local.INFO: Rescate #14 notificado a 0 entidades  
+[2026-04-26 21:17:21] local.ERROR: Error en traducción automática: foreach() argument must be of type array|object, null given  
