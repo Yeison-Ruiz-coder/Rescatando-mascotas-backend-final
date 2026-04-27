@@ -1,50 +1,176 @@
 <?php
 
-namespace App\Http\Controllers\Api\V1\Entity;
+namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\Suscripcion;
 use App\Models\Mascota;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class SuscripcionController extends Controller
 {
     /**
-     * Display a listing of the resource (solo suscripciones de las mascotas de la fundación)
+     * Obtener planes de membresía (público)
+     * GET /api/public/planes-membresia
      */
-    public function index()
+    public function getPlanesMembresia()
     {
-        // Obtener las mascotas de la fundación autenticada
-        $mascotasIds = Mascota::where('fundacion_id', auth()->user()->fundacion_id)
-            ->pluck('id');
+        $planes = [
+            [
+                'id' => 1,
+                'nombre' => 'Plan Básico',
+                'monto' => 10000,
+                'frecuencia' => 'mensual',
+                'destacado' => false,
+                'descripcion' => 'Ideal para empezar a ayudar',
+                'beneficios' => ['Certificado digital', 'Actualización mensual', 'Calcomanía']
+            ],
+            [
+                'id' => 2,
+                'nombre' => 'Plan Premium',
+                'monto' => 25000,
+                'frecuencia' => 'mensual',
+                'destacado' => true,
+                'descripcion' => 'Para quienes quieren marcar la diferencia',
+                'beneficios' => ['Certificado premium', 'Actualización semanal', 'Fotos exclusivas', 'Descuento en tienda', 'Eventos especiales']
+            ],
+            [
+                'id' => 3,
+                'nombre' => 'Plan Vitalicio',
+                'monto' => 50000,
+                'frecuencia' => 'mensual',
+                'destacado' => false,
+                'descripcion' => 'Para los súper patrocinadores',
+                'beneficios' => ['Certificado especial', 'Visitas mensuales', 'Nombre en placa', 'Descuento 20% tienda', 'Eventos VIP']
+            ]
+        ];
         
-        // Obtener suscripciones de esas mascotas
-        $suscripciones = Suscripcion::with(['user', 'mascota'])
-            ->whereIn('mascota_id', $mascotasIds)
-            ->orderBy('created_at', 'desc')
-            ->get();
-
         return response()->json([
             'success' => true,
-            'data' => $suscripciones
+            'data' => $planes
         ]);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Obtener mascotas disponibles para apadrinar (público)
+     * GET /api/public/mascotas-para-apadrinar
      */
-    public function store(Request $request)
+    public function getMascotasApadrinar()
+    {
+        // Estados según tu base de datos
+        $estadosValidos = ['En adopcion', 'Rescatada'];
+        
+        // Buscar mascotas
+        $mascotas = Mascota::whereIn('estado', $estadosValidos)
+            ->latest('created_at')
+            ->take(10)
+            ->get();
+        
+        if ($mascotas->count() > 0) {
+            $resultado = $mascotas->map(function ($mascota) {
+                // Imagen por defecto según especie
+                $imagenPorDefecto = $mascota->especie == 'Perro' 
+                    ? 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300&h=250&fit=crop'
+                    : ($mascota->especie == 'Gato' 
+                        ? 'https://images.unsplash.com/photo-1574158622682-e40e69881006?w=300&h=250&fit=crop'
+                        : 'https://images.unsplash.com/photo-1535241749838-299277b6305f?w=300&h=250&fit=crop');
+                
+                // Procesar la URL de la foto
+                $fotoUrl = $imagenPorDefecto;
+                if ($mascota->foto_principal) {
+                    if (strpos($mascota->foto_principal, 'http') === 0) {
+                        $fotoUrl = $mascota->foto_principal;
+                    } else {
+                        $fotoUrl = asset('storage/' . $mascota->foto_principal);
+                    }
+                }
+                
+                return [
+                    'id' => $mascota->id,
+                    'nombre' => $mascota->nombre_mascota,
+                    'especie' => $mascota->especie,
+                    'raza' => $mascota->raza ?? 'No especificada',
+                    'edad' => $mascota->edad_aprox ?? 1,
+                    'genero' => $mascota->genero ?? 'No especificado',
+                    'historia_corta' => $mascota->descripcion ?? "{$mascota->nombre_mascota} necesita un padrino",
+                    'lugar_rescate' => $mascota->lugar_rescate,
+                    'condiciones_especiales' => $mascota->condiciones_especiales,
+                    'monto_sugerido' => 15000,
+                    'apadrinamientos' => Suscripcion::where('mascota_id', $mascota->id)->count(),
+                    'foto_url' => $fotoUrl,
+                    'created_at' => $mascota->created_at,
+                ];
+            });
+            
+            return response()->json([
+                'success' => true,
+                'data' => $resultado
+            ]);
+        }
+        
+        // Si no hay mascotas, devolver array vacío
+        return response()->json([
+            'success' => true,
+            'data' => []
+        ]);
+    }
+
+    /**
+     * Get estadísticas generales (público)
+     * GET /api/public/suscripciones-estadisticas
+     */
+    public function estadisticas()
+    {
+        try {
+            $totalSuscripciones = Suscripcion::count();
+            $activas = Suscripcion::where('estado', 'activo')->count();
+            $pausadas = Suscripcion::where('estado', 'pausado')->count();
+            $canceladas = Suscripcion::where('estado', 'cancelado')->count();
+            $finalizadas = Suscripcion::where('estado', 'finalizado')->count();
+            $totalMensual = Suscripcion::where('estado', 'activo')->sum('monto_mensual');
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_suscripciones' => $totalSuscripciones,
+                    'activas' => $activas,
+                    'pausadas' => $pausadas,
+                    'canceladas' => $canceladas,
+                    'finalizadas' => $finalizadas,
+                    'ingreso_mensual_total' => $totalMensual
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_suscripciones' => 0,
+                    'activas' => 0,
+                    'pausadas' => 0,
+                    'canceladas' => 0,
+                    'finalizadas' => 0,
+                    'ingreso_mensual_total' => 0
+                ]
+            ]);
+        }
+    }
+
+    /**
+     * Crear suscripción pública
+     * POST /api/public/suscripciones-crear
+     */
+    public function storePublic(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'user_id' => 'required|exists:users,id',
-            'mascota_id' => 'required|exists:mascotas,id',
-            'monto_mensual' => 'required|numeric|min:1',
+            'mascota_id' => 'nullable|exists:mascotas,id',
+            'monto_mensual' => 'required|numeric|min:1000',
             'frecuencia' => 'required|in:unica,mensual,trimestral,anual',
             'fecha_inicio' => 'required|date',
-            'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
             'mensaje_apoyo' => 'nullable|string',
-            'estado' => 'required|in:activo,pausado,cancelado,finalizado'
+            'estado' => 'required|in:activo,pausado,cancelado,finalizado',
         ]);
 
         if ($validator->fails()) {
@@ -55,28 +181,14 @@ class SuscripcionController extends Controller
         }
 
         try {
-            // Verificar que la mascota pertenece a la fundación
-            $mascota = Mascota::where('id', $request->mascota_id)
-                ->where('fundacion_id', auth()->user()->fundacion_id)
-                ->first();
-
-            if (!$mascota) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'La mascota no pertenece a tu fundación'
-                ], 403);
-            }
-
             $suscripcion = new Suscripcion();
             $suscripcion->user_id = $request->user_id;
             $suscripcion->mascota_id = $request->mascota_id;
             $suscripcion->monto_mensual = $request->monto_mensual;
             $suscripcion->frecuencia = $request->frecuencia;
             $suscripcion->fecha_inicio = $request->fecha_inicio;
-            $suscripcion->fecha_fin = $request->fecha_fin;
             $suscripcion->mensaje_apoyo = $request->mensaje_apoyo;
             $suscripcion->estado = $request->estado;
-            
             $suscripcion->save();
 
             return response()->json([
@@ -94,55 +206,38 @@ class SuscripcionController extends Controller
     }
 
     /**
-     * Display the specified resource (solo si la mascota pertenece a la fundación)
+     * Obtener suscripciones del usuario
+     * GET /api/public/suscripciones/usuario/{userId}
      */
-    public function show($id)
+    public function getUserSuscripciones(int $userId)
     {
         try {
-            // Obtener mascotas de la fundación
-            $mascotasIds = Mascota::where('fundacion_id', auth()->user()->fundacion_id)
-                ->pluck('id');
-
-            $suscripcion = Suscripcion::with(['user', 'mascota'])
-                ->whereIn('mascota_id', $mascotasIds)
-                ->where('id', $id)
-                ->firstOrFail();
+            $suscripciones = Suscripcion::where('user_id', $userId)
+                ->with(['mascota.fundacion'])
+                ->orderBy('created_at', 'desc')
+                ->get();
 
             return response()->json([
                 'success' => true,
-                'data' => $suscripcion
+                'data' => $suscripciones
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Suscripción no encontrada'
-            ], 404);
+                'message' => 'Error al obtener suscripciones: ' . $e->getMessage()
+            ], 500);
         }
     }
 
     /**
-     * Update the specified resource in storage (solo si la mascota pertenece a la fundación)
+     * Cancelar suscripción
+     * POST /api/public/suscripciones/{id}/cancelar
      */
-    public function update(Request $request, $id)
+    public function cancelarSuscripcion(int $id, Request $request)
     {
         try {
-            // Verificar que la suscripción pertenece a una mascota de la fundación
-            $mascotasIds = Mascota::where('fundacion_id', auth()->user()->fundacion_id)
-                ->pluck('id');
-
-            $suscripcion = Suscripcion::whereIn('mascota_id', $mascotasIds)
-                ->where('id', $id)
-                ->firstOrFail();
-
             $validator = Validator::make($request->all(), [
-                'user_id' => 'sometimes|exists:users,id',
-                'mascota_id' => 'sometimes|exists:mascotas,id',
-                'monto_mensual' => 'sometimes|numeric|min:1',
-                'frecuencia' => 'sometimes|in:unica,mensual,trimestral,anual',
-                'fecha_inicio' => 'sometimes|date',
-                'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
-                'mensaje_apoyo' => 'nullable|string',
-                'estado' => 'sometimes|in:activo,pausado,cancelado,finalizado'
+                'user_id' => 'required|exists:users,id',
             ]);
 
             if ($validator->fails()) {
@@ -152,138 +247,30 @@ class SuscripcionController extends Controller
                 ], 422);
             }
 
-            // Si cambia la mascota, verificar que la nueva pertenece a la fundación
-            if ($request->has('mascota_id') && $request->mascota_id != $suscripcion->mascota_id) {
-                $nuevaMascota = Mascota::where('id', $request->mascota_id)
-                    ->where('fundacion_id', auth()->user()->fundacion_id)
-                    ->first();
+            $suscripcion = Suscripcion::where('id', $id)
+                ->where('user_id', $request->user_id)
+                ->first();
 
-                if (!$nuevaMascota) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'La mascota no pertenece a tu fundación'
-                    ], 403);
-                }
+            if (!$suscripcion) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Suscripción no encontrada'
+                ], 404);
             }
 
-            // Actualizar solo los campos que vienen en la request
-            if ($request->has('user_id')) $suscripcion->user_id = $request->user_id;
-            if ($request->has('mascota_id')) $suscripcion->mascota_id = $request->mascota_id;
-            if ($request->has('monto_mensual')) $suscripcion->monto_mensual = $request->monto_mensual;
-            if ($request->has('frecuencia')) $suscripcion->frecuencia = $request->frecuencia;
-            if ($request->has('fecha_inicio')) $suscripcion->fecha_inicio = $request->fecha_inicio;
-            if ($request->has('fecha_fin')) $suscripcion->fecha_fin = $request->fecha_fin;
-            if ($request->has('mensaje_apoyo')) $suscripcion->mensaje_apoyo = $request->mensaje_apoyo;
-            if ($request->has('estado')) $suscripcion->estado = $request->estado;
-
+            $suscripcion->estado = 'cancelado';
             $suscripcion->save();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Suscripción actualizada exitosamente',
-                'data' => $suscripcion->load(['user', 'mascota'])
+                'message' => 'Suscripción cancelada exitosamente'
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al actualizar la suscripción: ' . $e->getMessage()
+                'message' => 'Error al cancelar la suscripción: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    /**
-     * Remove the specified resource from storage (solo si la mascota pertenece a la fundación)
-     */
-    public function destroy($id)
-    {
-        try {
-            $mascotasIds = Mascota::where('fundacion_id', auth()->user()->fundacion_id)
-                ->pluck('id');
-
-            $suscripcion = Suscripcion::whereIn('mascota_id', $mascotasIds)
-                ->where('id', $id)
-                ->firstOrFail();
-                
-            $suscripcion->delete();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Suscripción eliminada exitosamente'
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al eliminar la suscripción: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get suscripciones by mascota (solo si la mascota pertenece a la fundación)
-     */
-    public function porMascota($mascotaId)
-    {
-        // Verificar que la mascota pertenece a la fundación
-        $mascota = Mascota::where('id', $mascotaId)
-            ->where('fundacion_id', auth()->user()->fundacion_id)
-            ->first();
-
-        if (!$mascota) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Mascota no encontrada o no pertenece a tu fundación'
-            ], 404);
-        }
-
-        $suscripciones = Suscripcion::with(['user'])
-            ->where('mascota_id', $mascotaId)
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => $suscripciones
-        ]);
-    }
-
-    /**
-     * Get estadísticas de suscripciones de la fundación
-     */
-    public function estadisticas()
-    {
-        $mascotasIds = Mascota::where('fundacion_id', auth()->user()->fundacion_id)
-            ->pluck('id');
-
-        $totalSuscripciones = Suscripcion::whereIn('mascota_id', $mascotasIds)->count();
-        $activas = Suscripcion::whereIn('mascota_id', $mascotasIds)
-            ->where('estado', 'activo')
-            ->count();
-        $pausadas = Suscripcion::whereIn('mascota_id', $mascotasIds)
-            ->where('estado', 'pausado')
-            ->count();
-        $canceladas = Suscripcion::whereIn('mascota_id', $mascotasIds)
-            ->where('estado', 'cancelado')
-            ->count();
-        $finalizadas = Suscripcion::whereIn('mascota_id', $mascotasIds)
-            ->where('estado', 'finalizado')
-            ->count();
-
-        $totalMensual = Suscripcion::whereIn('mascota_id', $mascotasIds)
-            ->where('estado', 'activo')
-            ->sum('monto_mensual');
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'total_suscripciones' => $totalSuscripciones,
-                'activas' => $activas,
-                'pausadas' => $pausadas,
-                'canceladas' => $canceladas,
-                'finalizadas' => $finalizadas,
-                'ingreso_mensual_total' => $totalMensual
-            ]
-        ]);
     }
 }
