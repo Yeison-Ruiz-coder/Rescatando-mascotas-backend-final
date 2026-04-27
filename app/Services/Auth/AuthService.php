@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Fundacion;
 use App\Models\Veterinaria;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 
@@ -91,34 +92,75 @@ class AuthService
         return User::where('email', $email)->exists();
     }
 
+    // 🔥 MÉTODO CORREGIDO - Enviar enlace de restablecimiento 🔥
     public function sendPasswordResetLink(string $email): string
     {
-        $status = Password::sendResetLink(['email' => $email]);
+        $user = User::where('email', $email)->first();
 
-        if ($status !== Password::RESET_LINK_SENT) {
-            throw new \Exception(__($status));
+        if (!$user) {
+            throw new \Exception('No existe un usuario con este correo electrónico');
         }
 
-        return __($status);
-    }
-
-    public function resetPassword(array $data): string
-    {
-        $status = Password::reset(
-            $data,
-            function ($user, $password) {
-                $user->forceFill([
-                    'password' => Hash::make($password),
-                    'remember_token' => Str::random(60),
-                ])->save();
-            }
+        // Crear token manualmente
+        $token = Password::createToken($user);
+        
+        // Guardar el token en la tabla password_reset_tokens
+        \DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $email],
+            ['token' => $token, 'created_at' => now()]
         );
 
-        if ($status !== Password::PASSWORD_RESET) {
-            throw new \Exception(__($status));
+        // URL del frontend
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        $resetUrl = $frontendUrl . '/reset-password?token=' . $token . '&email=' . urlencode($email);
+
+        // Enviar email
+        try {
+            Mail::send('emails.password-reset', ['resetUrl' => $resetUrl, 'user' => $user], function ($message) use ($email) {
+                $message->to($email)
+                        ->subject('Restablecer contraseña');
+            });
+        } catch (\Exception $e) {
+            throw new \Exception('Error al enviar el correo: ' . $e->getMessage());
         }
 
-        return __($status);
+        return 'Enlace de restablecimiento enviado a tu correo electrónico';
+    }
+
+    // 🔥 MÉTODO CORREGIDO - Restablecer contraseña 🔥
+    public function resetPassword(array $data): string
+    {
+        // Buscar el token en la tabla
+        $resetRecord = \DB::table('password_reset_tokens')
+            ->where('email', $data['email'])
+            ->where('token', $data['token'])
+            ->first();
+
+        if (!$resetRecord) {
+            throw new \Exception('Token inválido o expirado');
+        }
+
+        // Verificar expiración (60 minutos)
+        $createdAt = strtotime($resetRecord->created_at);
+        if (time() - $createdAt > 3600) {
+            throw new \Exception('El enlace ha expirado. Solicita uno nuevo');
+        }
+
+        // Actualizar la contraseña del usuario
+        $user = User::where('email', $data['email'])->first();
+        
+        if (!$user) {
+            throw new \Exception('Usuario no encontrado');
+        }
+
+        $user->password = Hash::make($data['password']);
+        $user->remember_token = Str::random(60);
+        $user->save();
+
+        // Eliminar el token usado
+        \DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
+
+        return 'Contraseña restablecida exitosamente';
     }
 
     private function autoRepararPerfil(User $user): void
