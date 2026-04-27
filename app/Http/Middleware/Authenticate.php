@@ -12,6 +12,21 @@ class Authenticate extends Middleware
      */
     protected function redirectTo(Request $request): ?string
     {
-        return $request->expectsJson() ? null : route('login');
+        // Para peticiones API, no redirigir
+        if ($request->is('api/*')) {
+            return null;
+        }
+        
+        // Para peticiones que esperan JSON, no redirigir
+        if ($request->expectsJson()) {
+            return null;
+        }
+        
+        // Intentar obtener la ruta 'login', si no existe retornar null
+        try {
+            return route('login');
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 }

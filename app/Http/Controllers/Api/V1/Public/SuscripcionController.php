@@ -273,4 +273,39 @@ class SuscripcionController extends Controller
             ], 500);
         }
     }
+
+    /**
+ * Obtener suscripciones del usuario autenticado (desde token)
+ * GET /api/user/mis-suscripciones
+ */
+public function misSuscripciones(Request $request)
+{
+    try {
+        // Obtener usuario del token
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario no autenticado'
+            ], 401);
+        }
+        
+        $suscripciones = Suscripcion::where('user_id', $user->id)
+            ->with(['mascota'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        return response()->json([
+            'success' => true,
+            'data' => $suscripciones
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }

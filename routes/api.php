@@ -59,10 +59,9 @@ Route::apiResource('veterinarias', App\Http\Controllers\Api\V1\Public\Veterinari
 Route::get('/veterinarias/urgencias/mapa', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'mapa']);
 
 // =========================================================================
-// RUTAS PÚBLICAS - EVENTOS (cualquier usuario puede ver)
+// RUTAS PÚBLICAS - EVENTOS
 // =========================================================================
 Route::prefix('eventos')->name('eventos.')->group(function () {
-    // Rutas públicas (sin autenticación)
     Route::get('/', [PublicEventoController::class, 'index']);
     Route::get('/proximos', [PublicEventoController::class, 'proximos']);
     Route::get('/tipo/{tipo}', [PublicEventoController::class, 'porTipo']);
@@ -70,7 +69,6 @@ Route::prefix('eventos')->name('eventos.')->group(function () {
     Route::get('/calendario/data', [PublicEventoController::class, 'calendario']);
     Route::post('/{id}/like', [PublicEventoController::class, 'like']);
 
-    // Rutas que requieren autenticación
     Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/mis-eventos', [PublicEventoController::class, 'misEventos']);
         Route::post('/{id}/confirmar-asistencia', [PublicEventoController::class, 'confirmarAsistencia']);
@@ -82,31 +80,14 @@ Route::prefix('eventos')->name('eventos.')->group(function () {
 // RUTAS PÚBLICAS DE SUSCRIPCIONES
 // =========================================================================
 Route::prefix('public')->group(function () {
-    // Planes de membresía
     Route::get('/planes-membresia', [PublicSuscripcionController::class, 'getPlanesMembresia']);
-    
-    // Mascotas disponibles para apadrinar
     Route::get('/mascotas-para-apadrinar', [PublicSuscripcionController::class, 'getMascotasApadrinar']);
-    
-    // Estadísticas
     Route::get('/suscripciones-estadisticas', [PublicSuscripcionController::class, 'estadisticas']);
-    
-    // Crear suscripción pública
     Route::post('/suscripciones-crear', [PublicSuscripcionController::class, 'storePublic']);
-    
-    // Obtener suscripciones por usuario
     Route::get('/suscripciones/usuario/{userId}', [PublicSuscripcionController::class, 'getUserSuscripciones']);
-    
-    // Cancelar suscripción
     Route::post('/suscripciones/{id}/cancelar', [PublicSuscripcionController::class, 'cancelarSuscripcion']);
-    
-    // Listar todas las suscripciones (público)
     Route::get('/suscripciones', [PublicSuscripcionController::class, 'index']);
-    
-    // Ver una suscripción específica
     Route::get('/suscripciones/{id}', [PublicSuscripcionController::class, 'show']);
-    
-    // Suscripciones por mascota
     Route::get('/suscripciones/mascota/{mascotaId}', [PublicSuscripcionController::class, 'porMascota']);
 });
 
@@ -130,10 +111,10 @@ Route::middleware(['auth:sanctum'])->prefix('user')->name('user.')->group(functi
     Route::get('/donaciones', [App\Http\Controllers\Api\V1\User\DonacionController::class, 'index']);
     Route::post('/donaciones', [App\Http\Controllers\Api\V1\User\DonacionController::class, 'store']);
     
-    // Mis suscripciones (del usuario logueado)
-    Route::get('/mis-suscripciones', [PublicSuscripcionController::class, 'getUserSuscripciones']);
+    // ✅ MIS SUSCRIPCIONES (usuario autenticado)
+    Route::get('/mis-suscripciones', [PublicSuscripcionController::class, 'misSuscripciones']);
     
-    // Cancelar mi suscripción
+    // Cancelar suscripción
     Route::post('/suscripciones/{id}/cancelar', [PublicSuscripcionController::class, 'cancelarSuscripcion']);
 });
 
@@ -176,14 +157,14 @@ Route::middleware(['auth:sanctum'])->prefix('entity')->name('entity.')->group(fu
     Route::get('/razas/especie/{especie}', [App\Http\Controllers\Api\V1\Entity\RazaController::class, 'porEspecie']);
     Route::get('/razas-especies/todas', [App\Http\Controllers\Api\V1\Entity\RazaController::class, 'especies']);
 
-    // Tipos de Vacuna para entidades
+    // Tipos de Vacuna
     Route::apiResource('tipos-vacunas', App\Http\Controllers\Api\V1\Entity\TipoVacunaController::class);
     Route::get('/tipos-vacunas/recomendadas', [App\Http\Controllers\Api\V1\Entity\TipoVacunaController::class, 'recomendadas']);
 
-    // EVENTOS PARA ENTIDADES (Fundación) - CRUD completo
+    // EVENTOS PARA ENTIDADES
     Route::apiResource('eventos', EntityEventoController::class);
 
-    // SUSCRIPCIONES PARA ENTIDADES (Fundación) - CRUD completo
+    // SUSCRIPCIONES PARA ENTIDADES
     Route::apiResource('suscripciones', EntitySuscripcionController::class);
     Route::get('/suscripciones/mascota/{mascotaId}', [EntitySuscripcionController::class, 'porMascota']);
     Route::get('/suscripciones-estadisticas', [EntitySuscripcionController::class, 'estadisticas']);
@@ -207,7 +188,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     Route::apiResource('mascotas', App\Http\Controllers\Api\V1\Admin\MascotaController::class);
     Route::delete('/mascotas/{mascota}/foto-galeria', [App\Http\Controllers\Api\V1\Admin\MascotaController::class, 'eliminarFotoGaleria']);
 
-    // Seguimientos de adopciones
+    // Seguimientos
     Route::prefix('seguimientos')->name('seguimientos.')->group(function () {
         Route::get('/adopcion/{adopcionId}', [App\Http\Controllers\Api\V1\Admin\SeguimientoController::class, 'index']);
         Route::post('/adopcion/{adopcionId}', [App\Http\Controllers\Api\V1\Admin\SeguimientoController::class, 'store']);
@@ -239,7 +220,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     Route::patch('/donaciones/{donacion}/toggle-publica', [App\Http\Controllers\Api\V1\Admin\DonacionController::class, 'togglePublica']);
     Route::get('/donaciones-reportes/generales', [App\Http\Controllers\Api\V1\Admin\DonacionController::class, 'reporte']);
 
-    // Rescates - ADMIN
+    // Rescates
     Route::apiResource('rescates', App\Http\Controllers\Api\V1\Admin\RescateController::class);
     Route::post('/rescates/{id}/asignar', [App\Http\Controllers\Api\V1\Admin\RescateController::class, 'asignar']);
     Route::get('/rescates-estadisticas/generales', [App\Http\Controllers\Api\V1\Admin\RescateController::class, 'estadisticas']);
@@ -273,11 +254,11 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     Route::apiResource('veterinarias', App\Http\Controllers\Api\V1\Admin\VeterinariaController::class);
     Route::get('/veterinarias/cercanas', [App\Http\Controllers\Api\V1\Admin\VeterinariaController::class, 'cercanas']);
 
-    // EVENTOS PARA ADMIN - CRUD completo
+    // EVENTOS PARA ADMIN
     Route::apiResource('eventos', AdminEventoController::class);
     Route::get('/eventos/calendario/data', [AdminEventoController::class, 'calendarData']);
     Route::get('/eventos/proximos', [AdminEventoController::class, 'proximos']);
 
-    // SUSCRIPCIONES PARA ADMIN - CRUD completo
+    // SUSCRIPCIONES PARA ADMIN
     Route::apiResource('suscripciones', AdminSuscripcionController::class);
 });
