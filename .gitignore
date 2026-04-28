@@ -1,9 +1,17 @@
+# ========== DIRECTORIOS DEL SISTEMA ==========
 /.phpunit.cache
 /node_modules
+/vendor
+/.fleet
+/.idea
+/.vscode
+
+# ========== BUILD Y ASSETS ==========
 /public/build
 /public/hot
 /public/storage
-/vendor
+
+# ========== LOGS (IGNORAR - NO SUBIR) ==========
 /storage/*.log
 /storage/logs/*.log
 /storage/logs/laravel.log
@@ -12,6 +20,7 @@
 /storage/framework/views/*.php
 /storage/framework/testing/*.php
 logs/
+*.log
 *.log.1
 *.log.2
 *.log.3
@@ -21,22 +30,43 @@ logs/
 *.log.7
 *.log.8
 *.log.9
+
+# ========== ARCHIVOS DE ENTORNO (NO SUBIR) ==========
 .env
 .env.backup
 .env.production
 .env.local
 .env.testing
+
+# ========== ARCHIVOS DE DEPENDENCIAS (NO SUBIR) ==========
+composer.lock
+package-lock.json
+auth.json
+
+# ========== ARCHIVOS DE PRUEBAS ==========
 .phpunit.result.cache
 Homestead.json
 Homestead.yaml
-auth.json
+
+# ========== LOGS DE ERRORES ==========
 npm-debug.log
 yarn-error.log
-composer.lock
-package-lock.json
-/.fleet
-/.idea
-/.vscode
+
+# ========== ARCHIVOS DEL SISTEMA ==========
 .DS_Store
 Thumbs.db
 /.dockerignore
+
+# ========== PERMITIR IMÁGENES (QUE SÍ SE SUBAN) ==========
+!public/img/
+!public/img/**/*.jpg
+!public/img/**/*.png
+!public/img/**/*.jpeg
+!public/img/**/*.webp
+!public/img/**/*.gif
+!public/uploads/
+!public/uploads/**/*.jpg
+!public/uploads/**/*.png
+!storage/app/public/
+!storage/app/public/**/*.jpg
+!storage/app/public/**/*.png
