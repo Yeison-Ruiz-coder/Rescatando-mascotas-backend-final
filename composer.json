@@ -6,6 +6,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "cloudinary/cloudinary_php": "^3.1",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/breeze": "^1.29",
         "laravel/framework": "^10.10",
@@ -68,4 +69,3 @@
     "minimum-stability": "stable",
     "prefer-stable": true
 }
-

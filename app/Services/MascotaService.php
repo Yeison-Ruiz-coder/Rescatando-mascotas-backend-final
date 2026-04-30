@@ -87,4 +87,49 @@ class MascotaService
         $mascota->vacunas()->detach();
         $mascota->delete();
     }
+
+    // En MascotaEntityService.php, agregar este método
+
+    public function addGaleriaFotos(Mascota $mascota, array $nuevasFotos): void
+    {
+        $galeriaActual = $mascota->galeria_fotos;
+
+        if (is_string($galeriaActual)) {
+            $galeriaActual = json_decode($galeriaActual, true) ?? [];
+        } elseif (!is_array($galeriaActual)) {
+            $galeriaActual = [];
+        }
+
+        // Subir nuevas fotos
+        $nuevasUrls = [];
+        foreach ($nuevasFotos as $foto) {
+            if ($foto && $foto->isValid()) {
+                $url = $this->uploadImage($foto, 'mascotas/galeria');
+                $nuevasUrls[] = $url;
+            }
+        }
+
+        // Combinar
+        $galeriaFinal = array_merge($galeriaActual, $nuevasUrls);
+        $mascota->galeria_fotos = json_encode($galeriaFinal);
+        $mascota->save();
+    }
+
+    public function removeGaleriaFoto(Mascota $mascota, string $fotoUrl): void
+    {
+        $galeria = $mascota->galeria_fotos;
+
+        if (is_string($galeria)) {
+            $galeria = json_decode($galeria, true) ?? [];
+        }
+
+        // Eliminar de Cloudinary
+        $this->deleteImage($fotoUrl);
+
+        // Eliminar del array
+        $galeria = array_filter($galeria, fn($url) => $url !== $fotoUrl);
+
+        $mascota->galeria_fotos = json_encode(array_values($galeria));
+        $mascota->save();
+    }
 }
