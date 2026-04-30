@@ -21,15 +21,7 @@
 /storage/framework/testing/*.php
 logs/
 *.log
-*.log.1
-*.log.2
-*.log.3
-*.log.4
-*.log.5
-*.log.6
-*.log.7
-*.log.8
-*.log.9
+*.log.[0-9]
 
 # ========== ARCHIVOS DE ENTORNO (NO SUBIR) ==========
 .env
@@ -38,9 +30,9 @@ logs/
 .env.local
 .env.testing
 
-# ========== ARCHIVOS DE DEPENDENCIAS (NO SUBIR) ==========
-composer.lock
-package-lock.json
+# ========== ARCHIVOS DE DEPENDENCIAS ==========
+# NOTA: composer.lock y package-lock.json DEBEN subirse a Git
+# No los ignores
 auth.json
 
 # ========== ARCHIVOS DE PRUEBAS ==========
@@ -51,33 +43,22 @@ Homestead.yaml
 # ========== LOGS DE ERRORES ==========
 npm-debug.log
 yarn-error.log
-<<<<<<< HEAD
-#composer.lock
-#package-lock.json
-/.fleet
-/.idea
-/.vscode
-.DS_Store
-Thumbs.db
-#/.dockerignore
-=======
 
 # ========== ARCHIVOS DEL SISTEMA ==========
 .DS_Store
 Thumbs.db
-/.dockerignore
+.dockerignore
 
-# ========== PERMITIR IMÁGENES (QUE SÍ SE SUBAN) ==========
+# ========== IMÁGENES DEL SISTEMA (DISEÑO) ==========
+# Estas SÍ se suben a Git porque son parte del código
 !public/img/
 !public/img/**/*.jpg
 !public/img/**/*.png
 !public/img/**/*.jpeg
 !public/img/**/*.webp
 !public/img/**/*.gif
-!public/uploads/
-!public/uploads/**/*.jpg
-!public/uploads/**/*.png
-!storage/app/public/
-!storage/app/public/**/*.jpg
-!storage/app/public/**/*.png
->>>>>>> bf2830f725cc210d262de7523a049bbe28411666
+
+# ========== SUBIDAS DE USUARIOS - NO SUBIR A GIT ==========
+# Estos son datos, no código. Van a Cloudinary
+public/uploads/
+storage/app/public/
