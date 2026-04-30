@@ -51,6 +51,16 @@ Homestead.yaml
 # ========== LOGS DE ERRORES ==========
 npm-debug.log
 yarn-error.log
+<<<<<<< HEAD
+#composer.lock
+#package-lock.json
+/.fleet
+/.idea
+/.vscode
+.DS_Store
+Thumbs.db
+#/.dockerignore
+=======
 
 # ========== ARCHIVOS DEL SISTEMA ==========
 .DS_Store
@@ -70,3 +80,4 @@ Thumbs.db
 !storage/app/public/
 !storage/app/public/**/*.jpg
 !storage/app/public/**/*.png
+>>>>>>> bf2830f725cc210d262de7523a049bbe28411666
