@@ -1,65 +1,64 @@
-# ========== ARCHIVOS DE ENTORNO (NUNCA SUBIR) ==========
+# ========== DIRECTORIOS DEL SISTEMA ==========
+/.phpunit.cache
+/node_modules
+/vendor
+/.fleet
+/.idea
+/.vscode
+
+# ========== BUILD Y ASSETS ==========
+/public/build
+/public/hot
+/public/storage
+
+# ========== LOGS (IGNORAR - NO SUBIR) ==========
+/storage/*.log
+/storage/logs/*.log
+/storage/logs/laravel.log
+/storage/framework/cache/*.php
+/storage/framework/sessions/*.php
+/storage/framework/views/*.php
+/storage/framework/testing/*.php
+logs/
+*.log
+*.log.[0-9]
+
+# ========== ARCHIVOS DE ENTORNO (NO SUBIR) ==========
 .env
 .env.backup
 .env.production
 .env.local
 .env.testing
 
-# ========== DEPENDENCIAS (NO SUBIR) ==========
-/vendor
-/node_modules
+# ========== ARCHIVOS DE DEPENDENCIAS ==========
+# NOTA: composer.lock y package-lock.json DEBEN subirse a Git
+# No los ignores
+auth.json
 
-# =========️ CACHE DE LARAVEL (IGNORAR CONTENIDO, PERO MANTENER CARPETAS) ==========
-/storage/*.key
-/storage/*.log
-/storage/logs/
-/storage/framework/cache/
-/storage/framework/sessions/
-/storage/framework/testing/
-/storage/framework/views/
-/bootstrap/cache/
+# ========== ARCHIVOS DE PRUEBAS ==========
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
 
-# ========== ARCHIVOS DE BUILD Y ASSETS TEMPORALES ==========
-/public/build
-/public/hot
-/public/storage
-
-# ========== ARCHIVOS DE LOGS ==========
-*.log
+# ========== LOGS DE ERRORES ==========
 npm-debug.log
 yarn-error.log
 
 # ========== ARCHIVOS DEL SISTEMA ==========
 .DS_Store
 Thumbs.db
-/.idea
-/.vscode
-/.fleet
-/.phpunit.cache
-.phpunit.result.cache
+.dockerignore
 
-# ========== HOMESTEAD / ENTORNO LOCAL ==========
-Homestead.json
-Homestead.yaml
+# ========== IMÁGENES DEL SISTEMA (DISEÑO) ==========
+# Estas SÍ se suben a Git porque son parte del código
+!public/img/
+!public/img/**/*.jpg
+!public/img/**/*.png
+!public/img/**/*.jpeg
+!public/img/**/*.webp
+!public/img/**/*.gif
 
-# ========== COMPOSER ==========
-composer.phar
-auth.json
-
-# ========== ARCHIVOS OPCIONALES (SEGÚN TU FLUJO) ==========
-# Si usas Laravel Sail
-/sail
-
-# Si usas Laravel Telescope
-/telescope
-
-# ========== ¡IMPORTANTE! MANTENER LAS CARPETAS DE STORAGE ==========
-# Esto evita que Git borre las carpetas vacías necesarias para Laravel
-!storage/app/
-!storage/framework/
-!storage/framework/cache/
-!storage/framework/sessions/
-!storage/framework/testing/
-!storage/framework/views/
-!storage/logs/
-!bootstrap/cache/
+# ========== SUBIDAS DE USUARIOS - NO SUBIR A GIT ==========
+# Estos son datos, no código. Van a Cloudinary
+public/uploads/
+storage/app/public/
