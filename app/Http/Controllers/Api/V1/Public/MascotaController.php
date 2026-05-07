@@ -21,7 +21,10 @@ class MascotaController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['especie', 'fundacion_id', 'genero', 'buscar']);
+        $filters = $request->only([
+            'especie', 'fundacion_id', 'genero', 'tamano', 'buscar',
+            'apto_con_ninos', 'apto_con_otros_animales', 'destacada'
+        ]);
         $perPage = $request->get('per_page', 15);
 
         $mascotas = $this->mascotaService->getAll($filters, $perPage);
@@ -29,7 +32,7 @@ class MascotaController extends Controller
         return $this->successResponse($mascotas, 'Mascotas obtenidas exitosamente');
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $mascota = $this->mascotaService->findById($id);
@@ -39,16 +42,21 @@ class MascotaController extends Controller
         }
     }
 
-    public function porEspecie($especie)
+    public function porEspecie(string $especie)
     {
         $mascotas = $this->mascotaService->getPorEspecie($especie);
         return $this->successResponse($mascotas, 'Mascotas por especie obtenidas exitosamente');
     }
 
-    public function porFundacion($fundacionId)
+    public function porFundacion(int $fundacionId)
     {
         $mascotas = $this->mascotaService->getPorFundacion($fundacionId);
         return $this->successResponse($mascotas, 'Mascotas por fundación obtenidas exitosamente');
     }
-    
+
+    public function destacadas()
+    {
+        $mascotas = $this->mascotaService->getDestacadas(6);
+        return $this->successResponse($mascotas, 'Mascotas destacadas obtenidas exitosamente');
+    }
 }

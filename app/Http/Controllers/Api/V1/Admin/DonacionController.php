@@ -24,7 +24,7 @@ class DonacionController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['user_id', 'fundacion_id', 'publica', 'fecha_inicio', 'fecha_fin', 'orden']);
+        $filters = $request->only(['user_id', 'fundacion_id', 'publica', 'fecha_inicio', 'fecha_fin', 'orden', 'metodo_pago']);
         $perPage = $request->get('per_page', 15);
 
         $donaciones = $this->donacionService->getAll($filters, $perPage);
@@ -36,7 +36,7 @@ class DonacionController extends Controller
         ], 'Donaciones obtenidas exitosamente');
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $donacion = $this->donacionService->findById($id);
@@ -64,7 +64,7 @@ class DonacionController extends Controller
         }
     }
 
-    public function update(DonacionRequest $request, $id)
+    public function update(DonacionRequest $request, int $id)
     {
         try {
             $donacion = $this->runInTransaction(
@@ -80,7 +80,7 @@ class DonacionController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         try {
             $this->runInTransaction(
@@ -96,7 +96,7 @@ class DonacionController extends Controller
         }
     }
 
-    public function togglePublica($id)
+    public function togglePublica(int $id)
     {
         try {
             $donacion = $this->runInTransaction(
@@ -128,6 +128,20 @@ class DonacionController extends Controller
             return $this->successResponse($reporte, 'Reporte generado exitosamente');
         } catch (\Exception $e) {
             return $this->errorResponse('Error al generar el reporte', $e->getMessage(), 500);
+        }
+    }
+
+    public function porMetodoPago(Request $request)
+    {
+        try {
+            $resultado = $this->donacionService->getPorMetodoPago(
+                $request->get('fecha_inicio', now()->startOfMonth()),
+                $request->get('fecha_fin', now())
+            );
+
+            return $this->successResponse($resultado, 'Donaciones por método de pago obtenidas');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al obtener donaciones por método de pago', $e->getMessage(), 500);
         }
     }
 }

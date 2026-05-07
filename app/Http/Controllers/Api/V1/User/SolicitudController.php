@@ -32,7 +32,7 @@ class SolicitudController extends Controller
         }
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $solicitud = $this->solicitudService->findById(auth()->id(), $id);

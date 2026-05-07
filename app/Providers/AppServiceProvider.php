@@ -16,6 +16,7 @@ use App\Services\ComentarioService;
 use App\Services\DonacionService;
 use App\Services\SolicitudService;
 use App\Services\AdopcionService;
+use App\Services\Entity\EventoEntityService;
 use App\Services\SeguimientoService;
 use App\Services\RescateService;
 use App\Services\ReporteService;
@@ -24,6 +25,7 @@ use App\Services\VeterinariaService;
 use App\Services\Entity\MascotaEntityService;
 use App\Services\Entity\RescateEntityService;
 use App\Services\Entity\SolicitudEntityService;
+use App\Services\Entity\SuscripcionEntityService;
 use App\Services\Public\MascotaPublicService;
 use App\Services\Public\AdopcionPublicService;
 use App\Services\Public\EventoPublicService;
@@ -31,6 +33,7 @@ use App\Services\Public\FundacionPublicService;
 use App\Services\Public\VeterinariaPublicService;
 use App\Services\Public\ComentarioPublicService;
 use App\Services\Public\RescatePublicService;
+use App\Services\SuscripcionService;
 use App\Services\User\ComentarioUserService;
 use App\Services\User\DonacionUserService;
 use App\Services\User\ProfileUserService;
@@ -83,6 +86,11 @@ class AppServiceProvider extends ServiceProvider
             return new RazaService();
         });
 
+        $this->app->singleton(SuscripcionService::class, function ($app) {
+            return new SuscripcionService();
+        });
+
+
         $this->app->singleton(MascotaService::class, function ($app) {
             return new MascotaService();
         });
@@ -119,6 +127,14 @@ class AppServiceProvider extends ServiceProvider
             return new SolicitudEntityService();
         });
 
+        $this->app->singleton(SuscripcionEntityService::class, function ($app) {
+            return new SuscripcionEntityService();
+        });
+
+        $this->app->singleton(EventoEntityService::class, function ($app) {
+            return new EventoEntityService();
+        });
+
         $this->app->singleton(MascotaPublicService::class, fn($app) => new MascotaPublicService());
         $this->app->singleton(AdopcionPublicService::class, fn($app) => new AdopcionPublicService());
         $this->app->singleton(EventoPublicService::class, fn($app) => new EventoPublicService());
@@ -126,6 +142,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(VeterinariaPublicService::class, fn($app) => new VeterinariaPublicService());
         $this->app->singleton(ComentarioPublicService::class, fn($app) => new ComentarioPublicService());
         $this->app->singleton(RescatePublicService::class, fn($app) => new RescatePublicService());
+        $this->app->singleton(SuscripcionService::class, fn($app) => new SuscripcionService());
+
 
 
         $this->app->singleton(ComentarioUserService::class, fn($app) => new ComentarioUserService());

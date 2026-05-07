@@ -3,141 +3,136 @@
 namespace App\Http\Controllers\Api\V1\Entity;
 
 use App\Http\Controllers\Controller;
-use App\Models\Evento;
+use App\Services\Entity\EventoEntityService;
+use App\Traits\ApiResponses;
+use App\Traits\TransactionTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class EventoController extends Controller
 {
+    use ApiResponses, TransactionTrait;
+
+    protected EventoEntityService $eventoService;
+
+    public function __construct(EventoEntityService $eventoService)
+    {
+        $this->eventoService = $eventoService;
+    }
+
     public function index()
     {
-        $eventos = Evento::where('fundacion_id', auth()->user()->fundacion_id)
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => $eventos
-        ]);
+        try {
+            $eventos = $this->eventoService->getMisEventos();
+            return $this->successResponse($eventos, 'Eventos obtenidos exitosamente');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 403);
+        }
     }
 
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'Nombre_evento' => 'required|string|max:255',
-            'Lugar_evento' => 'required|string|max:255',
-            'Descripcion' => 'required|string',
-            'Fecha_evento' => 'required|date',
+            'nombre_evento' => 'required|string|max:255',
+            'lugar_evento' => 'required|string|max:255',
+            'descripcion' => 'required|string',
+            'fecha_evento' => 'required|date',
+            'fecha_fin' => 'nullable|date|after_or_equal:fecha_evento',
+            'capacidad_maxima' => 'nullable|integer|min:1',
+            'costo' => 'nullable|numeric|min:0',
+            'organizador' => 'nullable|string|max:255',
+            'telefono_contacto' => 'nullable|string|max:20',
+            'email_contacto' => 'nullable|email|max:255',
+            'categoria' => 'nullable|string|max:100',
+            'tags' => 'nullable|array',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return $this->errorResponse('Error de validación', $validator->errors(), 422);
         }
 
         try {
-            $evento = new Evento();
-            $evento->nombre_evento = $request->Nombre_evento;
-            $evento->lugar_evento = $request->Lugar_evento;
-            $evento->descripcion = $request->Descripcion;
-            $evento->fecha_evento = $request->Fecha_evento;
-            $evento->fundacion_id = auth()->user()->fundacion_id ?? 1;
-            $evento->tipo = 'fundacion';
-            $evento->likes = 0;
+            $evento = $this->runInTransaction(
+                fn() => $this->eventoService->createEvento(
+                    $request->except('imagen'),
+                    $request->file('imagen')
+                ),
+                'Error al crear evento'
+            );
 
-            // ✅ MANEJO DE LA IMAGEN
-            if ($request->hasFile('imagen')) {
-                // Guardar la imagen en storage/app/public/eventos
-                $path = $request->file('imagen')->store('eventos', 'public');
-                $evento->imagen_url = '/storage/' . $path;
-            }
-
-            $evento->save();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Evento creado exitosamente',
-                'data' => $evento
-            ], 201);
-
+            return $this->successResponse($evento, 'Evento creado exitosamente', 201);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al crear el evento: ' . $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Error al crear el evento', $e->getMessage(), 500);
         }
     }
 
-    public function show($id)
+    public function show(int$id)
     {
-        $evento = Evento::where('fundacion_id', auth()->user()->fundacion_id)
-            ->where('id', $id)
-            ->firstOrFail();
-
-        return response()->json([
-            'success' => true,
-            'data' => $evento
-        ]);
+        try {
+            $evento = $this->eventoService->findEvento($id);
+            return $this->successResponse($evento, 'Evento obtenido exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Evento no encontrado');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 403);
+        }
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request,int $id)
     {
-        $evento = Evento::where('fundacion_id', auth()->user()->fundacion_id)
-            ->where('id', $id)
-            ->firstOrFail();
-
         $validator = Validator::make($request->all(), [
-            'Nombre_evento' => 'sometimes|string|max:255',
-            'Lugar_evento' => 'sometimes|string|max:255',
-            'Descripcion' => 'sometimes|string',
-            'Fecha_evento' => 'sometimes|date',
+            'nombre_evento' => 'sometimes|string|max:255',
+            'lugar_evento' => 'sometimes|string|max:255',
+            'descripcion' => 'sometimes|string',
+            'fecha_evento' => 'sometimes|date',
+            'fecha_fin' => 'nullable|date|after_or_equal:fecha_evento',
+            'capacidad_maxima' => 'nullable|integer|min:1',
+            'costo' => 'nullable|numeric|min:0',
+            'organizador' => 'nullable|string|max:255',
+            'telefono_contacto' => 'nullable|string|max:20',
+            'email_contacto' => 'nullable|email|max:255',
+            'categoria' => 'nullable|string|max:100',
+            'tags' => 'nullable|array',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return $this->errorResponse('Error de validación', $validator->errors(), 422);
         }
 
-        if ($request->has('Nombre_evento')) $evento->nombre_evento = $request->Nombre_evento;
-        if ($request->has('Lugar_evento')) $evento->lugar_evento = $request->Lugar_evento;
-        if ($request->has('Descripcion')) $evento->descripcion = $request->Descripcion;
-        if ($request->has('Fecha_evento')) $evento->fecha_evento = $request->Fecha_evento;
+        try {
+            $evento = $this->runInTransaction(
+                fn() => $this->eventoService->updateEvento(
+                    $id,
+                    $request->except('imagen'),
+                    $request->file('imagen')
+                ),
+                'Error al actualizar evento'
+            );
 
-        // ✅ ACTUALIZAR IMAGEN
-        if ($request->hasFile('imagen')) {
-            // Eliminar imagen anterior si existe
-            if ($evento->imagen_url && file_exists(public_path($evento->imagen_url))) {
-                unlink(public_path($evento->imagen_url));
-            }
-            $path = $request->file('imagen')->store('eventos', 'public');
-            $evento->imagen_url = '/storage/' . $path;
+            return $this->successResponse($evento, 'Evento actualizado exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Evento no encontrado');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al actualizar el evento', $e->getMessage(), 500);
         }
-
-        $evento->save();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Evento actualizado',
-            'data' => $evento
-        ]);
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
-        $evento = Evento::where('fundacion_id', auth()->user()->fundacion_id)
-            ->where('id', $id)
-            ->firstOrFail();
+        try {
+            $this->runInTransaction(
+                fn() => $this->eventoService->deleteEvento($id),
+                'Error al eliminar evento'
+            );
 
-        // ✅ ELIMINAR IMAGEN
-        if ($evento->imagen_url && file_exists(public_path($evento->imagen_url))) {
-            unlink(public_path($evento->imagen_url));
+            return $this->successResponse(null, 'Evento eliminado exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Evento no encontrado');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al eliminar el evento', $e->getMessage(), 500);
         }
-
-        $evento->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Evento eliminado'
-        ]);
     }
 }

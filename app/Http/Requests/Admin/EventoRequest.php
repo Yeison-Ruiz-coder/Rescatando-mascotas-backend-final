@@ -22,6 +22,7 @@ class EventoRequest extends FormRequest
             'fecha_evento' => 'required|date',
             'fecha_fin' => 'nullable|date|after_or_equal:fecha_evento',
             'imagen_url' => 'nullable|image|max:2048',
+            'imagen_public_id' => 'nullable|string|max:255',
             'capacidad_maxima' => 'nullable|integer|min:1',
             'costo' => 'nullable|numeric|min:0',
             'organizador' => 'nullable|string|max:255',

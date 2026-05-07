@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use App\Traits\HasScopes;
 
 class Fundacion extends Model
@@ -16,7 +17,7 @@ class Fundacion extends Model
     protected $allowFilter = ['id', 'Nombre_1', 'Email', 'Telefono'];
     protected $allowSort = ['id', 'Nombre_1', 'created_at'];
 
-    protected $fillable = [ // AÑADIDO - importante para asignación masiva
+    protected $fillable = [
         'Nombre_1',
         'Direccion',
         'Telefono',
@@ -26,13 +27,26 @@ class Fundacion extends Model
         'necesidades_actuales',
         'horario_atencion',
         'recibe_voluntarios',
-        'user_id', // AÑADIDO
+        'user_id',
+        // ===== NUEVOS CAMPOS =====
+        'lat',
+        'lng',
+        'radio_atencion',
+        'imagen_portada',
+        'imagen_portada_public_id',
+        'verificado',
+        'ciudad',
+        'fecha_fundacion',
     ];
 
     protected $casts = [
         'necesidades_actuales' => 'array',
         'recibe_voluntarios' => 'boolean',
         'capacidad_maxima' => 'integer',
+        'verificado' => 'boolean', //  NUEVO
+        'lat' => 'decimal:8', //  NUEVO
+        'lng' => 'decimal:8', //  NUEVO
+        'fecha_fundacion' => 'date', //  NUEVO
     ];
 
     // Relaciones
@@ -67,7 +81,7 @@ class Fundacion extends Model
     }
 
     // Scope para fundaciones que reciben voluntarios
-    public function scopeRecibenVoluntarios($query)
+    public function scopeRecibenVoluntarios(Builder $query)
     {
         return $query->where('recibe_voluntarios', true);
     }

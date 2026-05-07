@@ -70,13 +70,51 @@ class VeterinariaService
 
     public function create(array $data): Veterinaria
     {
+        // Procesar arrays a JSON
         if (isset($data['servicios']) && is_array($data['servicios'])) {
             $data['servicios'] = json_encode($data['servicios'], JSON_UNESCAPED_UNICODE);
+        }
+
+        if (isset($data['servicios_detallados']) && is_array($data['servicios_detallados'])) {
+            $data['servicios_detallados'] = json_encode($data['servicios_detallados'], JSON_UNESCAPED_UNICODE);
         }
 
         if (isset($data['convenios']) && is_array($data['convenios'])) {
             $data['convenios'] = json_encode($data['convenios'], JSON_UNESCAPED_UNICODE);
         }
+
+        if (isset($data['redes_sociales']) && is_array($data['redes_sociales'])) {
+            $data['redes_sociales'] = json_encode($data['redes_sociales'], JSON_UNESCAPED_UNICODE);
+        }
+
+        if (isset($data['equipo_medico']) && is_array($data['equipo_medico'])) {
+            $data['equipo_medico'] = json_encode($data['equipo_medico'], JSON_UNESCAPED_UNICODE);
+        }
+
+        if (isset($data['documentos_verificacion']) && is_array($data['documentos_verificacion'])) {
+            $data['documentos_verificacion'] = json_encode($data['documentos_verificacion'], JSON_UNESCAPED_UNICODE);
+        }
+
+        if (isset($data['cobertura_zona']) && is_array($data['cobertura_zona'])) {
+            $data['cobertura_zona'] = json_encode($data['cobertura_zona'], JSON_UNESCAPED_UNICODE);
+        }
+
+        if (isset($data['galeria_fotos']) && is_array($data['galeria_fotos'])) {
+            $data['galeria_fotos'] = json_encode($data['galeria_fotos'], JSON_UNESCAPED_UNICODE);
+        }
+
+        // Compatibilidad con latitud/longitud
+        if (isset($data['latitud']) && !isset($data['lat'])) {
+            $data['lat'] = $data['latitud'];
+        }
+        if (isset($data['longitud']) && !isset($data['lng'])) {
+            $data['lng'] = $data['longitud'];
+        }
+
+        // Valores por defecto
+        $data['verificado'] = $data['verificado'] ?? false;
+        $data['acepta_seguros'] = $data['acepta_seguros'] ?? false;
+        $data['radio_atencion'] = $data['radio_atencion'] ?? 10;
 
         return Veterinaria::create($data);
     }
@@ -89,8 +127,40 @@ class VeterinariaService
             $data['servicios'] = json_encode($data['servicios'], JSON_UNESCAPED_UNICODE);
         }
 
+        if (isset($data['servicios_detallados']) && is_array($data['servicios_detallados'])) {
+            $data['servicios_detallados'] = json_encode($data['servicios_detallados'], JSON_UNESCAPED_UNICODE);
+        }
+
         if (isset($data['convenios']) && is_array($data['convenios'])) {
             $data['convenios'] = json_encode($data['convenios'], JSON_UNESCAPED_UNICODE);
+        }
+
+        if (isset($data['redes_sociales']) && is_array($data['redes_sociales'])) {
+            $data['redes_sociales'] = json_encode($data['redes_sociales'], JSON_UNESCAPED_UNICODE);
+        }
+
+        if (isset($data['equipo_medico']) && is_array($data['equipo_medico'])) {
+            $data['equipo_medico'] = json_encode($data['equipo_medico'], JSON_UNESCAPED_UNICODE);
+        }
+
+        if (isset($data['documentos_verificacion']) && is_array($data['documentos_verificacion'])) {
+            $data['documentos_verificacion'] = json_encode($data['documentos_verificacion'], JSON_UNESCAPED_UNICODE);
+        }
+
+        if (isset($data['cobertura_zona']) && is_array($data['cobertura_zona'])) {
+            $data['cobertura_zona'] = json_encode($data['cobertura_zona'], JSON_UNESCAPED_UNICODE);
+        }
+
+        if (isset($data['galeria_fotos']) && is_array($data['galeria_fotos'])) {
+            $data['galeria_fotos'] = json_encode($data['galeria_fotos'], JSON_UNESCAPED_UNICODE);
+        }
+
+        // Compatibilidad con latitud/longitud
+        if (isset($data['latitud']) && !isset($data['lat'])) {
+            $data['lat'] = $data['latitud'];
+        }
+        if (isset($data['longitud']) && !isset($data['lng'])) {
+            $data['lng'] = $data['longitud'];
         }
 
         $veterinaria->update($data);
@@ -115,11 +185,11 @@ class VeterinariaService
     public function getCercanas(float $lat, float $lng, int $radio = 10)
     {
         return Veterinaria::selectRaw(
-            "*, (6371 * acos(cos(radians(?)) * cos(radians(latitud)) * cos(radians(longitud) - radians(?)) + sin(radians(?)) * sin(radians(latitud)))) AS distancia",
+            "*, (6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distancia",
             [$lat, $lng, $lat]
         )
-        ->whereNotNull('latitud')
-        ->whereNotNull('longitud')
+        ->whereNotNull('lat')
+        ->whereNotNull('lng')
         ->having('distancia', '<=', $radio)
         ->orderBy('distancia')
         ->get();

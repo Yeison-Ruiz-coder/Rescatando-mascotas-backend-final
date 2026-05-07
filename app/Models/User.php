@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Traits\HasScopes;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Builder;
 
 class User extends Authenticatable
 {
@@ -40,13 +41,34 @@ class User extends Authenticatable
         'direccion',
         'telefono',
         'avatar',
+        'avatar_public_id', // ✅ NUEVO
         'tipo_documento',
         'numero_documento',
         'email_verified_at',
         'created_by',
         'updated_by',
+        // ===== NUEVOS CAMPOS =====
+        'biografia',
+        'redes_sociales',
+        'pais',
+        'ciudad',
+        'codigo_postal',
+        'lat',
+        'lng',
+        'preferencias_notificaciones',
+        'idioma',
+        'tema',
+        'ultimo_acceso',
+        'ultima_ip',
+        'veces_reportado',
+        'documento_verificado',
+        'email_verification_token',
+        'telefono_verificado',
+        'total_mascotas_adoptadas',
+        'total_donaciones',
+        'puntos',
+        'rango',
     ];
-
     protected $hidden = [
         'password',
         'remember_token',
@@ -57,6 +79,12 @@ class User extends Authenticatable
         'fecha_nacimiento' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'redes_sociales' => 'array', // ✅ NUEVO
+        'preferencias_notificaciones' => 'array', // ✅ NUEVO
+        'documento_verificado' => 'boolean', // ✅ NUEVO
+        'telefono_verificado' => 'boolean', // ✅ NUEVO
+        'lat' => 'decimal:8', // ✅ NUEVO
+        'lng' => 'decimal:8', // ✅ NUEVO
     ];
 
     // Relaciones de usuario creador/editor
@@ -198,9 +226,17 @@ class User extends Authenticatable
     {
         return $this->tipo === 'user';
     }
+    // En User.php
+    public function mascotasDeFundacion()
+    {
+        if ($this->isFundacion() && $this->fundacion) {
+            return $this->fundacion->mascotas();
+        }
+        return $this->hasMany(Mascota::class, 'fundacion_id'); // fallback
+    }
 
     // Scope para usuarios activos
-    public function scopeActivos($query)
+    public function scopeActivos(Builder $query)
     {
         return $query->where('estado', 'activo');
     }
@@ -210,18 +246,27 @@ class User extends Authenticatable
     {
         return trim($this->nombre . ' ' . $this->apellidos);
     }
-    public function scopePendientes($query)
+    public function scopePendientes(Builder $query)
     {
         return $query->where('estado', 'pendiente')
             ->whereIn('tipo', ['fundacion', 'veterinaria']);
     }
     // app/Models/User.php
 
-// Relación con eventos donde el usuario confirma asistencia
-    public function eventosAsistencia()
+ function eventosAsistencia()
     {
         return $this->belongsToMany(Evento::class, 'evento_asistentes', 'user_id', 'evento_id')
                     ->withPivot('estado', 'created_at')
-                    ->withTimestamps();
+                    ->wherePivot('estado', 'confirmado');
+    }
+
+    /**
+     * Verificar si el usuario ha confirmado asistencia a un evento específico
+     */
+    public function haConfirmadoAsistencia(int $eventoId)
+    {
+        return $this->eventosAsistencia()
+                    ->where('evento_id', $eventoId)
+                    ->exists();
     }
 }

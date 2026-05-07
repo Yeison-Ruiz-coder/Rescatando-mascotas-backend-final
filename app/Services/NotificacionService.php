@@ -33,6 +33,14 @@ class NotificacionService
             $query->where('contenido', 'like', "%{$filters['search']}%");
         }
 
+        if (isset($filters['leida'])) {
+            $query->where('leida', $filters['leida']);
+        }
+
+        if (!empty($filters['prioridad'])) {
+            $query->where('prioridad', $filters['prioridad']);
+        }
+
         return $query->orderBy('fecha_envio', 'desc')->paginate($perPage);
     }
 
@@ -60,6 +68,16 @@ class NotificacionService
             $data['fecha_envio'] = now();
         }
 
+        // Valores por defecto para nuevos campos
+        $data['leida'] = $data['leida'] ?? false;
+        $data['prioridad'] = $data['prioridad'] ?? 'media';
+        $data['tipo'] = $data['tipo'] ?? 'info';
+
+        // Procesar metadata si viene como array
+        if (isset($data['metadata']) && is_array($data['metadata'])) {
+            $data['metadata'] = json_encode($data['metadata'], JSON_UNESCAPED_UNICODE);
+        }
+
         return Notificacion::create($data);
     }
 
@@ -76,19 +94,42 @@ class NotificacionService
         $notificacion->delete();
     }
 
+    public function marcarComoLeida(int $id): Notificacion
+    {
+        $notificacion = Notificacion::findOrFail($id);
+        $notificacion->leida = true;
+        $notificacion->leida_en = now();
+        $notificacion->save();
+        return $notificacion;
+    }
+
+    public function marcarTodasComoLeidas(int $userId): int
+    {
+        return Notificacion::where('user_id', $userId)
+            ->where('leida', false)
+            ->update([
+                'leida' => true,
+                'leida_en' => now()
+            ]);
+    }
+
     public function getPorUsuario(int $userId, array $filters = [], int $perPage = 15)
     {
         $user = User::findOrFail($userId);
 
         $query = Notificacion::with('creadoPor')->where('user_id', $userId);
 
-        if (!empty($filters['no_leidas'])) {
-            // $query->where('leida', false);
+        if (!empty($filters['solo_no_leidas'])) {
+            $query->where('leida', false);
+        }
+
+        if (!empty($filters['prioridad'])) {
+            $query->where('prioridad', $filters['prioridad']);
         }
 
         $notificaciones = $query->orderBy('fecha_envio', 'desc')->paginate($perPage);
 
-        $noLeidas = 0;
+        $noLeidas = Notificacion::where('user_id', $userId)->where('leida', false)->count();
 
         return [
             'data' => $notificaciones,
@@ -121,6 +162,10 @@ class NotificacionService
                 case 'usuarios':
                     $query->where('tipo', 'user');
                     break;
+                case 'todos':
+                default:
+                    // No filtrar por tipo
+                    break;
             }
 
             $destinatarios = $query->get();
@@ -130,12 +175,40 @@ class NotificacionService
         $notificacionesCreadas = [];
 
         foreach ($destinatarios as $destinatario) {
-            $notificacionesCreadas[] = Notificacion::create([
+            $notificacionData = [
                 'contenido' => $data['contenido'],
                 'user_id' => $destinatario->id,
                 'creado_por_id' => auth()->id(),
                 'fecha_envio' => $fechaEnvio,
-            ]);
+            ];
+
+            // Agregar campos nuevos si vienen
+            if (isset($data['titulo'])) {
+                $notificacionData['titulo'] = $data['titulo'];
+            }
+            if (isset($data['tipo'])) {
+                $notificacionData['tipo'] = $data['tipo'];
+            }
+            if (isset($data['prioridad'])) {
+                $notificacionData['prioridad'] = $data['prioridad'];
+            }
+            if (isset($data['url_accion'])) {
+                $notificacionData['url_accion'] = $data['url_accion'];
+            }
+            if (isset($data['texto_accion'])) {
+                $notificacionData['texto_accion'] = $data['texto_accion'];
+            }
+            if (isset($data['expira_en'])) {
+                $notificacionData['expira_en'] = $data['expira_en'];
+            }
+            if (isset($data['icono'])) {
+                $notificacionData['icono'] = $data['icono'];
+            }
+            if (isset($data['color'])) {
+                $notificacionData['color'] = $data['color'];
+            }
+
+            $notificacionesCreadas[] = Notificacion::create($notificacionData);
         }
 
         return [

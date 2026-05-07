@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('veterinarias', function (Blueprint $table) {
@@ -17,19 +14,20 @@ return new class extends Migration
             $table->string('Direccion')->unique();
             $table->string('Telefono')->unique();
             $table->string('Email')->unique();
-            $table->json('servicios')->nullable(); // ["urgencias", "cirugía", "vacunación", etc.]
+            $table->json('servicios')->nullable();
             $table->boolean('urgencias_24h')->default(false);
-            $table->json('convenios')->nullable(); // IDs de fundaciones con convenio
-
+            $table->json('convenios')->nullable();
             $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
+
+            // Ubicación
+            $table->decimal('lat', 10, 8)->nullable();
+            $table->decimal('lng', 11, 8)->nullable();
+            $table->integer('radio_atencion')->default(10);
 
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('veterinarias');

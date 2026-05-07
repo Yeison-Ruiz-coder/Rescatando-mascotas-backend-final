@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Traits\HasScopes;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 
 class Solicitud extends Model
 {
@@ -96,32 +97,32 @@ class Solicitud extends Model
     }
 
     // Scopes útiles
-    public function scopePendientes($query)
+    public function scopePendientes(Builder $query)
     {
         return $query->where('estado', self::ESTADO_PENDIENTE);
     }
 
-    public function scopeEnRevision($query)
+    public function scopeEnRevision(Builder $query)
     {
         return $query->where('estado', self::ESTADO_EN_REVISION);
     }
 
-    public function scopeAprobadas($query)
+    public function scopeAprobadas(Builder $query)
     {
         return $query->where('estado', self::ESTADO_APROBADA);
     }
 
-    public function scopeRechazadas($query)
+    public function scopeRechazadas(Builder $query)
     {
         return $query->where('estado', self::ESTADO_RECHAZADA);
     }
 
-    public function scopePorTipo($query, $tipo)
+    public function scopePorTipo(Builder $query, string $tipo)
     {
         return $query->where('tipo_solicitud', $tipo);
     }
 
-    public function scopePorMascota($query, $mascotaId)
+    public function scopePorMascota(Builder $query, int $mascotaId)
     {
         return $query->where('solicitable_type', Mascota::class)
             ->where('solicitable_id', $mascotaId);

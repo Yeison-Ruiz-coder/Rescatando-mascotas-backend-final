@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Donacion;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class DonacionService
@@ -30,6 +31,10 @@ class DonacionService
 
         if (!empty($filters['fecha_fin'])) {
             $query->whereDate('fecha_donacion', '<=', $filters['fecha_fin']);
+        }
+
+        if (!empty($filters['metodo_pago'])) {
+            $query->where('metodo_pago', $filters['metodo_pago']);
         }
 
         $orden = $filters['orden'] ?? 'desc';
@@ -61,6 +66,9 @@ class DonacionService
         if (!isset($data['fecha_donacion'])) {
             $data['fecha_donacion'] = now();
         }
+
+        $data['publica'] = $data['publica'] ?? true;
+        $data['anonima'] = $data['anonima'] ?? false;
 
         return Donacion::create($data);
     }
@@ -123,7 +131,7 @@ class DonacionService
         return $resultado;
     }
 
-    private function agruparDonaciones($donaciones, string $agrupacion): array
+    private function agruparDonaciones(Collection $donaciones, string $agrupacion): array
     {
         if ($agrupacion === 'dia') {
             return $donaciones->groupBy(function($item) {
@@ -158,6 +166,27 @@ class DonacionService
             })->toArray();
         }
 
+        if ($agrupacion === 'metodo_pago') {
+            return $donaciones->whereNotNull('metodo_pago')
+                ->groupBy('metodo_pago')
+                ->map(function($grupo) {
+                    return [
+                        'cantidad' => $grupo->count(),
+                        'total' => $grupo->sum('valor_donacion')
+                    ];
+                })->toArray();
+        }
+
         return [];
+    }
+
+    public function getPorMetodoPago(string $fechaInicio, string $fechaFin): array
+    {
+        return Donacion::whereBetween('fecha_donacion', [$fechaInicio, $fechaFin])
+            ->whereNotNull('metodo_pago')
+            ->select('metodo_pago', DB::raw('SUM(valor_donacion) as total'), DB::raw('COUNT(*) as cantidad'))
+            ->groupBy('metodo_pago')
+            ->get()
+            ->toArray();
     }
 }

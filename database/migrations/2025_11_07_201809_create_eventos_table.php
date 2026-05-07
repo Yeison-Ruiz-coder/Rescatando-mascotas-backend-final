@@ -15,10 +15,12 @@ return new class extends Migration
             $table->text('descripcion');
             $table->datetime('fecha_evento');
             $table->string('imagen_url')->nullable();
+            $table->string('imagen_public_id')->nullable();
             $table->foreignId('fundacion_id')->nullable()->constrained('fundaciones')->onDelete('cascade');
             $table->enum('tipo', ['fundacion', 'admin'])->default('fundacion');
             $table->integer('likes')->default(0);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

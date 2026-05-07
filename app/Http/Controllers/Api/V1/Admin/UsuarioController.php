@@ -49,7 +49,7 @@ class UsuarioController extends Controller
         }
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $usuario = $this->usuarioService->findById($id);
@@ -59,7 +59,7 @@ class UsuarioController extends Controller
         }
     }
 
-    public function update(UsuarioRequest $request, $id)
+    public function update(UsuarioRequest $request, int $id)
     {
         try {
             $usuario = $this->runInTransaction(
@@ -79,7 +79,7 @@ class UsuarioController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         try {
             $this->runInTransaction(
@@ -95,7 +95,7 @@ class UsuarioController extends Controller
         }
     }
 
-    public function cambiarEstado(CambiarEstadoUsuarioRequest $request, $id)
+    public function cambiarEstado(CambiarEstadoUsuarioRequest $request, int $id)
     {
         try {
             $usuario = $this->runInTransaction(
@@ -117,7 +117,7 @@ class UsuarioController extends Controller
         return $this->successResponse(['count' => $count], 'Conteo obtenido exitosamente');
     }
 
-    public function verificarEmail($id)
+    public function verificarEmail(int $id)
     {
         try {
             $usuario = $this->runInTransaction(

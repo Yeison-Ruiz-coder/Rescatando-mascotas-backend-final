@@ -11,7 +11,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
-
 class RescateController extends Controller
 {
     use ApiResponses, TransactionTrait;
@@ -30,7 +29,7 @@ class RescateController extends Controller
         return $this->successResponse($rescates, 'Rescates obtenidos exitosamente');
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $rescate = $this->rescateService->findById($id);
@@ -43,15 +42,19 @@ class RescateController extends Controller
     public function reportar(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'lugar_rescate'      => 'required|string',
+            'lugar_rescate'      => 'required|string|max:255',
             'descripcion_rescate'=> 'required|string',
             'fecha_rescate'      => 'required|date',
             'lat'                => 'nullable|numeric',
             'lng'                => 'nullable|numeric',
-            // Datos opcionales del reportante (soporte anónimo)
+            'tipo_emergencia'    => 'nullable|in:herido,abandonado,urgente,otro',
+            'prioridad'          => 'nullable|in:alta,media,baja',
             'nombre_reportante'  => 'nullable|string|max:255',
             'email_reportante'   => 'nullable|email|max:255',
             'telefono_reportante'=> 'nullable|string|max:20',
+            'foto_principal'     => 'nullable|image|max:5120',
+            'galeria_fotos'      => 'nullable|array',
+            'galeria_fotos.*'    => 'image|max:5120',
         ]);
 
         if ($validator->fails()) {
@@ -60,7 +63,11 @@ class RescateController extends Controller
 
         try {
             $rescate = $this->runInTransaction(
-                fn() => $this->rescateService->reportar($request->all()),
+                fn() => $this->rescateService->reportar(
+                    $request->all(),
+                    $request->file('foto_principal'),
+                    $request->file('galeria_fotos', [])
+                ),
                 'Error al reportar rescate'
             );
 

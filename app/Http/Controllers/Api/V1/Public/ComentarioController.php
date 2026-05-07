@@ -20,7 +20,7 @@ class ComentarioController extends Controller
         $this->comentarioService = $comentarioService;
     }
 
-    public function index($entidadTipo, $entidadId)
+    public function index(string $entidadTipo, int $entidadId)
     {
         try {
             $comentarios = $this->comentarioService->getComentarios($entidadTipo, $entidadId);

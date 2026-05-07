@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Builder;
 
 class Reporte extends Model
 {
@@ -31,12 +32,35 @@ class Reporte extends Model
         'solucion',
         'resuelto_por',
         'fecha_resolucion',
+        // ===== NUEVOS CAMPOS =====
+        'lat',
+        'lng',
+        'direccion_completa',
+        'fotos_detalle',
+        'fotos_public_ids',
+        'contacto_permiso',
+        'anonimo',
+        'urgencia',
+        'seguimiento_interno',
+        'asignado_a',
+        'fecha_asignacion',
+        'entidad_encargada',
+        'numero_caso',
+        'acciones_tomadas',
     ];
 
     protected $casts = [
         'galeria_fotos' => 'array',
+        'fotos_detalle' => 'array', //  NUEVO
+        'fotos_public_ids' => 'array', //  NUEVO
+        'seguimiento_interno' => 'array', //  NUEVO
         'fecha_incidente' => 'date',
         'fecha_resolucion' => 'datetime',
+        'fecha_asignacion' => 'datetime', //  NUEVO
+        'contacto_permiso' => 'boolean', //  NUEVO
+        'anonimo' => 'boolean', //  NUEVO
+        'lat' => 'decimal:8', //  NUEVO
+        'lng' => 'decimal:8', //  NUEVO
     ];
 
     // Relaciones
@@ -56,17 +80,17 @@ class Reporte extends Model
     }
 
     // Scopes
-    public function scopeActivos($query)
+    public function scopeActivos(Builder $query)
     {
         return $query->where('estado', 'activo');
     }
 
-    public function scopePerdidos($query)
+    public function scopePerdidos(Builder $query)
     {
         return $query->where('tipo_reporte', 'perdido');
     }
 
-    public function scopeEncontrados($query)
+    public function scopeEncontrados(Builder $query)
     {
         return $query->where('tipo_reporte', 'encontrado');
     }

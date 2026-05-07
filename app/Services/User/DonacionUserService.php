@@ -23,17 +23,42 @@ class DonacionUserService
 
     public function createDonacion(int $userId, array $data): Donacion
     {
-        return Donacion::create([
+        $donacionData = [
             'user_id' => $userId,
             'fundacion_id' => $data['fundacion_id'],
             'valor_donacion' => $data['valor_donacion'],
             'publica' => $data['publica'] ?? false,
             'fecha_donacion' => now(),
-        ]);
+        ];
+
+        // Nuevos campos
+        if (isset($data['anonima'])) {
+            $donacionData['anonima'] = $data['anonima'];
+        }
+        if (isset($data['metodo_pago'])) {
+            $donacionData['metodo_pago'] = $data['metodo_pago'];
+        }
+        if (isset($data['comentarios'])) {
+            $donacionData['comentarios'] = $data['comentarios'];
+        }
+        if (isset($data['nombre_donante']) && !$data['anonima']) {
+            $donacionData['nombre_donante'] = $data['nombre_donante'];
+        }
+        if (isset($data['email_donante']) && !$data['anonima']) {
+            $donacionData['email_donante'] = $data['email_donante'];
+        }
+
+        return Donacion::create($donacionData);
     }
 
     public function getCertificadoData(int $userId, int $donacionId): Donacion
     {
-        return $this->findById($userId, $donacionId);
+        $donacion = $this->findById($userId, $donacionId);
+
+        if ($donacion->anonima) {
+            throw new \Exception('No se puede generar certificado para donaciones anónimas');
+        }
+
+        return $donacion;
     }
 }

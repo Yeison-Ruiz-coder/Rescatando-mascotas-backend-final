@@ -32,7 +32,7 @@ class SolicitudController extends Controller
         }
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $solicitud = $this->solicitudService->findSolicitud($id);
@@ -44,7 +44,7 @@ class SolicitudController extends Controller
         }
     }
 
-    public function aprobar($id)
+    public function aprobar(int $id)
     {
         try {
             $resultado = $this->runInTransaction(
@@ -60,7 +60,7 @@ class SolicitudController extends Controller
         }
     }
 
-    public function rechazar(RechazarSolicitudRequest $request, $id)
+    public function rechazar(RechazarSolicitudRequest $request, int $id)
     {
         try {
             $solicitud = $this->runInTransaction(

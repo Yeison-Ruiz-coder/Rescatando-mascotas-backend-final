@@ -33,7 +33,7 @@ class AdopcionController extends Controller
         return $this->successResponse($adopciones, 'Adopciones obtenidas exitosamente');
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $adopcion = $this->adopcionService->findById($id);
@@ -61,7 +61,7 @@ class AdopcionController extends Controller
         }
     }
 
-    public function update(AdopcionRequest $request, $id)
+    public function update(AdopcionRequest $request, int $id)
     {
         try {
             $adopcion = $this->runInTransaction(
@@ -77,7 +77,7 @@ class AdopcionController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         try {
             $this->runInTransaction(
@@ -93,7 +93,7 @@ class AdopcionController extends Controller
         }
     }
 
-    public function cambiarEstado(CambiarEstadoAdopcionRequest $request, $id)
+    public function cambiarEstado(CambiarEstadoAdopcionRequest $request, int $id)
     {
         try {
             $adopcion = $this->runInTransaction(
@@ -109,7 +109,7 @@ class AdopcionController extends Controller
         }
     }
 
-    public function seguimientos($id)
+    public function seguimientos(int $id)
     {
         try {
             $seguimientos = $this->adopcionService->getSeguimientos($id);
@@ -119,7 +119,7 @@ class AdopcionController extends Controller
         }
     }
 
-    public function storeSeguimiento(SeguimientoRequest $request, $id)
+    public function storeSeguimiento(SeguimientoRequest $request, int $id)
     {
         try {
             $seguimiento = $this->runInTransaction(

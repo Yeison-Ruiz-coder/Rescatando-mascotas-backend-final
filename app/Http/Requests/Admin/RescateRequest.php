@@ -30,6 +30,19 @@ class RescateRequest extends FormRequest
             'email_reportante'   => 'nullable|email|max:255',
             'telefono_reportante'=> 'nullable|string|max:20',
             'gestionado_por'     => 'nullable|exists:users,id',
+            // ===== NUEVOS CAMPOS PARA FOTOS =====
+            'foto_principal'         => 'nullable|image|max:5120',
+            'galeria_fotos'          => 'nullable|array',
+            'galeria_fotos.*'        => 'image|max:5120',
+            'fotos_metadata'         => 'nullable|array',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'galeria_fotos.*.image' => 'Cada archivo debe ser una imagen válida',
+            'galeria_fotos.*.max' => 'Cada foto no puede superar los 5MB',
         ];
     }
 }

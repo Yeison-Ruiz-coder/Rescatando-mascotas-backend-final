@@ -24,7 +24,7 @@ class FundacionController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['search', 'recibe_voluntarios']);
+        $filters = $request->only(['search', 'recibe_voluntarios', 'verificado', 'ciudad']);
         $perPage = $request->get('per_page', 15);
 
         $fundaciones = $this->fundacionService->getAll($filters, $perPage);
@@ -36,12 +36,12 @@ class FundacionController extends Controller
         ], 'Fundaciones obtenidas exitosamente');
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $fundacion = $this->fundacionService->findById($id);
             $estadisticas = $this->fundacionService->getDetalleEstadisticas($fundacion);
-            $necesidades = json_decode($fundacion->necesidades_actuales, true) ?? [];
+            $necesidades = $this->fundacionService->getNecesidades($id);
 
             return $this->successResponse([
                 'fundacion' => $fundacion,
@@ -67,7 +67,7 @@ class FundacionController extends Controller
         }
     }
 
-    public function update(FundacionRequest $request, $id)
+    public function update(FundacionRequest $request, int $id)
     {
         try {
             $fundacion = $this->runInTransaction(
@@ -83,7 +83,7 @@ class FundacionController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         try {
             $this->runInTransaction(
@@ -99,7 +99,7 @@ class FundacionController extends Controller
         }
     }
 
-    public function necesidades($id)
+    public function necesidades(int $id)
     {
         try {
             $necesidades = $this->fundacionService->getNecesidades($id);
@@ -109,7 +109,7 @@ class FundacionController extends Controller
         }
     }
 
-    public function actualizarNecesidades(NecesidadesRequest $request, $id)
+    public function actualizarNecesidades(NecesidadesRequest $request, int $id)
     {
         try {
             $fundacion = $this->runInTransaction(
@@ -122,6 +122,27 @@ class FundacionController extends Controller
             return $this->notFoundResponse('Fundación no encontrada');
         } catch (\Exception $e) {
             return $this->errorResponse('Error al actualizar necesidades', $e->getMessage(), 500);
+        }
+    }
+
+    public function cercanas(Request $request)
+    {
+        $request->validate([
+            'lat' => 'required|numeric',
+            'lng' => 'required|numeric',
+            'radio' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        try {
+            $fundaciones = $this->fundacionService->getCercanas(
+                $request->lat,
+                $request->lng,
+                $request->get('radio', 10)
+            );
+
+            return $this->successResponse($fundaciones, 'Fundaciones cercanas obtenidas exitosamente');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al obtener fundaciones cercanas', $e->getMessage(), 500);
         }
     }
 }

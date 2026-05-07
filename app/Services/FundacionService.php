@@ -17,12 +17,21 @@ class FundacionService
                 $q->where('Nombre_1', 'like', "%{$search}%")
                   ->orWhere('Email', 'like', "%{$search}%")
                   ->orWhere('Telefono', 'like', "%{$search}%")
-                  ->orWhere('Direccion', 'like', "%{$search}%");
+                  ->orWhere('Direccion', 'like', "%{$search}%")
+                  ->orWhere('ciudad', 'like', "%{$search}%");
             });
         }
 
         if (isset($filters['recibe_voluntarios'])) {
             $query->where('recibe_voluntarios', $filters['recibe_voluntarios']);
+        }
+
+        if (isset($filters['verificado'])) {
+            $query->where('verificado', $filters['verificado']);
+        }
+
+        if (!empty($filters['ciudad'])) {
+            $query->where('ciudad', $filters['ciudad']);
         }
 
         return $query->orderBy('Nombre_1')->paginate($perPage);
@@ -33,6 +42,7 @@ class FundacionService
         return [
             'total' => Fundacion::count(),
             'reciben_voluntarios' => Fundacion::where('recibe_voluntarios', true)->count(),
+            'verificadas' => Fundacion::where('verificado', true)->count(),
             'total_mascotas' => Fundacion::withCount('mascotas')->get()->sum('mascotas_count'),
         ];
     }
@@ -72,6 +82,16 @@ class FundacionService
             $data['redes_sociales'] = json_encode($data['redes_sociales'], JSON_UNESCAPED_UNICODE);
         }
 
+        // Compatibilidad con latitud/longitud
+        if (isset($data['latitud']) && !isset($data['lat'])) {
+            $data['lat'] = $data['latitud'];
+        }
+        if (isset($data['longitud']) && !isset($data['lng'])) {
+            $data['lng'] = $data['longitud'];
+        }
+
+        $data['verificado'] = $data['verificado'] ?? false;
+
         return Fundacion::create($data);
     }
 
@@ -85,6 +105,14 @@ class FundacionService
 
         if (isset($data['redes_sociales']) && is_array($data['redes_sociales'])) {
             $data['redes_sociales'] = json_encode($data['redes_sociales'], JSON_UNESCAPED_UNICODE);
+        }
+
+        // Compatibilidad con latitud/longitud
+        if (isset($data['latitud']) && !isset($data['lat'])) {
+            $data['lat'] = $data['latitud'];
+        }
+        if (isset($data['longitud']) && !isset($data['lng'])) {
+            $data['lng'] = $data['longitud'];
         }
 
         $fundacion->update($data);
@@ -113,7 +141,11 @@ class FundacionService
     public function getNecesidades(int $id): array
     {
         $fundacion = Fundacion::findOrFail($id);
-        return json_decode($fundacion->necesidades_actuales, true) ?? [];
+        $necesidades = $fundacion->necesidades_actuales;
+        if (is_string($necesidades)) {
+            return json_decode($necesidades, true) ?? [];
+        }
+        return $necesidades ?? [];
     }
 
     public function actualizarNecesidades(int $id, array $necesidades): Fundacion
@@ -123,5 +155,18 @@ class FundacionService
             'necesidades_actuales' => json_encode($necesidades, JSON_UNESCAPED_UNICODE)
         ]);
         return $fundacion;
+    }
+
+    public function getCercanas(float $lat, float $lng, int $radio = 10)
+    {
+        return Fundacion::selectRaw(
+            "*, (6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distancia",
+            [$lat, $lng, $lat]
+        )
+        ->whereNotNull('lat')
+        ->whereNotNull('lng')
+        ->having('distancia', '<=', $radio)
+        ->orderBy('distancia')
+        ->get();
     }
 }

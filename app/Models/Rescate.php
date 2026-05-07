@@ -5,6 +5,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Builder;
 
 class Rescate extends Model
 {
@@ -72,22 +74,22 @@ class Rescate extends Model
     }
 
     // Scopes útiles
-    public function scopePendientes($query)
+    public function scopePendientes(Builder $query)
     {
         return $query->where('estado', 'pendiente');
     }
 
-    public function scopeEnProceso($query)
+    public function scopeEnProceso(Builder $query)
     {
         return $query->where('estado', 'en_proceso');
     }
 
-    public function scopeCompletados($query)
+    public function scopeCompletados(Builder $query)
     {
         return $query->where('estado', 'completado');
     }
 
-    public function scopePorPrioridad($query, $prioridad)
+    public function scopePorPrioridad(Builder $query, string $prioridad)
     {
         return $query->where('prioridad', $prioridad);
     }

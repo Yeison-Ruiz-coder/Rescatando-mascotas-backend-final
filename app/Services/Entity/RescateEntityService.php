@@ -176,7 +176,7 @@ class RescateEntityService
             ->where('estado', 'en_proceso')
             ->findOrFail($id);
 
-        $mascota = Mascota::create([
+        $mascotaData = [
             'nombre_mascota' => $data['nombre_mascota'],
             'especie' => $data['especie'],
             'edad_aprox' => $data['edad_aprox'] ?? null,
@@ -190,11 +190,32 @@ class RescateEntityService
             'estado' => ($data['necesita_hogar_temporal'] ?? false) ? 'En acogida' : 'En adopcion',
             'fundacion_id' => $user->tipo === 'fundacion' ? $entidad->id : null,
             'lugar_rescate' => $rescate->lugar_rescate,
-        ]);
+        ];
 
-        if (!empty($files['foto_principal'])) {
+        // Agregar foto del rescate si existe
+        if ($rescate->foto_principal) {
+            $mascotaData['foto_principal'] = $rescate->foto_principal;
+        }
+
+        $mascota = Mascota::create($mascotaData);
+
+        if (!empty($files['foto_principal']) && $files['foto_principal']->isValid()) {
             $mascota->foto_principal = $this->uploadImage($files['foto_principal'], 'mascotas');
             $mascota->save();
+        }
+
+        // Procesar galería si viene
+        if (!empty($files['galeria_fotos']) && is_array($files['galeria_fotos'])) {
+            $galeriaPaths = [];
+            foreach ($files['galeria_fotos'] as $foto) {
+                if ($foto && $foto->isValid()) {
+                    $galeriaPaths[] = $this->uploadImage($foto, 'mascotas/galeria');
+                }
+            }
+            if (!empty($galeriaPaths)) {
+                $mascota->galeria_fotos = json_encode($galeriaPaths);
+                $mascota->save();
+            }
         }
 
         $rescate->update([
@@ -211,5 +232,57 @@ class RescateEntityService
         }
 
         return $mascota->load(['razas', 'vacunas']);
+    }
+    // En app/Services/Entity/RescateEntityService.php
+    // Agregar este método:
+
+    public function agregarFotos(int $id, array $nuevasFotos): Rescate
+    {
+        $entidad = $this->getEntidad();
+
+        if (!$entidad) {
+            throw new \Exception('No se encontró la entidad asociada');
+        }
+
+        $rescate = Rescate::where('entidad_responsable_type', get_class($entidad))
+            ->where('entidad_responsable_id', $entidad->id)
+            ->findOrFail($id);
+
+        $galeriaActual = $rescate->galeria_fotos;
+        if (is_string($galeriaActual)) {
+            $galeriaActual = json_decode($galeriaActual, true) ?? [];
+        } elseif (!is_array($galeriaActual)) {
+            $galeriaActual = [];
+        }
+
+        foreach ($nuevasFotos as $foto) {
+            if ($foto && $foto->isValid()) {
+                $url = $this->uploadImage($foto, 'rescates/galeria');
+                $galeriaActual[] = $url;
+            }
+        }
+
+        $rescate->galeria_fotos = json_encode($galeriaActual);
+        $rescate->save();
+
+        return $rescate;
+    }
+
+    public function updateEstado(int $id, string $estado): Rescate
+    {
+        $entidad = $this->getEntidad();
+
+        if (!$entidad) {
+            throw new \Exception('No se encontró la entidad asociada');
+        }
+
+        $rescate = Rescate::where('entidad_responsable_type', get_class($entidad))
+            ->where('entidad_responsable_id', $entidad->id)
+            ->findOrFail($id);
+
+        $rescate->estado = $estado;
+        $rescate->save();
+
+        return $rescate;
     }
 }

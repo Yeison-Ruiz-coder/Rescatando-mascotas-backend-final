@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 use App\Models\Mascota;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Builder;
 
 class Suscripcion extends Model
 {
@@ -43,7 +45,7 @@ class Suscripcion extends Model
     }
 
     // 🔥 scope
-    public function scopeActivas($query)
+    public function scopeActivas(Builder $query)
     {
         return $query->where('estado', 'activo');
     }

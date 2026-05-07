@@ -23,8 +23,27 @@ class MascotaPublicService
             $query->where('genero', $filters['genero']);
         }
 
+        if (!empty($filters['tamano'])) {
+            $query->where('tamano', $filters['tamano']);
+        }
+
+        if (!empty($filters['destacada'])) {
+            $query->where('destacada', true);
+        }
+
         if (!empty($filters['buscar'])) {
-            $query->where('nombre_mascota', 'like', '%' . $filters['buscar'] . '%');
+            $query->where(function($q) use ($filters) {
+                $q->where('nombre_mascota', 'like', '%' . $filters['buscar'] . '%')
+                  ->orWhere('descripcion', 'like', '%' . $filters['buscar'] . '%');
+            });
+        }
+
+        if (isset($filters['apto_con_ninos'])) {
+            $query->where('apto_con_ninos', $filters['apto_con_ninos']);
+        }
+
+        if (isset($filters['apto_con_otros_animales'])) {
+            $query->where('apto_con_otros_animales', $filters['apto_con_otros_animales']);
         }
 
         return $query->latest()->paginate($perPage);
@@ -32,7 +51,7 @@ class MascotaPublicService
 
     public function findById(int $id): Mascota
     {
-        return Mascota::with(['fundacion', 'razas', 'vacunas', 'historialMedico'])
+        return Mascota::with(['fundacion', 'razas', 'vacunas', 'historialMedico', 'suscripciones'])
             ->findOrFail($id);
     }
 
@@ -50,5 +69,15 @@ class MascotaPublicService
             ->where('fundacion_id', $fundacionId)
             ->where('estado', 'En adopcion')
             ->paginate($perPage);
+    }
+
+    public function getDestacadas(int $limit = 6)
+    {
+        return Mascota::with(['fundacion', 'razas'])
+            ->where('estado', 'En adopcion')
+            ->where('destacada', true)
+            ->latest()
+            ->limit($limit)
+            ->get();
     }
 }

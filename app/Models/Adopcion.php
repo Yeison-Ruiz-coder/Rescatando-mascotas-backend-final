@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\HasScopes;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Builder;
 
 class Adopcion extends Model
 {
@@ -60,12 +62,12 @@ class Adopcion extends Model
     }
 
     // Scopes
-    public function scopeEnProceso($query)
+    public function scopeEnProceso(Builder $query)
     {
         return $query->where('estado', 'en_proceso');
     }
 
-    public function scopeCompletadas($query)
+    public function scopeCompletadas(Builder $query)
     {
         return $query->where('estado', 'completada');
     }

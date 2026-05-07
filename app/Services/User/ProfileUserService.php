@@ -24,6 +24,16 @@ class ProfileUserService
             $data['avatar'] = $this->uploadImage($avatar, 'avatars');
         }
 
+        // Procesar redes sociales como JSON
+        if (isset($data['redes_sociales']) && is_array($data['redes_sociales'])) {
+            $data['redes_sociales'] = json_encode($data['redes_sociales'], JSON_UNESCAPED_UNICODE);
+        }
+
+        // Procesar preferencias de notificaciones
+        if (isset($data['preferencias_notificaciones']) && is_array($data['preferencias_notificaciones'])) {
+            $data['preferencias_notificaciones'] = json_encode($data['preferencias_notificaciones'], JSON_UNESCAPED_UNICODE);
+        }
+
         $user->update($data);
         return $user;
     }
@@ -49,7 +59,21 @@ class ProfileUserService
             throw new \Exception('No puedes eliminar tu cuenta mientras tengas solicitudes pendientes');
         }
 
+        // Eliminar avatar si existe
+        if ($user->avatar) {
+            $this->deleteImage($user->avatar);
+        }
+
         $user->tokens()->delete();
         $user->delete();
+    }
+    public function updatePreferences(User $user, array $data): User
+    {
+        if (isset($data['preferencias_notificaciones']) && is_array($data['preferencias_notificaciones'])) {
+            $data['preferencias_notificaciones'] = json_encode($data['preferencias_notificaciones'], JSON_UNESCAPED_UNICODE);
+        }
+
+        $user->update($data);
+        return $user;
     }
 }
