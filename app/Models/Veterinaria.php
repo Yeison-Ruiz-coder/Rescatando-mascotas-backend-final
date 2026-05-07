@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Builder;
 
 class Veterinaria extends Model
 {
@@ -19,14 +21,51 @@ class Veterinaria extends Model
         'servicios',
         'urgencias_24h',
         'convenios',
-        'user_id', // AÑADIDO
+        'user_id',
+        // ===== NUEVOS CAMPOS =====
+        'lat',
+        'lng',
+        'radio_atencion',
+        'descripcion',
+        'horario_atencion',
+        'anios_experiencia',
+        'servicios_detallados',
+        'equipo_medico',
+        'logo',
+        'logo_public_id',
+        'galeria_fotos',
+        'redes_sociales',
+        'whatsapp',
+        'sitio_web',
+        'verificado',
+        'documentos_verificacion',
+        'precio_consulta',
+        'acepta_seguros',
+        'valoracion_promedio',
+        'total_valoraciones',
+        'cobertura_zona',
+        'ciudad',
+        'departamento',
     ];
 
+
     protected $casts = [
-        'servicios' => 'array',
-        'convenios' => 'array',
-        'urgencias_24h' => 'boolean',
-    ];
+    'servicios' => 'array',
+    'convenios' => 'array',
+    'servicios_detallados' => 'array', // NUEVO
+    'equipo_medico' => 'array', // NUEVO
+    'galeria_fotos' => 'array', // NUEVO
+    'redes_sociales' => 'array', // NUEVO
+    'documentos_verificacion' => 'array', //  NUEVO
+    'cobertura_zona' => 'array', //  NUEVO
+    'urgencias_24h' => 'boolean',
+    'verificado' => 'boolean', //  NUEVO
+    'acepta_seguros' => 'boolean', // NUEVO
+    'lat' => 'decimal:8', // NUEVO
+    'lng' => 'decimal:8', // NUEVO
+    'valoracion_promedio' => 'decimal:2', // NUEVO
+    'precio_consulta' => 'decimal:2', // NUEVO
+];
 
     // NUEVAS RELACIONES
     public function usuarios()
@@ -50,7 +89,7 @@ class Veterinaria extends Model
     }
 
     // Scope para veterinarias con urgencias 24h
-    public function scopeUrgencias24h($query)
+    public function scopeUrgencias24h(Builder $query)
     {
         return $query->where('urgencias_24h', true);
     }

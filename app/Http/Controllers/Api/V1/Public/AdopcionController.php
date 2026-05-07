@@ -21,8 +21,10 @@ class AdopcionController extends Controller
 
     public function index(Request $request)
     {
+        $filters = $request->only(['especie', 'genero', 'tamano', 'apto_con_ninos', 'apto_con_otros_animales']);
         $perPage = $request->get('per_page', 15);
-        $mascotas = $this->adopcionService->getMascotasDisponibles($perPage);
+
+        $mascotas = $this->adopcionService->getMascotasDisponibles($filters, $perPage);
 
         return $this->successResponse($mascotas, 'Mascotas disponibles obtenidas exitosamente');
     }
@@ -32,7 +34,7 @@ class AdopcionController extends Controller
         return $this->index($request);
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $mascota = $this->adopcionService->findMascotaDisponible($id);
@@ -42,7 +44,7 @@ class AdopcionController extends Controller
         }
     }
 
-    public function verificarDisponibilidad($id)
+    public function verificarDisponibilidad(int $id)
     {
         $resultado = $this->adopcionService->verificarDisponibilidad($id);
 
@@ -51,5 +53,11 @@ class AdopcionController extends Controller
         }
 
         return $this->successResponse($resultado['data'], 'Disponibilidad verificada');
+    }
+
+    public function destacadas()
+    {
+        $mascotas = $this->adopcionService->getDestacadas(6);
+        return $this->successResponse($mascotas, 'Mascotas destacadas obtenidas exitosamente');
     }
 }

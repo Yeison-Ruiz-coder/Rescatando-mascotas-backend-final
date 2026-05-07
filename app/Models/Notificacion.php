@@ -16,10 +16,30 @@ class Notificacion extends Model
         'fecha_envio',
         'user_id',
         'creado_por_id',
+        // ===== NUEVOS CAMPOS =====
+        'titulo',
+        'tipo',
+        'icono',
+        'color',
+        'url_accion',
+        'texto_accion',
+        'metadata',
+        'prioridad',
+        'leida',
+        'leida_en',
+        'expira_en',
+        'enviada_email',
+        'enviada_push',
     ];
 
     protected $casts = [
         'fecha_envio' => 'datetime',
+        'metadata' => 'array', //  NUEVO
+        'leida' => 'boolean', //  NUEVO
+        'leida_en' => 'datetime', //  NUEVO
+        'expira_en' => 'datetime', //  NUEVO
+        'enviada_email' => 'boolean', //  NUEVO
+        'enviada_push' => 'boolean', //  NUEVO
     ];
 
     public function usuario()

@@ -36,7 +36,7 @@ class SolicitudController extends Controller
         ], 'Solicitudes obtenidas exitosamente');
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $solicitud = $this->solicitudService->findById($id);
@@ -64,7 +64,7 @@ class SolicitudController extends Controller
         }
     }
 
-    public function update(SolicitudRequest $request, $id)
+    public function update(SolicitudRequest $request, int $id)
     {
         try {
             $solicitud = $this->runInTransaction(
@@ -82,7 +82,7 @@ class SolicitudController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         try {
             $this->runInTransaction(
@@ -98,7 +98,7 @@ class SolicitudController extends Controller
         }
     }
 
-    public function cambiarEstado(CambiarEstadoSolicitudRequest $request, $id)
+    public function cambiarEstado(CambiarEstadoSolicitudRequest $request, int $id)
     {
         try {
             $solicitud = $this->runInTransaction(

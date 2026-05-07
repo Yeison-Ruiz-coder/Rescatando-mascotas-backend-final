@@ -25,7 +25,7 @@ class NotificacionController extends Controller
 
     public function index(NotificacionIndexRequest $request)
     {
-        $filters = $request->only(['user_id', 'creado_por_id', 'fecha_inicio', 'fecha_fin', 'search']);
+        $filters = $request->only(['user_id', 'creado_por_id', 'fecha_inicio', 'fecha_fin', 'search', 'leida', 'prioridad']);
         $perPage = $request->get('per_page', 15);
 
         $notificaciones = $this->notificacionService->getAll($filters, $perPage);
@@ -37,7 +37,7 @@ class NotificacionController extends Controller
         ], 'Notificaciones obtenidas exitosamente');
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $notificacion = $this->notificacionService->findById($id);
@@ -65,7 +65,7 @@ class NotificacionController extends Controller
         }
     }
 
-    public function update(NotificacionRequest $request, $id)
+    public function update(NotificacionRequest $request, int $id)
     {
         try {
             $notificacion = $this->runInTransaction(
@@ -81,7 +81,7 @@ class NotificacionController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         try {
             $this->runInTransaction(
@@ -97,10 +97,43 @@ class NotificacionController extends Controller
         }
     }
 
-    public function porUsuario($userId, Request $request)
+    public function marcarComoLeida(int $id)
     {
         try {
-            $filters = $request->only(['no_leidas']);
+            $notificacion = $this->runInTransaction(
+                fn() => $this->notificacionService->marcarComoLeida($id),
+                'Error al marcar notificación como leída'
+            );
+
+            return $this->successResponse($notificacion, 'Notificación marcada como leída');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Notificación no encontrada');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al marcar la notificación', $e->getMessage(), 500);
+        }
+    }
+
+    public function marcarTodasComoLeidas(int $userId)
+    {
+        try {
+            $actualizadas = $this->runInTransaction(
+                fn() => $this->notificacionService->marcarTodasComoLeidas($userId),
+                'Error al marcar notificaciones como leídas'
+            );
+
+            return $this->successResponse(
+                ['actualizadas' => $actualizadas],
+                'Todas las notificaciones marcadas como leídas'
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al marcar las notificaciones', $e->getMessage(), 500);
+        }
+    }
+
+    public function porUsuario(int $userId, Request $request)
+    {
+        try {
+            $filters = $request->only(['solo_no_leidas', 'prioridad']);
             $perPage = $request->get('per_page', 15);
 
             $resultado = $this->notificacionService->getPorUsuario($userId, $filters, $perPage);

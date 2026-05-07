@@ -24,7 +24,7 @@ class VeterinariaController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['search', 'urgencias_24h']);
+        $filters = $request->only(['search', 'urgencias_24h', 'verificado', 'ciudad', 'servicio']);
         $perPage = $request->get('per_page', 15);
 
         $veterinarias = $this->veterinariaService->getAll($filters, $perPage);
@@ -36,17 +36,37 @@ class VeterinariaController extends Controller
         ], 'Veterinarias obtenidas exitosamente');
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $veterinaria = $this->veterinariaService->findById($id);
             $estadisticas = $this->veterinariaService->getDetalleEstadisticas($veterinaria);
-            $servicios = json_decode($veterinaria->servicios, true) ?? [];
-            $convenios = json_decode($veterinaria->convenios, true) ?? [];
+
+            $servicios = [];
+            if ($veterinaria->servicios) {
+                $servicios = is_string($veterinaria->servicios)
+                    ? json_decode($veterinaria->servicios, true)
+                    : ($veterinaria->servicios ?? []);
+            }
+
+            $convenios = [];
+            if ($veterinaria->convenios) {
+                $convenios = is_string($veterinaria->convenios)
+                    ? json_decode($veterinaria->convenios, true)
+                    : ($veterinaria->convenios ?? []);
+            }
+
+            $serviciosDetallados = [];
+            if ($veterinaria->servicios_detallados) {
+                $serviciosDetallados = is_string($veterinaria->servicios_detallados)
+                    ? json_decode($veterinaria->servicios_detallados, true)
+                    : ($veterinaria->servicios_detallados ?? []);
+            }
 
             return $this->successResponse([
                 'veterinaria' => $veterinaria,
                 'servicios' => $servicios,
+                'servicios_detallados' => $serviciosDetallados,
                 'convenios' => $convenios,
                 'estadisticas' => $estadisticas,
             ], 'Veterinaria obtenida exitosamente');
@@ -69,7 +89,7 @@ class VeterinariaController extends Controller
         }
     }
 
-    public function update(VeterinariaRequest $request, $id)
+    public function update(VeterinariaRequest $request,int $id)
     {
         try {
             $veterinaria = $this->runInTransaction(
@@ -85,7 +105,7 @@ class VeterinariaController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         try {
             $this->runInTransaction(

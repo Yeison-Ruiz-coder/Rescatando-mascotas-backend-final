@@ -9,7 +9,7 @@ class TipoVacunaRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->check() && in_array(auth()->user()->rol, ['fundacion', 'veterinaria']);
+        return auth()->check() && in_array(auth()->user()->tipo, ['fundacion', 'veterinaria']);
     }
 
     public function rules(): array

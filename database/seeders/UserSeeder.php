@@ -33,7 +33,7 @@ class UserSeeder extends Seeder
                 'nombre' => 'María',
                 'apellidos' => 'González Pérez',
                 'email' => 'maria@email.com',
-                'password' => Hash::make('usuario123'),
+                'password' => Hash::make('Usuario123'),
                 'tipo' => 'user',
                 'estado' => 'activo',
                 'fecha_nacimiento' => '1995-05-20',

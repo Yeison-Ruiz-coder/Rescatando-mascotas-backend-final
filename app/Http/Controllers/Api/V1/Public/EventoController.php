@@ -3,229 +3,193 @@
 namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\Evento;
+use App\Services\Public\EventoPublicService;
+use App\Traits\ApiResponses;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Models\Evento;
+use App\Models\User;
 
 class EventoController extends Controller
 {
-    /**
-     * Display a listing of all public events.
-     */
-    public function index()
-    {
-        $eventos = Evento::orderBy('fecha_evento', 'asc')->get();
+    use ApiResponses;
 
-        // Agregar información de asistencia para el usuario autenticado
+    protected EventoPublicService $eventoService;
+
+    public function __construct(EventoPublicService $eventoService)
+    {
+        $this->eventoService = $eventoService;
+    }
+
+    /**
+     * Listar todos los eventos (con paginación opcional)
+     */
+    public function index(Request $request)
+    {
+        $filters = $request->only(['mes', 'anio', 'tipo', 'fundacion_id', 'proximos']);
+        $perPage = $request->get('per_page', 15);
+
+        $eventos = $this->eventoService->getAll($filters, $perPage);
+
         if (auth()->check()) {
-            foreach ($eventos as $evento) {
+            foreach ($eventos->items() as $evento) {
                 $evento->usuario_confirmado = $evento->usuarioConfirmoAsistencia(auth()->id());
             }
         }
 
-        // Agregar contador de asistentes a cada evento
-        $eventos->each(function($evento) {
-            $evento->total_asistentes = $evento->total_asistentes;
-        });
-
-        return response()->json([
-            'success' => true,
-            'data' => $eventos
-        ]);
+        // ✅ Devolver SOLO los items del paginador para que el frontend reciba un array
+        return $this->successResponse($eventos->items(), 'Eventos obtenidos exitosamente');
     }
 
     /**
-     * Display the specified event.
+     * Ver un evento específico
      */
-    public function show($id)
+    public function show(int $id)
     {
-        $evento = Evento::with(['asistentes' => function($query) {
-                $query->limit(10);
-            }])
-            ->findOrFail($id);
+        try {
+            $evento = $this->eventoService->findById($id);
 
-        // Agregar información de asistencia para el usuario autenticado
-        if (auth()->check()) {
-            $evento->usuario_confirmado = $evento->usuarioConfirmoAsistencia(auth()->id());
+            if (auth()->check()) {
+                $evento->usuario_confirmado = $evento->usuarioConfirmoAsistencia(auth()->id());
+            }
+
+            return $this->successResponse($evento, 'Evento obtenido exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Evento no encontrado');
         }
-
-        $evento->total_asistentes = $evento->total_asistentes;
-
-        return response()->json([
-            'success' => true,
-            'data' => $evento
-        ]);
     }
 
     /**
-     * Add like to an event.
+     * Dar like a un evento
      */
-    public function like($id)
+    public function like(int $id)
     {
-        $evento = Evento::findOrFail($id);
-        $evento->increment('likes');
+        try {
+            $evento = $this->eventoService->findById($id);
+            $evento->increment('likes');
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Like agregado',
-            'likes' => $evento->likes
-        ]);
+            return $this->successResponse(['likes' => $evento->likes], 'Like agregado');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Evento no encontrado');
+        }
     }
 
     /**
-     * Get calendar data for events.
+     * Obtener datos para el calendario
      */
     public function calendario()
     {
-        $eventos = Evento::select('id', 'nombre_evento as title', 'fecha_evento as start')
-            ->get();
-
-        return response()->json($eventos);
+        $calendario = $this->eventoService->getCalendarData();
+        return response()->json($calendario);
     }
 
     /**
-     * Confirm user attendance to an event.
+     * Confirmar asistencia a un evento
      */
-    public function confirmarAsistencia($id)
+    public function confirmarAsistencia(int $id)
     {
-        // Verificar si el usuario está autenticado
         if (!auth()->check()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Debes iniciar sesión para confirmar asistencia'
-            ], 401);
+            return $this->errorResponse('Debes iniciar sesión para confirmar asistencia', null, 401);
         }
 
-        $evento = Evento::findOrFail($id);
-        $userId = auth()->id();
+        try {
+            $this->eventoService->confirmarAsistencia($id, auth()->id());
+            $evento = $this->eventoService->findById($id);
 
-        // Verificar si ya confirmó asistencia
-        if ($evento->usuarioConfirmoAsistencia($userId)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Ya has confirmado asistencia a este evento'
-            ], 400);
+            return $this->successResponse(
+                ['total_asistentes' => $evento->total_asistentes],
+                'Asistencia confirmada exitosamente'
+            );
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Evento no encontrado');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
         }
-
-        // Agregar asistente
-        $evento->asistentes()->attach($userId, ['estado' => 'confirmado']);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Asistencia confirmada exitosamente',
-            'total_asistentes' => $evento->total_asistentes
-        ]);
     }
 
     /**
-     * Cancel user attendance to an event.
+     * Cancelar asistencia a un evento
      */
-    public function cancelarAsistencia($id)
+    public function cancelarAsistencia(int $id)
     {
-        // Verificar si el usuario está autenticado
         if (!auth()->check()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Debes iniciar sesión para cancelar asistencia'
-            ], 401);
+            return $this->errorResponse('Debes iniciar sesión para cancelar asistencia', null, 401);
         }
 
-        $evento = Evento::findOrFail($id);
-        $userId = auth()->id();
+        try {
+            $this->eventoService->cancelarAsistencia($id, auth()->id());
+            $evento = $this->eventoService->findById($id);
 
-        // Verificar si confirmó asistencia
-        if (!$evento->usuarioConfirmoAsistencia($userId)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No habías confirmado asistencia a este evento'
-            ], 400);
+            return $this->successResponse(
+                ['total_asistentes' => $evento->total_asistentes],
+                'Asistencia cancelada'
+            );
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Evento no encontrado');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
         }
-
-        // Eliminar asistente
-        $evento->asistentes()->detach($userId);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Asistencia cancelada',
-            'total_asistentes' => $evento->total_asistentes
-        ]);
     }
 
     /**
-     * Get events by type (admin or fundacion)
+     * Filtrar eventos por tipo
      */
-    public function porTipo($tipo)
+    public function porTipo(string $tipo)
     {
-        $eventos = Evento::where('tipo', $tipo)
-            ->orderBy('fecha_evento', 'asc')
-            ->get();
+        $filters = ['tipo' => $tipo];
+        $eventos = $this->eventoService->getAll($filters, 100);
 
         if (auth()->check()) {
-            foreach ($eventos as $evento) {
+            foreach ($eventos->items() as $evento) {
                 $evento->usuario_confirmado = $evento->usuarioConfirmoAsistencia(auth()->id());
             }
         }
 
-        $eventos->each(function($evento) {
-            $evento->total_asistentes = $evento->total_asistentes;
-        });
-
-        return response()->json([
-            'success' => true,
-            'data' => $eventos
-        ]);
+        // ✅ Devolver SOLO los items del paginador
+        return $this->successResponse($eventos->items(), 'Eventos obtenidos exitosamente');
     }
 
     /**
-     * Get upcoming events (future events only)
+     * Obtener solo eventos próximos
      */
     public function proximos()
     {
-        $eventos = Evento::where('fecha_evento', '>', now())
-            ->orderBy('fecha_evento', 'asc')
-            ->get();
+        $filters = ['proximos' => true];
+        $eventos = $this->eventoService->getAll($filters, 100);
 
         if (auth()->check()) {
-            foreach ($eventos as $evento) {
+            foreach ($eventos->items() as $evento) {
                 $evento->usuario_confirmado = $evento->usuarioConfirmoAsistencia(auth()->id());
             }
         }
 
-        $eventos->each(function($evento) {
-            $evento->total_asistentes = $evento->total_asistentes;
-        });
-
-        return response()->json([
-            'success' => true,
-            'data' => $eventos
-        ]);
+        // ✅ Devolver SOLO los items del paginador
+        return $this->successResponse($eventos->items(), 'Próximos eventos obtenidos exitosamente');
     }
 
     /**
-     * Get events that the authenticated user is attending
+     * Obtener eventos del usuario autenticado
      */
     public function misEventos()
     {
         if (!auth()->check()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Debes iniciar sesión'
-            ], 401);
+            return $this->errorResponse('Debes iniciar sesión', null, 401);
         }
 
         $user = auth()->user();
+
+        // ✅ CORREGIDO: Obtener eventos con la relación
         $eventos = $user->eventosAsistencia()
             ->orderBy('fecha_evento', 'asc')
             ->get();
 
+        // ✅ CORREGIDO: Agregar propiedades necesarias para el frontend
         foreach ($eventos as $evento) {
             $evento->usuario_confirmado = true;
-            $evento->total_asistentes = $evento->total_asistentes;
+            // El total_asistentes ya viene del accessor en el modelo
+            // $evento->total_asistentes ya está disponible
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $eventos
-        ]);
+        return $this->successResponse($eventos, 'Tus eventos obtenidos exitosamente');
     }
 }

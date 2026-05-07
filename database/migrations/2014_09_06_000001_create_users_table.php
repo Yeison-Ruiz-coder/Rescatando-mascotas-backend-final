@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('direccion')->nullable();
             $table->string('telefono')->nullable();
             $table->string('avatar')->nullable();
+            $table->string('avatar_public_id')->nullable();
             $table->string('tipo_documento')->nullable();
             $table->string('numero_documento')->nullable()->unique();
             $table->timestamp('email_verified_at')->nullable();
@@ -27,7 +28,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            // Auditoría - Nombres corregidos
+            // Auditoría
             $table->foreignId('created_by')->nullable()->constrained('users');
             $table->foreignId('updated_by')->nullable()->constrained('users');
 

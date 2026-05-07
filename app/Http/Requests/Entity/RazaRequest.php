@@ -10,7 +10,7 @@ class RazaRequest extends FormRequest
     public function authorize(): bool
     {
         // La entidad (fundación/veterinaria) debe estar autenticada
-        return auth()->check() && in_array(auth()->user()->rol, ['fundacion', 'veterinaria']);
+        return auth()->check() && in_array(auth()->user()->tipo, ['fundacion', 'veterinaria']);
     }
 
     public function rules(): array

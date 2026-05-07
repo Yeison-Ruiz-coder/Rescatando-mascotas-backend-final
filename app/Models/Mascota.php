@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\HasScopes;
 use App\Traits\Translatable;
+use Illuminate\Database\Query\Builder;
 
 class Mascota extends Model
 {
@@ -23,6 +24,7 @@ class Mascota extends Model
         'descripcion',
         'condiciones_especiales',
         'foto_principal',
+        'foto_principal_public_id', //  NUEVO
         'galeria_fotos',
         'necesita_hogar_temporal',
         'apto_con_ninos',
@@ -30,16 +32,50 @@ class Mascota extends Model
         'fecha_ingreso',
         'fecha_salida',
         'fundacion_id',
+        // ===== NUEVOS CAMPOS =====
+        'peso_aprox',
+        'tamano',
+        'color',
+        'salud_general',
+        'esterilizado',
+        'desparasitado',
+        'vacunado',
+        'enfermedades_cronicas',
+        'medicamentos',
+        'requisitos_adopcion',
+        'hogar_recomendado',
+        'video_url',
+        'video_public_id',
+        'destacada',
+        'fecha_publicacion',
+        'vistas',
+        'interesados',
+        'veterinaria_id',
+        'padrinos',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
         'galeria_fotos' => 'array',
+        'enfermedades_cronicas' => 'array', //  NUEVO
+        'medicamentos' => 'array', //  NUEVO
+        'requisitos_adopcion' => 'array', // NUEVO
+        'padrinos' => 'array', //  NUEVO
         'necesita_hogar_temporal' => 'boolean',
         'apto_con_ninos' => 'boolean',
         'apto_con_otros_animales' => 'boolean',
+        'esterilizado' => 'boolean', //  NUEVO
+        'desparasitado' => 'boolean', //  NUEVO
+        'vacunado' => 'boolean', //  NUEVO
+        'destacada' => 'boolean', //  NUEVO
         'fecha_ingreso' => 'date',
         'fecha_salida' => 'date',
+        'fecha_publicacion' => 'datetime', // UEVO
         'edad_aprox' => 'decimal:2',
+        'peso_aprox' => 'decimal:2', //  NUEVO
+        'vistas' => 'integer', //  NUEVO
+        'interesados' => 'integer', //  NUEVO
     ];
 
     protected $allowIncluded = [
@@ -110,12 +146,12 @@ class Mascota extends Model
     }
 
     // Scopes
-    public function scopeDisponibles($query)
+    public function scopeDisponibles(Builder $query)
     {
         return $query->where('estado', 'En adopcion');
     }
 
-    public function scopePorEspecie($query, $especie)
+    public function scopePorEspecie(Builder $query, string $especie)
     {
         return $query->where('especie', $especie);
     }
@@ -143,7 +179,7 @@ class Mascota extends Model
             ->exists();
     }
 
-     public function getEdadAproxAttribute($value)
+    public function getEdadAproxAttribute(mixed $value)
     {
         if (is_null($value)) {
             return null;
@@ -164,7 +200,7 @@ class Mascota extends Model
     /**
      * Mutator para la edad - Guarda siempre como entero
      */
-    public function setEdadAproxAttribute($value)
+    public function setEdadAproxAttribute(mixed $value)
     {
         if (is_null($value) || $value === '') {
             $this->attributes['edad_aprox'] = null;

@@ -41,7 +41,7 @@ class TipoVacunaController extends Controller
     /**
      * Mostrar detalle de tipo de vacuna
      */
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $tipoVacuna = $this->tipoVacunaService->findById($id);
@@ -76,7 +76,7 @@ class TipoVacunaController extends Controller
     /**
      * Actualizar tipo de vacuna
      */
-    public function update(TipoVacunaRequest $request, $id)
+    public function update(TipoVacunaRequest $request, int $id)
     {
         try {
             $tipoVacuna = $this->runInTransaction(
@@ -95,7 +95,7 @@ class TipoVacunaController extends Controller
     /**
      * Eliminar tipo de vacuna
      */
-    public function destroy($id)
+    public function destroy(int $id)
     {
         try {
             $this->runInTransaction(

@@ -29,7 +29,7 @@ class DonacionController extends Controller
         return $this->successResponse($donaciones, 'Donaciones obtenidas exitosamente');
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $donacion = $this->donacionService->findById(request()->user()->id, $id);
@@ -60,7 +60,7 @@ class DonacionController extends Controller
         }
     }
 
-    public function certificado($id)
+    public function certificado(int $id)
     {
         try {
             $donacion = $this->donacionService->getCertificadoData(request()->user()->id, $id);
@@ -71,6 +71,8 @@ class DonacionController extends Controller
             ], 'Certificado generado');
         } catch (ModelNotFoundException $e) {
             return $this->notFoundResponse('Donación no encontrada');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 400);
         }
     }
 }

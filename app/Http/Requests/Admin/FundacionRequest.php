@@ -26,8 +26,17 @@ class FundacionRequest extends FormRequest
             'horario_atencion' => 'nullable|string',
             'recibe_voluntarios' => 'boolean',
             'user_id' => 'nullable|exists:users,id',
-            'latitud' => 'nullable|numeric',
-            'longitud' => 'nullable|numeric',
+            // ===== CAMPOS ACTUALIZADOS =====
+            'lat' => 'nullable|numeric',
+            'lng' => 'nullable|numeric',
+            'radio_atencion' => 'nullable|integer|min:1|max:100',
+            'imagen_portada' => 'nullable|image|max:2048',
+            'verificado' => 'nullable|boolean',
+            'ciudad' => 'nullable|string|max:100',
+            'fecha_fundacion' => 'nullable|date',
+            // Mantener compatibilidad con campos antiguos si los usas
+            'latitud' => 'nullable|numeric', // por si el frontend usa latitud
+            'longitud' => 'nullable|numeric', // por si el frontend usa longitud
             'sitio_web' => 'nullable|url|max:255',
             'redes_sociales' => 'nullable|array',
             'descripcion' => 'nullable|string',
@@ -38,6 +47,15 @@ class FundacionRequest extends FormRequest
     {
         $this->merge([
             'recibe_voluntarios' => $this->boolean('recibe_voluntarios'),
+            'verificado' => $this->boolean('verificado'),
         ]);
+
+        // Compatibilidad con latitud/longitud
+        if ($this->has('latitud') && !$this->has('lat')) {
+            $this->merge(['lat' => $this->latitud]);
+        }
+        if ($this->has('longitud') && !$this->has('lng')) {
+            $this->merge(['lng' => $this->longitud]);
+        }
     }
 }

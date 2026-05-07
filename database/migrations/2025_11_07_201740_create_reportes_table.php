@@ -15,7 +15,7 @@ return new class extends Migration
             $table->text('descripcion');
             $table->string('ubicacion');
             $table->date('fecha_incidente');
-            $table->string('especie')->nullable(); // Perro, Gato, etc.
+            $table->string('especie')->nullable();
             $table->string('raza')->nullable();
             $table->string('color')->nullable();
             $table->string('foto_url')->nullable();

@@ -36,7 +36,7 @@ class ComentarioController extends Controller
         ], 'Comentarios obtenidos exitosamente');
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $comentario = $this->comentarioService->findById($id);
@@ -46,7 +46,7 @@ class ComentarioController extends Controller
         }
     }
 
-    public function update(ComentarioRequest $request, $id)
+    public function update(ComentarioRequest $request, int $id)
     {
         try {
             $comentario = $this->runInTransaction(
@@ -62,7 +62,7 @@ class ComentarioController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         try {
             $this->runInTransaction(

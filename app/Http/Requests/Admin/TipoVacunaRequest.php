@@ -11,20 +11,14 @@ class TipoVacunaRequest extends FormRequest
         return true;
     }
 
+    // TipoVacunaRequest.php - VERSIÓN SIMPLIFICADA (RECOMENDADA)
     public function rules(): array
     {
         $id = $this->route('tipo_vacuna') ?? 'null';
 
         return [
             'nombre_vacuna' => 'required|string|max:255|unique:tipos_vacunas,nombre_vacuna,' . $id,
-            'descripcion' => 'nullable|string',
-            'frecuencia_dias' => 'nullable|integer|min:1',
-            'edad_minima_dias' => 'nullable|integer|min:0',
-            'edad_maxima_dias' => 'nullable|integer|min:0|gt:edad_minima_dias',
-            'especie' => 'nullable|string|max:100',
-            'obligatoria' => 'boolean',
-            'activa' => 'boolean',
-            'informacion_adicional' => 'nullable|string',
+            'frecuencia_dias' => 'nullable|integer|min:1', // SOLO ESTO
         ];
     }
 

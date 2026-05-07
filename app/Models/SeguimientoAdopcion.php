@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Builder;
 
 class SeguimientoAdopcion extends Model
 {
@@ -57,14 +59,14 @@ class SeguimientoAdopcion extends Model
     }
 
     // Scopes
-    public function scopePendientesProximoSeguimiento($query)
+    public function scopePendientesProximoSeguimiento(Builder$query)
     {
         return $query->where('requiere_nuevo_seguimiento', true)
                      ->whereNotNull('proximo_seguimiento')
                      ->whereDate('proximo_seguimiento', '<=', now());
     }
 
-    public function scopePorEstadoMascota($query, $estado)
+    public function scopePorEstadoMascota(Builder $query, string $estado)
     {
         return $query->where('estado_mascota', $estado);
     }

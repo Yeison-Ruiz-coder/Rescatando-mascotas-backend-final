@@ -1,5 +1,5 @@
 <?php
-// database/migrations/2025_11_07_202250_create_rescates_table.php (reemplazar completamente)
+// database/migrations/2025_11_07_202250_create_rescates_table.php (MODIFICADA PARA FOTOS)
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -18,6 +18,19 @@ return new class extends Migration
             $table->date('fecha_rescate');
             $table->string('lugar_rescate');
             $table->text('descripcion_rescate');
+
+            // ========== NUEVOS CAMPOS PARA FOTOS ==========
+            // Foto principal
+            $table->string('foto_principal')->nullable();
+            $table->string('foto_principal_public_id')->nullable();
+
+            // Galería de fotos (JSON para múltiples fotos)
+            $table->json('galeria_fotos')->nullable();
+            $table->json('galeria_fotos_public_ids')->nullable();
+
+            // Metadatos de las fotos
+            $table->json('fotos_metadata')->nullable(); // Para almacenar orden, descripciones, etc.
+            // ============================================
 
             // Estado y clasificación
             $table->enum('estado', ['pendiente', 'en_proceso', 'completado', 'seguimiento'])

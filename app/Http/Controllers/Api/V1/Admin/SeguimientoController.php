@@ -21,7 +21,7 @@ class SeguimientoController extends Controller
         $this->seguimientoService = $seguimientoService;
     }
 
-    public function index($adopcionId)
+    public function index(int $adopcionId)
     {
         try {
             $seguimientos = $this->seguimientoService->getByAdopcion($adopcionId, 15);
@@ -31,7 +31,7 @@ class SeguimientoController extends Controller
         }
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $seguimiento = $this->seguimientoService->findById($id);
@@ -41,7 +41,7 @@ class SeguimientoController extends Controller
         }
     }
 
-    public function store(SeguimientoStoreRequest $request, $adopcionId)
+    public function store(SeguimientoStoreRequest $request, int $adopcionId)
     {
         try {
             $seguimiento = $this->runInTransaction(
@@ -65,7 +65,7 @@ class SeguimientoController extends Controller
         }
     }
 
-    public function update(SeguimientoUpdateRequest $request, $id)
+    public function update(SeguimientoUpdateRequest $request, int $id)
     {
         try {
             $seguimiento = $this->runInTransaction(
@@ -81,7 +81,7 @@ class SeguimientoController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         try {
             $this->runInTransaction(
@@ -97,7 +97,7 @@ class SeguimientoController extends Controller
         }
     }
 
-    public function estadisticas($adopcionId)
+    public function estadisticas(int $adopcionId)
     {
         try {
             $estadisticas = $this->seguimientoService->getEstadisticas($adopcionId);

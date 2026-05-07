@@ -41,7 +41,7 @@ class RazaController extends Controller
     /**
      * Mostrar detalle de raza
      */
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $raza = $this->razaService->findById($id);
@@ -76,7 +76,7 @@ class RazaController extends Controller
     /**
      * Actualizar raza
      */
-    public function update(RazaRequest $request, $id)
+    public function update(RazaRequest $request, int $id)
     {
         try {
             $raza = $this->runInTransaction(
@@ -95,7 +95,7 @@ class RazaController extends Controller
     /**
      * Eliminar raza
      */
-    public function destroy($id)
+    public function destroy(int $id)
     {
         try {
             $this->runInTransaction(
@@ -114,7 +114,7 @@ class RazaController extends Controller
     /**
      * Obtener razas por especie
      */
-    public function porEspecie($especie)
+    public function porEspecie(string $especie)
     {
         try {
             $razas = $this->razaService->getPorEspecie($especie);

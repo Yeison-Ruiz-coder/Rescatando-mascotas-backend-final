@@ -26,7 +26,16 @@ class ReporteController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['tipo_reporte', 'estado']);
+        $filters = $request->only(['tipo_reporte', 'estado', 'urgencia']);
+
+        // Filtro de cercanía
+        if ($request->has(['lat', 'lng'])) {
+            $filters['cercanos'] = true;
+            $filters['lat'] = $request->lat;
+            $filters['lng'] = $request->lng;
+            $filters['radio'] = $request->get('radio', 10);
+        }
+
         $perPage = $request->get('per_page', 20);
 
         $reportes = $this->reporteService->getAll($filters, $perPage);
@@ -38,7 +47,7 @@ class ReporteController extends Controller
         ], 'Reportes obtenidos exitosamente');
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $reporte = $this->reporteService->findById($id);
@@ -69,7 +78,7 @@ class ReporteController extends Controller
         }
     }
 
-    public function update(ReporteUpdateRequest $request, $id)
+    public function update(ReporteUpdateRequest $request, int $id)
     {
         try {
             $reporte = $this->runInTransaction(
@@ -85,7 +94,7 @@ class ReporteController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         try {
             $this->runInTransaction(
@@ -101,7 +110,7 @@ class ReporteController extends Controller
         }
     }
 
-    public function convertirARescate(ConvertirRescateRequest $request, $id)
+    public function convertirARescate(ConvertirRescateRequest $request, int $id)
     {
         try {
             $resultado = $this->runInTransaction(

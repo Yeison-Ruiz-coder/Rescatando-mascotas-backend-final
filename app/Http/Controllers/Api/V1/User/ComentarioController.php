@@ -29,7 +29,7 @@ class ComentarioController extends Controller
         return $this->successResponse($comentarios, 'Comentarios obtenidos exitosamente');
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
         $validator = Validator::make($request->all(), [
             'contenido' => 'required|string|min:3|max:1000',
@@ -55,7 +55,7 @@ class ComentarioController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         try {
             $this->runInTransaction(

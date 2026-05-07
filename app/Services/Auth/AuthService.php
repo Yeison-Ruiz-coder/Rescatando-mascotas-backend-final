@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class AuthService
 {
@@ -42,7 +43,7 @@ class AuthService
 
     public function register(array $data): array
     {
-        $user = User::create([
+        $userData = [
             'nombre' => $data['nombre'],
             'apellidos' => $data['apellidos'] ?? null,
             'email' => $data['email'],
@@ -50,10 +51,33 @@ class AuthService
             'telefono' => $data['telefono'] ?? null,
             'tipo' => $data['tipo'],
             'estado' => $data['tipo'] === 'user' ? 'activo' : 'pendiente',
-        ]);
+        ];
 
+        // Agregar campos opcionales si vienen
+        if (isset($data['tipo_documento'])) {
+            $userData['tipo_documento'] = $data['tipo_documento'];
+        }
+        if (isset($data['numero_documento'])) {
+            $userData['numero_documento'] = $data['numero_documento'];
+        }
+        if (isset($data['fecha_nacimiento'])) {
+            $userData['fecha_nacimiento'] = $data['fecha_nacimiento'];
+        }
+        if (isset($data['direccion'])) {
+            $userData['direccion'] = $data['direccion'];
+        }
+        if (isset($data['pais'])) {
+            $userData['pais'] = $data['pais'];
+        }
+        if (isset($data['ciudad'])) {
+            $userData['ciudad'] = $data['ciudad'];
+        }
+
+        $user = User::create($userData);
+
+        // Crear perfil según tipo
         if ($data['tipo'] === 'fundacion') {
-            Fundacion::create([
+            $fundacionData = [
                 'Nombre_1' => $data['nombre_entidad'] ?? $data['nombre'],
                 'Direccion' => $data['direccion'] ?? null,
                 'Telefono' => $data['telefono'] ?? null,
@@ -61,16 +85,43 @@ class AuthService
                 'registro_sanitario' => $data['registro_sanitario'] ?? null,
                 'capacidad_maxima' => $data['capacidad'] ?? null,
                 'user_id' => $user->id,
-            ]);
-        } elseif ($data['tipo'] === 'veterinaria') {
-            Veterinaria::create([
+                'ciudad' => $data['ciudad'] ?? null,
+                'descripcion' => $data['descripcion'] ?? null,
+                'horario_atencion' => $data['horario_atencion'] ?? null,
+            ];
+
+            // Agregar lat/lng si vienen
+            if (isset($data['lat'])) {
+                $fundacionData['lat'] = $data['lat'];
+            }
+            if (isset($data['lng'])) {
+                $fundacionData['lng'] = $data['lng'];
+            }
+
+            Fundacion::create($fundacionData);
+        }
+        elseif ($data['tipo'] === 'veterinaria') {
+            $veterinariaData = [
                 'Nombre_vet' => $data['nombre_entidad'] ?? $data['nombre'],
                 'Direccion' => $data['direccion'] ?? null,
                 'Telefono' => $data['telefono'] ?? null,
                 'Email' => $data['email'],
                 'servicios' => isset($data['servicios']) ? json_encode($data['servicios']) : null,
                 'user_id' => $user->id,
-            ]);
+                'ciudad' => $data['ciudad'] ?? null,
+                'descripcion' => $data['descripcion'] ?? null,
+                'horario_atencion' => $data['horario_atencion'] ?? null,
+            ];
+
+            // Agregar lat/lng si vienen
+            if (isset($data['lat'])) {
+                $veterinariaData['lat'] = $data['lat'];
+            }
+            if (isset($data['lng'])) {
+                $veterinariaData['lng'] = $data['lng'];
+            }
+
+            Veterinaria::create($veterinariaData);
         }
 
         $token = $data['tipo'] === 'user' ? $user->createToken('auth_token')->plainTextToken : null;
@@ -82,9 +133,9 @@ class AuthService
         ];
     }
 
-    public function logout($user): void
+    public function logout(User $user): void
     {
-        $user->currentAccessToken()->delete();
+        $user->tokens()->delete();
     }
 
     public function checkEmail(string $email): bool
@@ -92,7 +143,6 @@ class AuthService
         return User::where('email', $email)->exists();
     }
 
-    // 🔥 MÉTODO CORREGIDO - Enviar enlace de restablecimiento 🔥
     public function sendPasswordResetLink(string $email): string
     {
         $user = User::where('email', $email)->first();
@@ -101,24 +151,19 @@ class AuthService
             throw new \Exception('No existe un usuario con este correo electrónico');
         }
 
-        // Crear token manualmente
         $token = Password::createToken($user);
-        
-        // Guardar el token en la tabla password_reset_tokens
-        \DB::table('password_reset_tokens')->updateOrInsert(
+
+        DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $email],
             ['token' => $token, 'created_at' => now()]
         );
 
-        // URL del frontend
         $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
         $resetUrl = $frontendUrl . '/reset-password?token=' . $token . '&email=' . urlencode($email);
 
-        // Enviar email
         try {
             Mail::send('emails.password-reset', ['resetUrl' => $resetUrl, 'user' => $user], function ($message) use ($email) {
-                $message->to($email)
-                        ->subject('Restablecer contraseña');
+                $message->to($email)->subject('Restablecer contraseña');
             });
         } catch (\Exception $e) {
             throw new \Exception('Error al enviar el correo: ' . $e->getMessage());
@@ -127,11 +172,9 @@ class AuthService
         return 'Enlace de restablecimiento enviado a tu correo electrónico';
     }
 
-    // 🔥 MÉTODO CORREGIDO - Restablecer contraseña 🔥
     public function resetPassword(array $data): string
     {
-        // Buscar el token en la tabla
-        $resetRecord = \DB::table('password_reset_tokens')
+        $resetRecord = DB::table('password_reset_tokens')
             ->where('email', $data['email'])
             ->where('token', $data['token'])
             ->first();
@@ -140,15 +183,13 @@ class AuthService
             throw new \Exception('Token inválido o expirado');
         }
 
-        // Verificar expiración (60 minutos)
         $createdAt = strtotime($resetRecord->created_at);
         if (time() - $createdAt > 3600) {
             throw new \Exception('El enlace ha expirado. Solicita uno nuevo');
         }
 
-        // Actualizar la contraseña del usuario
         $user = User::where('email', $data['email'])->first();
-        
+
         if (!$user) {
             throw new \Exception('Usuario no encontrado');
         }
@@ -157,8 +198,7 @@ class AuthService
         $user->remember_token = Str::random(60);
         $user->save();
 
-        // Eliminar el token usado
-        \DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
+        DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
 
         return 'Contraseña restablecida exitosamente';
     }
@@ -175,6 +215,7 @@ class AuthService
                     'Email' => $user->email,
                     'registro_sanitario' => 'AUTO_' . time() . '_' . $user->id,
                     'user_id' => $user->id,
+                    'ciudad' => $user->ciudad ?? null,
                 ]);
             }
         }
@@ -188,6 +229,7 @@ class AuthService
                     'Telefono' => $user->telefono ?? '000000000',
                     'Email' => $user->email,
                     'user_id' => $user->id,
+                    'ciudad' => $user->ciudad ?? null,
                 ]);
             }
         }

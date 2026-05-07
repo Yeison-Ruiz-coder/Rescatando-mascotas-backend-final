@@ -9,6 +9,7 @@ use App\Traits\ApiResponses;
 use App\Traits\TransactionTrait;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Validator;
 
 class RescateController extends Controller
 {
@@ -20,7 +21,18 @@ class RescateController extends Controller
     {
         $this->rescateService = $rescateService;
     }
-    public function show($id)
+
+    public function index(Request $request)
+    {
+        try {
+            $rescates = $this->rescateService->getMisRescates();
+            return $this->successResponse($rescates, 'Rescates obtenidos exitosamente');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 404);
+        }
+    }
+
+    public function show(int $id)
     {
         try {
             $rescate = $this->rescateService->findById($id);
@@ -30,7 +42,7 @@ class RescateController extends Controller
         }
     }
 
-    public function completar($id)
+    public function completar(int $id)
     {
         try {
             $rescate = $this->runInTransaction(
@@ -55,7 +67,7 @@ class RescateController extends Controller
         }
     }
 
-    public function aceptar($id)
+    public function aceptar(int $id)
     {
         try {
             $rescate = $this->runInTransaction(
@@ -71,7 +83,7 @@ class RescateController extends Controller
         }
     }
 
-    public function rechazar($id)
+    public function rechazar(int $id)
     {
         try {
             $rescate = $this->runInTransaction(
@@ -97,14 +109,22 @@ class RescateController extends Controller
         }
     }
 
-    public function registrarMascota(RegistrarMascotaRescateRequest $request, $id)
+    public function registrarMascota(RegistrarMascotaRescateRequest $request,int $id)
     {
         try {
+            $files = [];
+            if ($request->hasFile('foto_principal')) {
+                $files['foto_principal'] = $request->file('foto_principal');
+            }
+            if ($request->hasFile('galeria_fotos')) {
+                $files['galeria_fotos'] = $request->file('galeria_fotos');
+            }
+
             $mascota = $this->runInTransaction(
                 fn() => $this->rescateService->registrarMascotaDesdeRescate(
                     $id,
                     $request->validated(),
-                    $request->only(['foto_principal'])
+                    $files
                 ),
                 'Error al registrar mascota'
             );
@@ -114,6 +134,55 @@ class RescateController extends Controller
             return $this->notFoundResponse('Rescate no encontrado');
         } catch (\Exception $e) {
             return $this->errorResponse('Error al registrar mascota', $e->getMessage(), 500);
+        }
+    }
+
+    public function agregarFotos(Request $request,int $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'fotos' => 'required|array',
+            'fotos.*' => 'image|max:5120'
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse('Error de validación', $validator->errors(), 422);
+        }
+
+        try {
+            $rescate = $this->runInTransaction(
+                fn() => $this->rescateService->agregarFotos($id, $request->file('fotos')),
+                'Error al agregar fotos'
+            );
+
+            return $this->successResponse($rescate, 'Fotos agregadas exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Rescate no encontrado');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al agregar fotos', $e->getMessage(), 500);
+        }
+    }
+
+    public function actualizarEstado(Request $request,int $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'estado' => 'required|in:pendiente,en_proceso,completado,seguimiento'
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse('Error de validación', $validator->errors(), 422);
+        }
+
+        try {
+            $rescate = $this->runInTransaction(
+                fn() => $this->rescateService->updateEstado($id, $request->estado),
+                'Error al actualizar estado'
+            );
+
+            return $this->successResponse($rescate, 'Estado actualizado exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Rescate no encontrado');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al actualizar el estado', $e->getMessage(), 500);
         }
     }
 }

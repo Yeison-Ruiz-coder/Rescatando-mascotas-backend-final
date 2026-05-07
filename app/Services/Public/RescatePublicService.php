@@ -7,10 +7,13 @@ use App\Models\Rescate;
 use App\Models\Fundacion;
 use App\Models\Veterinaria;
 use App\Models\Notificacion;
+use App\Traits\ImageUploadTrait;
 use Illuminate\Support\Facades\Log;
 
 class RescatePublicService
 {
+    use ImageUploadTrait;
+
     public function getAll(int $perPage = 15)
     {
         return Rescate::with(['usuarioReporto', 'entidadResponsable'])
@@ -25,10 +28,9 @@ class RescatePublicService
             ->findOrFail($id);
     }
 
-    public function reportar(array $data): Rescate
+    public function reportar(array $data, $fotoPrincipal = null, array $galeriaFotos = []): Rescate
     {
-        // Si el frontend ya envió tipo_emergencia y prioridad, usarlos
-        // Si no, analizar automáticamente
+        // Analizar tipo de emergencia y prioridad
         if (isset($data['tipo_emergencia']) && !empty($data['tipo_emergencia'])) {
             $tipoEmergencia = $data['tipo_emergencia'];
             $prioridad = $data['prioridad'] ?? $this->calcularPrioridad($tipoEmergencia);
@@ -37,7 +39,7 @@ class RescatePublicService
             $prioridad = $this->calcularPrioridad($tipoEmergencia);
         }
 
-        $rescate = Rescate::create([
+        $rescateData = [
             'lugar_rescate'       => $data['lugar_rescate'],
             'descripcion_rescate' => $data['descripcion_rescate'],
             'fecha_rescate'       => $data['fecha_rescate'],
@@ -50,7 +52,28 @@ class RescatePublicService
             'email_reportante'    => $data['email_reportante'] ?? null,
             'telefono_reportante' => $data['telefono_reportante'] ?? null,
             'usuario_reporto_id'  => auth()->id(),
-        ]);
+        ];
+
+        // Subir foto principal si existe
+        if ($fotoPrincipal && $fotoPrincipal->isValid()) {
+            $rescateData['foto_principal'] = $this->uploadImage($fotoPrincipal, 'rescates');
+        }
+
+        $rescate = Rescate::create($rescateData);
+
+        // Subir galería de fotos
+        if (!empty($galeriaFotos)) {
+            $galeriaUrls = [];
+            foreach ($galeriaFotos as $foto) {
+                if ($foto && $foto->isValid()) {
+                    $galeriaUrls[] = $this->uploadImage($foto, 'rescates/galeria');
+                }
+            }
+            if (!empty($galeriaUrls)) {
+                $rescate->galeria_fotos = json_encode($galeriaUrls);
+                $rescate->save();
+            }
+        }
 
         $this->notificarEntidadesCercanas($rescate);
         $this->verificarEscalamientoAutomatico($rescate);
@@ -93,10 +116,10 @@ class RescatePublicService
         $tipo = $rescate->tipo_emergencia;
         $lat = $rescate->lat;
         $lng = $rescate->lng;
-        $radio = 10; // km
+        $radio = 10;
 
+        $entidades = collect();
 
-        $entidades = collect(); // usar colección
         if (in_array($tipo, ['urgente', 'herido'])) {
             $entidades = $entidades->concat($this->buscarVeterinariasCercanas($lat, $lng, $radio));
         }
@@ -105,15 +128,13 @@ class RescatePublicService
         }
 
         foreach ($entidades as $entidad) {
-            // ... resto igual
-        }
-
-        foreach ($entidades as $entidad) {
             if ($entidad->user_id) {
                 Notificacion::create([
                     'user_id'      => $entidad->user_id,
                     'contenido'    => "Nuevo rescate {$rescate->tipo_emergencia} cerca de ti: {$rescate->lugar_rescate}",
                     'creado_por_id' => 1,
+                    'tipo' => 'alert',
+                    'prioridad' => $rescate->prioridad === 'alta' ? 'urgente' : 'media',
                 ]);
             }
         }
@@ -121,7 +142,7 @@ class RescatePublicService
         Log::info("Rescate #{$rescate->id} notificado a " . count($entidades) . " entidades");
     }
 
-    private function buscarVeterinariasCercanas($lat, $lng, $radio)
+    private function buscarVeterinariasCercanas(float|null $lat, float|null $lng, int|float $radio)
     {
         $query = Veterinaria::where('urgencias_24h', true);
         if ($lat && $lng) {
@@ -133,7 +154,7 @@ class RescatePublicService
         return $query->get();
     }
 
-    private function buscarFundacionesCercanas($lat, $lng, $radio)
+    private function buscarFundacionesCercanas(float|null $lat, float|null $lng, int|float $radio)
     {
         $query = Fundacion::where('capacidad_maxima', '>', 0);
         if ($lat && $lng) {
@@ -145,12 +166,8 @@ class RescatePublicService
         return $query->get();
     }
 
-    /**
-     * Si no hay entidades cercanas, escala automáticamente a admin.
-     */
     private function verificarEscalamientoAutomatico(Rescate $rescate): void
     {
-        // Verificar si hay alguna entidad que pueda atender este tipo de rescate
         $tipo = $rescate->tipo_emergencia;
         $hayEntidades = false;
 
@@ -162,13 +179,14 @@ class RescatePublicService
         }
 
         if (!$hayEntidades) {
-            // Notificar a todos los administradores
-            $admins = \App\Models\User::where('tipo', 'admin', true)->get();
+            $admins = \App\Models\User::where('tipo', 'admin')->get();
             foreach ($admins as $admin) {
                 Notificacion::create([
                     'user_id'      => $admin->id,
                     'contenido'    => "Rescate #{$rescate->id} (tipo {$tipo}) no tiene entidades cercanas. Requiere asignación manual.",
                     'creado_por_id' => 1,
+                    'tipo' => 'warning',
+                    'prioridad' => 'alta',
                 ]);
             }
             Log::warning("Rescate #{$rescate->id} escalado a admin por falta de entidades.");

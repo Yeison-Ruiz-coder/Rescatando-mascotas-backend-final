@@ -9,12 +9,13 @@ use Illuminate\Http\Request;
 use App\Services\MascotaService;
 use App\Traits\ApiResponses;
 use App\Traits\TransactionTrait;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class MascotaController extends Controller
 {
     use ApiResponses, TransactionTrait;
 
-    protected $mascotaService;
+    protected MascotaService $mascotaService;
 
     public function __construct(MascotaService $mascotaService)
     {
@@ -27,6 +28,11 @@ class MascotaController extends Controller
             ->when($request->estado, fn($q) => $q->where('estado', $request->estado))
             ->when($request->especie, fn($q) => $q->where('especie', $request->especie))
             ->when($request->fundacion_id, fn($q) => $q->where('fundacion_id', $request->fundacion_id))
+            ->when($request->genero, fn($q) => $q->where('genero', $request->genero))
+            ->when($request->tamano, fn($q) => $q->where('tamano', $request->tamano))
+            ->when($request->destacada, fn($q) => $q->where('destacada', true))
+            ->when($request->esterilizado, fn($q) => $q->where('esterilizado', $request->esterilizado))
+            ->when($request->vacunado, fn($q) => $q->where('vacunado', $request->vacunado))
             ->when($request->buscar, fn($q) => $q->where('nombre_mascota', 'like', "%{$request->buscar}%"))
             ->latest()
             ->paginate($request->get('per_page', 15));
@@ -52,18 +58,18 @@ class MascotaController extends Controller
         }
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         try {
-            $mascota = Mascota::with(['fundacion', 'razas', 'vacunas', 'historialMedico', 'adopciones'])
+            $mascota = Mascota::with(['fundacion', 'razas', 'vacunas', 'historialMedico', 'adopciones', 'suscripciones'])
                 ->findOrFail($id);
-            return $this->successResponse($mascota);
-        } catch (\Exception $e) {
+            return $this->successResponse($mascota, 'Mascota obtenida exitosamente');
+        } catch (ModelNotFoundException $e) {
             return $this->notFoundResponse('Mascota no encontrada');
         }
     }
 
-    public function update(MascotaRequest $request, $id)
+    public function update(MascotaRequest $request, int $id)
     {
         try {
             $mascota = $this->runInTransaction(
@@ -75,21 +81,44 @@ class MascotaController extends Controller
                 $mascota->fresh(['fundacion', 'razas', 'vacunas']),
                 'Mascota actualizada exitosamente'
             );
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Mascota no encontrada');
         } catch (\Exception $e) {
             return $this->errorResponse('Error al actualizar mascota', $e->getMessage(), 500);
         }
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         try {
             $this->runInTransaction(
                 fn() => $this->mascotaService->delete($id),
                 'Error al eliminar mascota'
             );
-            return $this->successResponse(null, 'Mascota eliminada exitosamente', 200);
+            return $this->successResponse(null, 'Mascota eliminada exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Mascota no encontrada');
         } catch (\Exception $e) {
             return $this->errorResponse('Error al eliminar mascota', $e->getMessage(), 500);
+        }
+    }
+
+    public function toggleDestacada(int $id)
+    {
+        try {
+            $mascota = $this->runInTransaction(
+                fn() => $this->mascotaService->toggleDestacada($id),
+                'Error al cambiar estado destacada'
+            );
+
+            return $this->successResponse(
+                ['destacada' => $mascota->destacada],
+                'Estado destacada actualizado'
+            );
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Mascota no encontrada');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al cambiar estado destacada', $e->getMessage(), 500);
         }
     }
 }

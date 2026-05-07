@@ -17,13 +17,7 @@ class RazaRequest extends FormRequest
 
         return [
             'nombre_raza' => 'required|string|max:255|unique:razas,nombre_raza,' . $id,
-            'especie' => 'nullable|string|max:100',
-            'descripcion' => 'nullable|string',
-            'tamanio' => 'nullable|in:pequeño,mediano,grande',
-            'esperanza_vida' => 'nullable|integer|min:1|max:30',
-            'pelaje' => 'nullable|string|max:100',
-            'origen' => 'nullable|string|max:255',
-            'cuidados_especiales' => 'nullable|string',
+            'especie' => 'nullable|string|max:100', // SOLO ESTO
         ];
     }
 

@@ -13,19 +13,20 @@ return new class extends Migration
 
             // Información básica
             $table->string('nombre_mascota');
-            $table->string('especie')->nullable(); // Perro, Gato, Conejo, Ave, Otro
-            $table->decimal('edad_aprox', 5, 2)->nullable(); // Permite 1.5 años, 2.3 años, etc.
+            $table->string('especie')->nullable();
+            $table->decimal('edad_aprox', 5, 2)->nullable();
             $table->enum('genero', ['Macho', 'Hembra', 'Desconocido'])->nullable();
             $table->enum('estado', ['Adoptado', 'En adopcion', 'Rescatada', 'En acogida'])->default('En adopcion');
 
             // Ubicación y descripción
             $table->string('lugar_rescate')->nullable();
             $table->text('descripcion')->nullable();
-            $table->text('condiciones_especiales')->nullable(); // Enfermedades crónicas, discapacidades
+            $table->text('condiciones_especiales')->nullable();
 
             // Fotos
-            $table->string('foto_principal')->nullable(); // Ruta de la foto principal
-            $table->json('galeria_fotos')->nullable(); // Array de rutas de fotos
+            $table->string('foto_principal')->nullable();
+            $table->string('foto_principal_public_id')->nullable();
+            $table->json('galeria_fotos')->nullable();
 
             // Características
             $table->boolean('necesita_hogar_temporal')->default(false);
@@ -38,10 +39,7 @@ return new class extends Migration
 
             // Relación con fundación
             $table->unsignedBigInteger('fundacion_id')->nullable();
-            $table->foreign('fundacion_id')
-                ->references('id')
-                ->on('fundaciones')
-                ->onDelete('set null');
+            $table->foreign('fundacion_id')->references('id')->on('fundaciones')->onDelete('set null');
 
             $table->timestamps();
         });

@@ -24,12 +24,27 @@ class VeterinariaRequest extends FormRequest
             'urgencias_24h' => 'boolean',
             'convenios' => 'nullable|array',
             'user_id' => 'nullable|exists:users,id',
+            // ===== NUEVOS CAMPOS =====
+            'lat' => 'nullable|numeric',
+            'lng' => 'nullable|numeric',
+            'radio_atencion' => 'nullable|integer|min:1|max:100',
+            'descripcion' => 'nullable|string',
+            'horario_atencion' => 'nullable|string',
+            'anios_experiencia' => 'nullable|integer|min:0|max:100',
+            'servicios_detallados' => 'nullable|array',
+            'logo' => 'nullable|image|max:2048',
+            'redes_sociales' => 'nullable|array',
+            'whatsapp' => 'nullable|string|max:20',
+            'sitio_web' => 'nullable|url',
+            'verificado' => 'nullable|boolean',
+            'precio_consulta' => 'nullable|numeric|min:0',
+            'acepta_seguros' => 'nullable|boolean',
+            'ciudad' => 'nullable|string|max:100',
+            'departamento' => 'nullable|string|max:100',
+            'cobertura_zona' => 'nullable|array',
+            // Mantener compatibilidad con campos antiguos
             'latitud' => 'nullable|numeric',
             'longitud' => 'nullable|numeric',
-            'radio_atencion' => 'nullable|integer|min:1|max:100',
-            'sitio_web' => 'nullable|url|max:255',
-            'horario_atencion' => 'nullable|string',
-            'descripcion' => 'nullable|string',
             'logo_url' => 'nullable|string|max:255',
         ];
     }
@@ -38,6 +53,16 @@ class VeterinariaRequest extends FormRequest
     {
         $this->merge([
             'urgencias_24h' => $this->boolean('urgencias_24h'),
+            'verificado' => $this->boolean('verificado'),
+            'acepta_seguros' => $this->boolean('acepta_seguros'),
         ]);
+
+        // Compatibilidad con latitud/longitud
+        if ($this->has('latitud') && !$this->has('lat')) {
+            $this->merge(['lat' => $this->latitud]);
+        }
+        if ($this->has('longitud') && !$this->has('lng')) {
+            $this->merge(['lng' => $this->longitud]);
+        }
     }
 }
