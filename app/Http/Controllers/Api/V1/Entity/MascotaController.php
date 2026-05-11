@@ -63,19 +63,43 @@ class MascotaController extends Controller
         }
     }
 
-    public function update(MascotaRequest $request, $id)
+    // app/Http/Controllers/Api/V1/Entity/MascotaController.php
+
+    public function update(MascotaRequest $request, int $id)
     {
+        Log::info('=== CONTROLLER UPDATE ===');
+        Log::info('Has galeria_fotos?', ['has' => $request->hasFile('galeria_fotos')]);
+        Log::info('All files keys:', array_keys($request->allFiles()));
+        Log::info('Fotos eliminar:', $request->input('fotos_eliminar', []));
         try {
             $files = [];
 
+            // ✅ Capturar foto principal
             if ($request->hasFile('foto_principal')) {
                 $files['foto_principal'] = $request->file('foto_principal');
+            }
+
+            // ✅ ✅ ✅ CAPTURAR GALERÍA DE FOTOS (esto estaba faltando)
+            if ($request->hasFile('galeria_fotos')) {
+                $files['galeria_fotos'] = $request->file('galeria_fotos');
+                Log::info('📸 Galería de fotos recibida en controller:', [
+                    'count' => count($request->file('galeria_fotos'))
+                ]);
+            }
+
+            // ✅ Capturar fotos a eliminar (vienen en el request validated)
+            $validatedData = $request->validated();
+
+            // Asegurar que fotos_eliminar se pase al servicio
+            if ($request->has('fotos_eliminar')) {
+                $validatedData['fotos_eliminar'] = $request->input('fotos_eliminar');
+                Log::info('🗑️ Fotos a eliminar:', $validatedData['fotos_eliminar']);
             }
 
             $mascota = $this->runInTransaction(
                 fn() => $this->mascotaService->updateMascota(
                     $id,
-                    $request->validated(),
+                    $validatedData,  // Pasar los datos validados CON fotos_eliminar
                     $files
                 ),
                 'Error al actualizar mascota'
@@ -89,7 +113,7 @@ class MascotaController extends Controller
             return $this->errorResponse('Error al actualizar', $e->getMessage(), 500);
         }
     }
-    public function show($id)
+    public function show(int $id)
     {
         try {
             $mascota = $this->mascotaService->findMascota($id);
@@ -102,7 +126,7 @@ class MascotaController extends Controller
     }
 
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         try {
             $this->runInTransaction(

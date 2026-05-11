@@ -58,16 +58,29 @@ class EventoService
     public function create(array $data, mixed $imagen = null): Evento
     {
         if ($imagen) {
-            // ✅ Igual que en Mascota: retorna string URL directamente
             $data['imagen_url'] = $this->uploadImage($imagen, 'eventos');
             $data['imagen_public_id'] = null;
         }
 
-        if (isset($data['tags']) && is_array($data['tags'])) {
-            $data['tags'] = json_encode($data['tags'], JSON_UNESCAPED_UNICODE);
+        // Asegurar que tags sea JSON válido
+        if (isset($data['tags'])) {
+            if (is_array($data['tags'])) {
+                $data['tags'] = json_encode($data['tags'], JSON_UNESCAPED_UNICODE);
+            } elseif (is_string($data['tags']) && !$this->isJson($data['tags'])) {
+                // Si es string pero no es JSON, convertirlo a array y luego a JSON
+                $data['tags'] = json_encode([$data['tags']], JSON_UNESCAPED_UNICODE);
+            }
         }
 
         return Evento::create($data);
+    }
+
+    // Helper method para verificar si es JSON
+    private function isJson(string $string): bool
+    {
+        if (!is_string($string)) return false;
+        json_decode($string);
+        return json_last_error() === JSON_ERROR_NONE;
     }
 
     public function update(int $id, array $data, mixed $imagen = null): Evento
@@ -75,17 +88,20 @@ class EventoService
         $evento = Evento::findOrFail($id);
 
         if ($imagen) {
-            // Eliminar imagen anterior si existe
             if ($evento->imagen_url) {
                 $this->deleteImage($evento->imagen_url);
             }
-            // Subir nueva imagen
             $data['imagen_url'] = $this->uploadImage($imagen, 'eventos');
             $data['imagen_public_id'] = null;
         }
 
-        if (isset($data['tags']) && is_array($data['tags'])) {
-            $data['tags'] = json_encode($data['tags'], JSON_UNESCAPED_UNICODE);
+        // Asegurar que tags sea JSON válido
+        if (isset($data['tags'])) {
+            if (is_array($data['tags'])) {
+                $data['tags'] = json_encode($data['tags'], JSON_UNESCAPED_UNICODE);
+            } elseif (is_string($data['tags']) && !$this->isJson($data['tags'])) {
+                $data['tags'] = json_encode([$data['tags']], JSON_UNESCAPED_UNICODE);
+            }
         }
 
         $evento->update($data);

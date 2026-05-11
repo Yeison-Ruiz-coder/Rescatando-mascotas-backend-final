@@ -9,6 +9,7 @@ use App\Traits\TransactionTrait;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class EventoController extends Controller
 {
@@ -49,7 +50,7 @@ class EventoController extends Controller
             'telefono_contacto' => 'nullable|string|max:20',
             'email_contacto' => 'nullable|email|max:255',
             'categoria' => 'nullable|string|max:100',
-            'tags' => 'nullable|array',
+            'tags' => 'nullable|array',  // Permite array
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
@@ -58,9 +59,17 @@ class EventoController extends Controller
         }
 
         try {
+            // Obtener todos los datos excepto imagen
+            $data = $request->except('imagen');
+
+            // Procesar tags: convertir array a JSON string
+            if ($request->has('tags') && is_array($request->tags)) {
+                $data['tags'] = json_encode($request->tags, JSON_UNESCAPED_UNICODE);
+            }
+
             $evento = $this->runInTransaction(
                 fn() => $this->eventoService->create(
-                    $request->except('imagen'),
+                    $data,
                     $request->file('imagen')
                 ),
                 'Error al crear evento'
@@ -68,10 +77,13 @@ class EventoController extends Controller
 
             return $this->successResponse($evento, 'Evento creado exitosamente', 201);
         } catch (\Exception $e) {
+            Log::error('Error al crear evento: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'data' => $request->all()
+            ]);
             return $this->errorResponse('Error al crear el evento', $e->getMessage(), 500);
         }
     }
-
     public function show(int $id)
     {
         try {

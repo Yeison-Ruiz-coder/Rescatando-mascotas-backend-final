@@ -31,6 +31,8 @@ class MascotaRequest extends FormRequest
             'vacunas' => 'array|exists:tipos_vacunas,id',
             'galeria_fotos' => 'array',
             'galeria_fotos.*' => 'image|max:2048',
+            'fotos_eliminar' => 'nullable|array',
+            'fotos_eliminar.*' => 'nullable|string',
 
             // ===== NUEVOS CAMPOS =====
             'peso_aprox' => 'nullable|numeric|min:0|max:99.99',

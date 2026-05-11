@@ -51,7 +51,6 @@ trait ImageUploadTrait
             ]);
 
             return $result['secure_url'];
-
         } catch (\Exception $e) {
             Log::error('Error subiendo imagen a Cloudinary: ' . $e->getMessage());
             throw new \Exception('Error al subir la imagen: ' . $e->getMessage());
