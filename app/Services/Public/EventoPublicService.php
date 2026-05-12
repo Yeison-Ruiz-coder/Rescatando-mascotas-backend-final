@@ -8,7 +8,11 @@ class EventoPublicService
 {
     public function getAll(array $filters = [], int $perPage = 15)
     {
-        $query = Evento::where('fecha_evento', '>=', now());
+        $query = Evento::query();
+
+        if (isset($filters['proximos']) && filter_var($filters['proximos'], FILTER_VALIDATE_BOOLEAN)) {
+            $query->where('fecha_evento', '>=', now());
+        }
 
         if (!empty($filters['mes'])) {
             $query->whereMonth('fecha_evento', $filters['mes']);
