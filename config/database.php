@@ -46,11 +46,11 @@ return [
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DATABASE_URL'),
-            'host' => 'mainline.proxy.rlwy.net',
+            'host' => 'mysql.railway.internal',
             'port' => '55143',
             'database' => 'railway',
             'username' => 'root',
-            'password' => 'vyRAsPHWROIebzZBjJXdMHJiTOEwOKvs',
+            'password' => 'BkESNoLqDtwJMvXQilIBwWlQIUsZQaFD',
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
