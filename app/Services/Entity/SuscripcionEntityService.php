@@ -19,6 +19,21 @@ class SuscripcionEntityService
         return null;
     }
 
+    /**
+     * ✅ NUEVO: Validar fechas de suscripción
+     */
+    private function validarFechas(array $data): void
+    {
+        if (isset($data['fecha_inicio']) && isset($data['fecha_fin']) &&
+            $data['fecha_fin'] && $data['fecha_inicio'] > $data['fecha_fin']) {
+            throw new \Exception('La fecha de inicio no puede ser posterior a la fecha de fin');
+        }
+
+        if (isset($data['fecha_inicio']) && $data['fecha_inicio'] < now()->startOfDay()) {
+            throw new \Exception('La fecha de inicio no puede ser anterior a hoy');
+        }
+    }
+
     public function getMisSuscripciones()
     {
         $entidad = $this->getEntidad();
@@ -57,6 +72,9 @@ class SuscripcionEntityService
         return $suscripcion;
     }
 
+    /**
+     * ✅ CORREGIDO: Ahora valida fechas
+     */
     public function createSuscripcion(array $data)
     {
         $entidad = $this->getEntidad();
@@ -74,9 +92,20 @@ class SuscripcionEntityService
             throw new \Exception('La mascota no pertenece a tu fundación');
         }
 
+        // ✅ Validar fechas
+        $this->validarFechas($data);
+
+        // Si no se especifica fecha_inicio, usar hoy
+        if (!isset($data['fecha_inicio'])) {
+            $data['fecha_inicio'] = now()->toDateString();
+        }
+
         return Suscripcion::create($data);
     }
 
+    /**
+     * ✅ CORREGIDO: Ahora valida fechas en update
+     */
     public function updateSuscripcion(int $id, array $data)
     {
         $suscripcion = $this->findSuscripcion($id);
@@ -92,6 +121,9 @@ class SuscripcionEntityService
                 throw new \Exception('La mascota no pertenece a tu fundación');
             }
         }
+
+        // ✅ Validar fechas si vienen en la actualización
+        $this->validarFechas($data);
 
         $suscripcion->update($data);
         return $suscripcion->load(['user', 'mascota']);
@@ -154,5 +186,50 @@ class SuscripcionEntityService
             'finalizadas' => $finalizadas,
             'ingreso_mensual_total' => $totalMensual
         ];
+    }
+
+    /**
+     * ✅ NUEVO: Cancelar suscripción
+     */
+    public function cancelarSuscripcion(int $id): Suscripcion
+    {
+        $suscripcion = $this->findSuscripcion($id);
+
+        if ($suscripcion->estado === 'cancelado') {
+            throw new \Exception('La suscripción ya está cancelada');
+        }
+
+        $suscripcion->update(['estado' => 'cancelado']);
+        return $suscripcion;
+    }
+
+    /**
+     * ✅ NUEVO: Pausar suscripción
+     */
+    public function pausarSuscripcion(int $id): Suscripcion
+    {
+        $suscripcion = $this->findSuscripcion($id);
+
+        if ($suscripcion->estado !== 'activo') {
+            throw new \Exception('Solo se pueden pausar suscripciones activas');
+        }
+
+        $suscripcion->update(['estado' => 'pausado']);
+        return $suscripcion;
+    }
+
+    /**
+     * ✅ NUEVO: Reactivar suscripción
+     */
+    public function reactivarSuscripcion(int $id): Suscripcion
+    {
+        $suscripcion = $this->findSuscripcion($id);
+
+        if ($suscripcion->estado !== 'pausado') {
+            throw new \Exception('Solo se pueden reactivar suscripciones pausadas');
+        }
+
+        $suscripcion->update(['estado' => 'activo']);
+        return $suscripcion;
     }
 }
