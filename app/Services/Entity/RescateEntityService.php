@@ -9,6 +9,7 @@ use App\Traits\ImageUploadTrait;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Log;
 
 class RescateEntityService
 {
@@ -25,6 +26,55 @@ class RescateEntityService
             return $user->fundacion;
         }
         return null;
+    }
+
+    /**
+     * ✅ NUEVO: Extrae el public_id de Cloudinary desde una URL
+     */
+    private function extractPublicIdFromUrl(string $url): ?string
+    {
+        // Si ya es un public_id limpio
+        if (strpos($url, 'cloudinary.com') === false && strpos($url, '/') === false) {
+            return $url;
+        }
+
+        // Extraer de URL completa de Cloudinary
+        if (preg_match('/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-zA-Z]+)?$/', $url, $matches)) {
+            // Eliminar la extensión del archivo
+            $publicId = preg_replace('/\.[^.]+$/', '', $matches[1]);
+            return $publicId;
+        }
+
+        // Si es un path como 'rescates/galeria/abc123'
+        if (strpos($url, 'rescates/') === 0) {
+            return preg_replace('/\.[^.]+$/', '', $url);
+        }
+
+        return null;
+    }
+
+    /**
+     * ✅ NUEVO: Normaliza una URL de imagen para comparación
+     */
+    private function normalizeImageUrl(?string $url): ?string
+    {
+        if (!$url) return null;
+
+        // Si es una URL completa de Cloudinary, extraer la parte relevante
+        if (strpos($url, 'cloudinary.com') !== false) {
+            if (preg_match('/\/upload\/(?:v\d+\/)?(.+?)(?:\?|$)/', $url, $matches)) {
+                $normalized = preg_replace('/\.[^.]+$/', '', $matches[1]);
+                return $normalized;
+            }
+        }
+
+        // Si ya es un path limpio (como 'rescates/galeria/abc123')
+        if (strpos($url, 'rescates/') === 0) {
+            $normalized = preg_replace('/\.[^.]+$/', '', $url);
+            return $normalized;
+        }
+
+        return $url;
     }
 
     public function findById(int $id): Rescate
@@ -233,8 +283,6 @@ class RescateEntityService
 
         return $mascota->load(['razas', 'vacunas']);
     }
-    // En app/Services/Entity/RescateEntityService.php
-    // Agregar este método:
 
     public function agregarFotos(int $id, array $nuevasFotos): Rescate
     {
@@ -268,6 +316,79 @@ class RescateEntityService
         return $rescate;
     }
 
+    /**
+     * ✅ NUEVO: Eliminar fotos específicas de la galería
+     */
+    public function eliminarFotos(int $id, array $fotosAEliminar): Rescate
+    {
+        $entidad = $this->getEntidad();
+
+        if (!$entidad) {
+            throw new \Exception('No se encontró la entidad asociada');
+        }
+
+        $rescate = Rescate::where('entidad_responsable_type', get_class($entidad))
+            ->where('entidad_responsable_id', $entidad->id)
+            ->findOrFail($id);
+
+        $galeriaActual = $rescate->galeria_fotos;
+        if (is_string($galeriaActual)) {
+            $galeriaActual = json_decode($galeriaActual, true) ?? [];
+        } elseif (!is_array($galeriaActual)) {
+            $galeriaActual = [];
+        }
+
+        // Filtrar solo strings válidos
+        $galeriaActual = array_values(array_filter($galeriaActual, function ($item) {
+            return is_string($item) && !empty($item);
+        }));
+
+        Log::info('Eliminando fotos de rescate:', ['fotos_a_eliminar' => $fotosAEliminar]);
+
+        foreach ($fotosAEliminar as $fotoPath) {
+            if (!$fotoPath || !is_string($fotoPath)) continue;
+
+            // Encontrar la URL completa que coincide
+            $fotoAEliminar = null;
+            $indexToRemove = null;
+
+            foreach ($galeriaActual as $index => $existingFoto) {
+                $normalizedExisting = $this->normalizeImageUrl($existingFoto);
+                $normalizedToDelete = $this->normalizeImageUrl($fotoPath);
+
+                if ($normalizedExisting === $normalizedToDelete) {
+                    $fotoAEliminar = $existingFoto;
+                    $indexToRemove = $index;
+                    break;
+                }
+            }
+
+            if ($fotoAEliminar) {
+                // Eliminar de Cloudinary
+                $publicId = $this->extractPublicIdFromUrl($fotoAEliminar);
+                if ($publicId) {
+                    Log::info('🗑️ Eliminando foto de Cloudinary:', ['public_id' => $publicId]);
+                    $this->deleteImage($publicId);
+                }
+
+                // Eliminar del array
+                unset($galeriaActual[$indexToRemove]);
+            } else {
+                Log::warning('⚠️ Foto no encontrada para eliminar:', ['path' => $fotoPath]);
+            }
+        }
+
+        // Reindexar
+        $galeriaActual = array_values($galeriaActual);
+
+        $rescate->galeria_fotos = json_encode($galeriaActual);
+        $rescate->save();
+
+        Log::info('Galería después de eliminar:', $galeriaActual);
+
+        return $rescate;
+    }
+
     public function updateEstado(int $id, string $estado): Rescate
     {
         $entidad = $this->getEntidad();
@@ -282,6 +403,40 @@ class RescateEntityService
 
         $rescate->estado = $estado;
         $rescate->save();
+
+        return $rescate;
+    }
+
+    /**
+     * ✅ NUEVO: Actualizar rescate con manejo de eliminación de fotos
+     */
+    public function update(int $id, array $data, $fotoPrincipal = null, array $fotosAEliminar = []): Rescate
+    {
+        $entidad = $this->getEntidad();
+
+        if (!$entidad) {
+            throw new \Exception('No se encontró la entidad asociada');
+        }
+
+        $rescate = Rescate::where('entidad_responsable_type', get_class($entidad))
+            ->where('entidad_responsable_id', $entidad->id)
+            ->findOrFail($id);
+
+        // Actualizar foto principal
+        if ($fotoPrincipal) {
+            if ($rescate->foto_principal) {
+                $this->deleteImage($rescate->foto_principal);
+            }
+            $data['foto_principal'] = $this->uploadImage($fotoPrincipal, 'rescates');
+        }
+
+        // Eliminar fotos de galería
+        if (!empty($fotosAEliminar)) {
+            $this->eliminarFotos($id, $fotosAEliminar);
+        }
+
+        // Actualizar otros campos
+        $rescate->update($data);
 
         return $rescate;
     }

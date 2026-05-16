@@ -113,7 +113,7 @@ class EventoEntityService
         // Crear el evento
         $evento = Evento::create($eventoData);
 
-        // ✅ Subir imagen a Cloudinary si existe (igual que Mascota)
+        // Subir imagen a Cloudinary si existe
         if ($imagen) {
             $evento->imagen_url = $this->uploadImage($imagen, 'eventos');
             $evento->imagen_public_id = null;
@@ -125,6 +125,7 @@ class EventoEntityService
 
     /**
      * Actualizar un evento existente
+     * CORREGIDO: Ahora elimina la imagen anterior antes de subir la nueva
      */
     public function updateEvento(int $id, array $data, $imagen = null)
     {
@@ -168,7 +169,7 @@ class EventoEntityService
             $evento->tags = json_encode($data['tags'], JSON_UNESCAPED_UNICODE);
         }
 
-        // ✅ Actualizar imagen si viene una nueva (igual que Mascota)
+        // ✅ CORREGIDO: Actualizar imagen si viene una nueva (eliminando la anterior)
         if ($imagen) {
             // Eliminar imagen anterior si existe
             if ($evento->imagen_url) {
@@ -190,7 +191,7 @@ class EventoEntityService
     {
         $evento = $this->findEvento($id);
 
-        // ✅ Eliminar imagen de Cloudinary si existe
+        // Eliminar imagen de Cloudinary si existe
         if ($evento->imagen_url) {
             $this->deleteImage($evento->imagen_url);
         }
