@@ -6,10 +6,18 @@ use App\Models\Mascota;
 
 class MascotaPublicService
 {
+    /**
+     * Estados permitidos para mostrar al público
+     */
+    private function getEstadosDisponibles(): array
+    {
+        return ['En adopcion', 'En acogida'];
+    }
+
     public function getAll(array $filters = [], int $perPage = 15)
     {
         $query = Mascota::with(['fundacion', 'razas'])
-            ->where('estado', 'En adopcion');
+            ->whereIn('estado', $this->getEstadosDisponibles()); // ← Cambiado a whereIn
 
         if (!empty($filters['especie'])) {
             $query->where('especie', $filters['especie']);
@@ -46,7 +54,12 @@ class MascotaPublicService
             $query->where('apto_con_otros_animales', $filters['apto_con_otros_animales']);
         }
 
-        return $query->latest()->paginate($perPage);
+        // Ordenamiento
+        $orderBy = $filters['order_by'] ?? 'created_at';
+        $orderDir = $filters['order_dir'] ?? 'desc';
+        $query->orderBy($orderBy, $orderDir);
+
+        return $query->paginate($perPage);
     }
 
     public function findById(int $id): Mascota
@@ -59,7 +72,7 @@ class MascotaPublicService
     {
         return Mascota::with('fundacion')
             ->where('especie', $especie)
-            ->where('estado', 'En adopcion')
+            ->whereIn('estado', $this->getEstadosDisponibles()) // ← Cambiado
             ->paginate($perPage);
     }
 
@@ -67,14 +80,14 @@ class MascotaPublicService
     {
         return Mascota::with('fundacion')
             ->where('fundacion_id', $fundacionId)
-            ->where('estado', 'En adopcion')
+            ->whereIn('estado', $this->getEstadosDisponibles()) // ← Cambiado
             ->paginate($perPage);
     }
 
     public function getDestacadas(int $limit = 6)
     {
         return Mascota::with(['fundacion', 'razas'])
-            ->where('estado', 'En adopcion')
+            ->whereIn('estado', $this->getEstadosDisponibles()) // ← Cambiado
             ->where('destacada', true)
             ->latest()
             ->limit($limit)
