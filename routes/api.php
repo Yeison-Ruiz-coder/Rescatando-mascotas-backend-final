@@ -110,6 +110,16 @@ Route::middleware(['auth:sanctum'])->prefix('user')->name('user.')->group(functi
     Route::put('/profile', [App\Http\Controllers\Api\V1\User\ProfileController::class, 'update']);
     Route::post('/profile/change-password', [App\Http\Controllers\Api\V1\User\ProfileController::class, 'changePassword']);
     Route::delete('/profile', [App\Http\Controllers\Api\V1\User\ProfileController::class, 'destroy']);
+    Route::post('/profile/avatar', [App\Http\Controllers\Api\V1\User\ProfileController::class, 'uploadAvatar']);
+    Route::delete('/profile/avatar', [App\Http\Controllers\Api\V1\User\ProfileController::class, 'deleteAvatar']);
+    Route::put('/profile/location', [App\Http\Controllers\Api\V1\User\ProfileController::class, 'updateLocation']);
+    Route::put('/profile/social', [App\Http\Controllers\Api\V1\User\ProfileController::class, 'updateSocialNetworks']);
+    Route::get('/profile/completion-status', [App\Http\Controllers\Api\V1\User\ProfileController::class, 'getCompletionStatus']);
+    Route::post('/profile/verify-phone', [App\Http\Controllers\Api\V1\User\ProfileController::class, 'sendPhoneVerification']);
+    Route::post('/profile/verify-phone/confirm', [App\Http\Controllers\Api\V1\User\ProfileController::class, 'confirmPhone']);
+    Route::get('/stats', [App\Http\Controllers\Api\V1\User\UserStatsController::class, 'getStats']);
+    Route::get('/adopciones', [App\Http\Controllers\Api\V1\User\UserStatsController::class, 'getAdoptions']);
+    Route::get('/donaciones', [App\Http\Controllers\Api\V1\User\UserStatsController::class, 'getDonations']);
 
     // Solicitudes de adopción
     Route::get('/solicitudes', [App\Http\Controllers\Api\V1\User\SolicitudController::class, 'index']);
@@ -174,6 +184,39 @@ Route::middleware(['auth:sanctum'])->prefix('entity')->name('entity.')->group(fu
     Route::apiResource('suscripciones', EntitySuscripcionController::class);
     Route::get('/suscripciones/mascota/{mascotaId}', [EntitySuscripcionController::class, 'porMascota']);
     Route::get('/suscripciones-estadisticas', [EntitySuscripcionController::class, 'estadisticas']);
+});
+// =========================================================================
+// PERFIL ESPECÍFICO PARA FUNDACIONES
+// =========================================================================
+Route::middleware(['auth:sanctum'])->prefix('fundacion')->name('fundacion.')->group(function () {
+    // Perfil completo de fundación (users + fundacion)
+    Route::get('/profile', [App\Http\Controllers\Api\V1\Fundacion\FundacionProfileController::class, 'show']);
+    Route::put('/profile', [App\Http\Controllers\Api\V1\Fundacion\FundacionProfileController::class, 'update']);
+
+    // Datos específicos de fundación
+    Route::put('/profile/general', [App\Http\Controllers\Api\V1\Fundacion\FundacionProfileController::class, 'updateGeneralInfo']);
+    Route::put('/profile/needs', [App\Http\Controllers\Api\V1\Fundacion\FundacionProfileController::class, 'updateNeeds']);
+    Route::put('/profile/schedule', [App\Http\Controllers\Api\V1\Fundacion\FundacionProfileController::class, 'updateSchedule']);
+    Route::post('/profile/cover', [App\Http\Controllers\Api\V1\Fundacion\FundacionProfileController::class, 'uploadCoverImage']);
+    Route::delete('/profile/cover', [App\Http\Controllers\Api\V1\Fundacion\FundacionProfileController::class, 'deleteCoverImage']);
+});
+
+// =========================================================================
+// PERFIL ESPECÍFICO PARA VETERINARIAS
+// =========================================================================
+Route::middleware(['auth:sanctum'])->prefix('veterinaria')->name('veterinaria.')->group(function () {
+    // Perfil completo de veterinaria (users + veterinaria)
+    Route::get('/profile', [App\Http\Controllers\Api\V1\Veterinaria\VeterinariaProfileController::class, 'show']);
+    Route::put('/profile', [App\Http\Controllers\Api\V1\Veterinaria\VeterinariaProfileController::class, 'update']);
+
+    // Datos específicos de veterinaria
+    Route::put('/profile/general', [App\Http\Controllers\Api\V1\Veterinaria\VeterinariaProfileController::class, 'updateGeneralInfo']);
+    Route::put('/profile/services', [App\Http\Controllers\Api\V1\Veterinaria\VeterinariaProfileController::class, 'updateServices']);
+    Route::put('/profile/schedule', [App\Http\Controllers\Api\V1\Veterinaria\VeterinariaProfileController::class, 'updateSchedule']);
+    Route::post('/profile/logo', [App\Http\Controllers\Api\V1\Veterinaria\VeterinariaProfileController::class, 'uploadLogo']);
+    Route::delete('/profile/logo', [App\Http\Controllers\Api\V1\Veterinaria\VeterinariaProfileController::class, 'deleteLogo']);
+    Route::post('/profile/gallery', [App\Http\Controllers\Api\V1\Veterinaria\VeterinariaProfileController::class, 'addGalleryPhotos']);
+    Route::delete('/profile/gallery', [App\Http\Controllers\Api\V1\Veterinaria\VeterinariaProfileController::class, 'removeGalleryPhoto']);
 });
 
 // =========================================================================
