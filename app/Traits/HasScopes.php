@@ -8,6 +8,36 @@ use Illuminate\Database\Eloquent\Builder;
 trait HasScopes
 {
     /**
+     * Scope para limitar columnas devueltas por la consulta.
+     * Usa un allowSelect por modelo como lista blanca.
+     */
+    public function scopeSelectFields(Builder $query)
+    {
+        $allowed = property_exists($this, 'allowSelect') && is_array($this->allowSelect)
+            ? $this->allowSelect
+            : [];
+
+        if (empty($allowed)) {
+            return $query;
+        }
+
+        $requested = request('fields');
+
+        if (!empty($requested)) {
+            $requestedFields = array_values(array_filter(array_map('trim', explode(',', $requested))));
+            $filtered = array_values(array_intersect($requestedFields, $allowed));
+
+            if (!empty($filtered)) {
+                return $query->select($filtered);
+            }
+
+            return $query;
+        }
+
+        return $query->select($allowed);
+    }
+
+    /**
      * Scope para incluir relaciones
      */
     public function scopeIncluded(Builder $query)

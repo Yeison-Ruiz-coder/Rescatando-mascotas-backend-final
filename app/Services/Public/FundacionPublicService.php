@@ -8,7 +8,9 @@ class FundacionPublicService
 {
     public function getAll(array $filters = [], int $perPage = 15)
     {
-        $query = Fundacion::withCount('mascotas');
+        $query = Fundacion::query()
+            ->selectFields()
+            ->withCount('mascotas');
 
         if (!empty($filters['recibe_voluntarios'])) {
             $query->where('recibe_voluntarios', true);
@@ -34,9 +36,12 @@ class FundacionPublicService
 
     public function findById(int $id): array
     {
-        $fundacion = Fundacion::with(['mascotas' => function ($q) {
-            $q->where('estado', 'En adopcion');
-        }])
+        $fundacion = Fundacion::query()
+            ->selectFields()
+            ->with(['mascotas' => function ($q) {
+                $q->select(['id', 'nombre_mascota', 'foto_principal', 'estado', 'fundacion_id', 'created_at'])
+                  ->where('estado', 'En adopcion');
+            }])
             ->withCount('mascotas')
             ->findOrFail($id);
 
@@ -58,10 +63,12 @@ class FundacionPublicService
 
     public function getCercanas(float $lat, float $lng, int $radio = 10)
     {
-        return Fundacion::selectRaw(
-            "*, (6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distance",
-            [$lat, $lng, $lat]
-        )
+        return Fundacion::query()
+            ->selectRaw(
+                "*, (6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distance",
+                [$lat, $lng, $lat]
+            )
+            ->select(['id', 'Nombre_1', 'Direccion', 'Telefono', 'Email', 'ciudad', 'lat', 'lng', 'imagen_portada', 'verificado'])
             ->whereNotNull('lat')
             ->whereNotNull('lng')
             ->having('distance', '<=', $radio)

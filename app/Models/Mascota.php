@@ -86,6 +86,36 @@ class Mascota extends Model
         'adopciones'
     ];
 
+    protected $allowSelect = [
+        'id',
+        'nombre_mascota',
+        'especie',
+        'edad_aprox',
+        'genero',
+        'estado',
+        'descripcion',
+        'lugar_rescate',
+        'condiciones_especiales',
+        'foto_principal',
+        'galeria_fotos',
+        'tamano',
+        'destacada',
+        'fundacion_id',
+        'veterinaria_id',
+        'peso_aprox',
+        'color',
+        'salud_general',
+        'esterilizado',
+        'desparasitado',
+        'vacunado',
+        'requisitos_adopcion',
+        'video_url',
+        'fecha_publicacion',
+        'vistas',
+        'interesados',
+        'created_at',
+    ];
+
     protected $allowFilter = [
         'id',
         'nombre_mascota',

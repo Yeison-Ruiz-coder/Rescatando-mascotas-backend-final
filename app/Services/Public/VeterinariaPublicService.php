@@ -8,7 +8,8 @@ class VeterinariaPublicService
 {
     public function getAll(array $filters = [], int $perPage = 15)
     {
-        $query = Veterinaria::query();
+        $query = Veterinaria::query()
+            ->selectFields();
 
         if (!empty($filters['urgencias'])) {
             $query->where('urgencias_24h', true);
@@ -38,7 +39,9 @@ class VeterinariaPublicService
 
     public function findById(int $id): array
     {
-        $veterinaria = Veterinaria::findOrFail($id);
+        $veterinaria = Veterinaria::query()
+            ->selectFields()
+            ->findOrFail($id);
         $servicios = [];
 
         if ($veterinaria->servicios) {
@@ -66,7 +69,9 @@ class VeterinariaPublicService
 
     public function getMapa()
     {
-        return Veterinaria::where('urgencias_24h', true)
+        return Veterinaria::query()
+            ->select(['id', 'Nombre_vet', 'Direccion', 'Telefono', 'urgencias_24h', 'lat', 'lng'])
+            ->where('urgencias_24h', true)
             ->whereNotNull('lat')
             ->whereNotNull('lng')
             ->get(['id', 'Nombre_vet', 'Direccion', 'Telefono', 'urgencias_24h', 'lat', 'lng']);
@@ -74,10 +79,12 @@ class VeterinariaPublicService
 
     public function getCercanas(float $lat, float $lng, int $radio = 10)
     {
-        return Veterinaria::selectRaw(
-            "*, (6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distance",
-            [$lat, $lng, $lat]
-        )
+        return Veterinaria::query()
+            ->selectRaw(
+                "*, (6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distance",
+                [$lat, $lng, $lat]
+            )
+            ->select(['id', 'Nombre_vet', 'Direccion', 'Telefono', 'urgencias_24h', 'lat', 'lng'])
         ->whereNotNull('lat')
         ->whereNotNull('lng')
         ->where('urgencias_24h', true)

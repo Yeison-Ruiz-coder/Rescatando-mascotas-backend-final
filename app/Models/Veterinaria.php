@@ -6,12 +6,43 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
+use App\Traits\HasScopes;
 
 class Veterinaria extends Model
 {
-    use HasFactory;
+    use HasFactory, HasScopes;
 
     protected $table = 'veterinarias';
+
+    protected $allowSelect = [
+        'id',
+        'Nombre_vet',
+        'Direccion',
+        'Telefono',
+        'Email',
+        'ciudad',
+        'lat',
+        'lng',
+        'logo',
+        'urgencias_24h',
+        'verificado',
+        'valoracion_promedio',
+        'servicios',
+        'descripcion',
+        'horario_atencion',
+        'anios_experiencia',
+        'servicios_detallados',
+        'equipo_medico',
+        'galeria_fotos',
+        'whatsapp',
+        'sitio_web',
+        'documentos_verificacion',
+        'precio_consulta',
+        'acepta_seguros',
+        'total_valoraciones',
+        'cobertura_zona',
+        'departamento',
+    ];
 
     protected $fillable = [
         'Nombre_vet',

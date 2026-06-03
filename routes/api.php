@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\V1\Public\SuscripcionPublicController as PublicSusc
 // API V1 - RUTAS PÚBLICAS (SIN AUTENTICACIÓN)
 // =========================================================================
 
+Route::middleware(['cache.public:10'])->group(function () {
+
 Route::prefix('auth')->name('auth.')->group(function () {
     Route::post('/login', [App\Http\Controllers\Api\V1\Auth\LoginController::class, 'login']);
     Route::post('/register', [App\Http\Controllers\Api\V1\Auth\RegisterController::class, 'register']);
@@ -98,6 +100,8 @@ Route::prefix('suscripciones')->name('suscripciones.')->group(function () {
         Route::patch('/{id}/pausar', [PublicSuscripcionController::class, 'pausar']);
         Route::patch('/{id}/reactivar', [PublicSuscripcionController::class, 'reactivar']);
     });
+});
+
 });
 
 // =========================================================================

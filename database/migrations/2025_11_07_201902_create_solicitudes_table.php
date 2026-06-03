@@ -22,6 +22,7 @@ return new class extends Migration
             $table->string('nombre_solicitante')->nullable(); // Si no es usuario registrado
             $table->string('email_solicitante')->nullable();
             $table->string('telefono_solicitante')->nullable();
+            $table->json('datos_adicionales')->nullable();
 
             // Item solicitado (polimórfico: mascota, ayuda económica, etc.)
             $table->nullableMorphs('solicitable'); // Crea solicitable_id y solicitable_type

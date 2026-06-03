@@ -16,8 +16,13 @@ class MascotaPublicService
 
     public function getAll(array $filters = [], int $perPage = 15)
     {
-        $query = Mascota::with(['fundacion', 'razas'])
-            ->whereIn('estado', $this->getEstadosDisponibles()); // ← Cambiado a whereIn
+        $query = Mascota::query()
+            ->selectFields()
+            ->with([
+                'fundacion:id,Nombre_1,imagen_portada,ciudad',
+                'razas:id,nombre_raza',
+            ])
+            ->whereIn('estado', $this->getEstadosDisponibles());
 
         if (!empty($filters['especie'])) {
             $query->where('especie', $filters['especie']);
@@ -64,13 +69,20 @@ class MascotaPublicService
 
     public function findById(int $id): Mascota
     {
-        return Mascota::with(['fundacion', 'razas', 'vacunas', 'historialMedico', 'suscripciones'])
+        return Mascota::query()
+            ->selectFields()
+            ->with([
+                'fundacion:id,Nombre_1,Direccion,Telefono,Email,ciudad,imagen_portada,verificado',
+                'razas:id,nombre_raza',
+            ])
             ->findOrFail($id);
     }
 
     public function getPorEspecie(string $especie, int $perPage = 15)
     {
-        return Mascota::with('fundacion')
+        return Mascota::query()
+            ->selectFields()
+            ->with('fundacion:id,Nombre_1,imagen_portada,ciudad')
             ->where('especie', $especie)
             ->whereIn('estado', $this->getEstadosDisponibles()) // ← Cambiado
             ->paginate($perPage);
@@ -78,7 +90,9 @@ class MascotaPublicService
 
     public function getPorFundacion(int $fundacionId, int $perPage = 15)
     {
-        return Mascota::with('fundacion')
+        return Mascota::query()
+            ->selectFields()
+            ->with('fundacion:id,Nombre_1,imagen_portada,ciudad')
             ->where('fundacion_id', $fundacionId)
             ->whereIn('estado', $this->getEstadosDisponibles()) // ← Cambiado
             ->paginate($perPage);
@@ -86,10 +100,15 @@ class MascotaPublicService
 
     public function getDestacadas(int $limit = 6)
     {
-        return Mascota::with(['fundacion', 'razas'])
-            ->whereIn('estado', $this->getEstadosDisponibles()) // ← Cambiado
+        return Mascota::query()
+            ->selectFields()
+            ->with([
+                'fundacion:id,Nombre_1,imagen_portada,ciudad',
+                'razas:id,nombre_raza',
+            ])
+            ->whereIn('estado', $this->getEstadosDisponibles())
             ->where('destacada', true)
-            ->latest()
+            ->latest('created_at')
             ->limit($limit)
             ->get();
     }

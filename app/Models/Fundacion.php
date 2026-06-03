@@ -14,6 +14,24 @@ class Fundacion extends Model
     protected $table = 'fundaciones';
 
     protected $allowIncluded = ['mascotas', 'adopciones', 'donaciones', 'usuarios']; // Añadido 'usuarios'
+    protected $allowSelect = [
+        'id',
+        'Nombre_1',
+        'Direccion',
+        'Telefono',
+        'Email',
+        'ciudad',
+        'verificado',
+        'recibe_voluntarios',
+        'imagen_portada',
+        'capacidad_maxima',
+        'lat',
+        'lng',
+        'necesidades_actuales',
+        'horario_atencion',
+        'registro_sanitario',
+        'fecha_fundacion',
+    ];
     protected $allowFilter = ['id', 'Nombre_1', 'Email', 'Telefono'];
     protected $allowSort = ['id', 'Nombre_1', 'created_at'];
 
