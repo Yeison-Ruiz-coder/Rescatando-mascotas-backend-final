@@ -42,12 +42,16 @@ trait HasScopes
      */
     public function scopeIncluded(Builder $query)
     {
-        if (empty($this->allowIncluded) || empty(request('include'))) {  // ← Cambiado
+        $allowIncluded = property_exists($this, 'allowIncluded') && is_array($this->allowIncluded)
+            ? $this->allowIncluded
+            : [];
+
+        if (empty($allowIncluded) || empty(request('include'))) {
             return;
         }
 
-        $relations = explode(',', request('include'));  // ← Cambiado
-        $allowIncluded = collect($this->allowIncluded);
+        $relations = explode(',', request('include'));
+        $allowIncluded = collect($allowIncluded);
 
         foreach ($relations as $key => $relationship) {
             if (!$allowIncluded->contains($relationship)) {
@@ -62,12 +66,16 @@ trait HasScopes
      */
     public function scopeFilter(Builder $query)
     {
-        if (empty($this->allowFilter) || empty(request('filter'))) {
+        $allowFilter = property_exists($this, 'allowFilter') && is_array($this->allowFilter)
+            ? $this->allowFilter
+            : [];
+
+        if (empty($allowFilter) || empty(request('filter'))) {
             return;
         }
 
         $filters = request('filter');
-        $allowFilter = collect($this->allowFilter);
+        $allowFilter = collect($allowFilter);
 
         foreach ($filters as $filter => $value) {
             if ($allowFilter->contains($filter)) {
@@ -81,12 +89,16 @@ trait HasScopes
      */
     public function scopeSort(Builder $query)
     {
-        if (empty($this->allowSort) || empty(request('sort'))) {
+        $allowSort = property_exists($this, 'allowSort') && is_array($this->allowSort)
+            ? $this->allowSort
+            : [];
+
+        if (empty($allowSort) || empty(request('sort'))) {
             return;
         }
 
         $sortFields = explode(',', request('sort'));
-        $allowSort = collect($this->allowSort);
+        $allowSort = collect($allowSort);
 
         foreach ($sortFields as $sortField) {
             $direction = 'asc';

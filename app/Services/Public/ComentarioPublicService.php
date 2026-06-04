@@ -33,9 +33,11 @@ class ComentarioPublicService
             throw new \Exception('Entidad no encontrada');
         }
 
-        return Comentario::where('comentable_type', $modelClass)
+        return Comentario::query()
+            ->selectFields()
+            ->where('comentable_type', $modelClass)
             ->where('comentable_id', $entidadId)
-            ->with('usuario')
+            ->with('usuario:id,nombre,avatar')
             ->latest()
             ->get()
             ->toArray();

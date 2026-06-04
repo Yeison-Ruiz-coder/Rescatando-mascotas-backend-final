@@ -4,12 +4,40 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasScopes;
 
 class Notificacion extends Model
 {
-    use HasFactory;
+    use HasFactory, HasScopes;
 
     protected $table = 'notificaciones';
+
+    protected $allowSelect = [
+        'id',
+        'contenido',
+        'fecha_envio',
+        'user_id',
+        'creado_por_id',
+        'titulo',
+        'tipo',
+        'icono',
+        'color',
+        'url_accion',
+        'texto_accion',
+        'metadata',
+        'prioridad',
+        'leida',
+        'leida_en',
+        'expira_en',
+        'enviada_email',
+        'enviada_push',
+        'created_at',
+        'updated_at',
+    ];
+
+    protected $allowIncluded = ['usuario', 'creadoPor'];
+    protected $allowFilter = ['id', 'titulo', 'tipo', 'leida', 'prioridad'];
+    protected $allowSort = ['id', 'fecha_envio', 'titulo', 'created_at'];
 
     protected $fillable = [
         'contenido',

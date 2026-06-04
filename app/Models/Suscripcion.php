@@ -8,12 +8,31 @@ use App\Models\User;
 use App\Models\Mascota;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
+use App\Traits\HasScopes;
 
 class Suscripcion extends Model
 {
-    use HasFactory;
+    use HasFactory, HasScopes;
 
     protected $table = 'suscripciones';
+
+    protected $allowSelect = [
+        'id',
+        'user_id',
+        'mascota_id',
+        'monto_mensual',
+        'frecuencia',
+        'fecha_inicio',
+        'fecha_fin',
+        'mensaje_apoyo',
+        'estado',
+        'created_at',
+    ];
+
+    protected $allowIncluded = [
+        'user',
+        'mascota',
+    ];
 
     protected $fillable = [
         'user_id',

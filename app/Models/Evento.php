@@ -5,12 +5,34 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\HasScopes;
 
 class Evento extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasScopes;
 
     protected $table = 'eventos';
+
+    protected $allowSelect = [
+        'id',
+        'nombre_evento',
+        'lugar_evento',
+        'descripcion',
+        'fecha_evento',
+        'imagen_url',
+        'fundacion_id',
+        'tipo',
+        'likes',
+        'fecha_fin',
+        'capacidad_maxima',
+        'costo',
+        'organizador',
+        'telefono_contacto',
+        'email_contacto',
+        'categoria',
+        'tags',
+        'created_at',
+    ];
 
     protected $fillable = [
         'nombre_evento',

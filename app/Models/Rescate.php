@@ -7,12 +7,35 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
+use App\Traits\HasScopes;
 
 class Rescate extends Model
 {
-    use HasFactory;
+    use HasFactory, HasScopes;
 
     protected $table = 'rescates';
+
+    protected $allowSelect = [
+        'id',
+        'fecha_rescate',
+        'lugar_rescate',
+        'descripcion_rescate',
+        'estado',
+        'tipo_emergencia',
+        'prioridad',
+        'lat',
+        'lng',
+        'nombre_reportante',
+        'email_reportante',
+        'telefono_reportante',
+        'mascota_id',
+        'reporte_id',
+        'usuario_reporto_id',
+        'entidad_responsable_id',
+        'entidad_responsable_type',
+        'gestionado_por',
+        'created_at',
+    ];
 
     protected $fillable = [
         'fecha_rescate',

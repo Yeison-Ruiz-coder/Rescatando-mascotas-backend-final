@@ -7,12 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Mensaje;
 use Illuminate\Database\Eloquent\Builder;
+use App\Traits\HasScopes;
 
 class Conversacion extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasScopes;
 
     protected $table = 'conversaciones';
+
+    protected $allowSelect = ['id','participante1_id','participante2_id','ultimo_mensaje_at','ultimo_mensaje','activa','fecha_cierre','cerrada_por','created_at','updated_at'];
+    protected $allowIncluded = ['participante1','participante2','cerradaPor','mensajes'];
+    protected $allowFilter = ['id','activa'];
+    protected $allowSort = ['id','ultimo_mensaje_at','created_at'];
 
     protected $fillable = [
         'participante1_id',

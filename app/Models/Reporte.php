@@ -6,12 +6,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
+use App\Traits\HasScopes;
 
 class Reporte extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasScopes;
 
     protected $table = 'reportes';
+
+    protected $allowSelect = ['id','tipo_reporte','titulo','descripcion','ubicacion','fecha_incidente','especie','raza','color','foto_url','galeria_fotos','estado','user_id','nombre_reportante','telefono_reportante','email_reportante','solucion','resuelto_por','fecha_resolucion','lat','lng','direccion_completa','fotos_detalle','fotos_public_ids','contacto_permiso','anonimo','urgencia','seguimiento_interno','asignado_a','fecha_asignacion','entidad_encargada','numero_caso','acciones_tomadas','created_at','updated_at'];
+    protected $allowIncluded = ['usuario','resueltoPor','rescate'];
+    protected $allowFilter = ['id','tipo_reporte','estado','titulo','user_id'];
+    protected $allowSort = ['id','fecha_incidente','created_at'];
 
     protected $fillable = [
         'tipo_reporte',
