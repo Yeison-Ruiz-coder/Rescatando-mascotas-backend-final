@@ -16,7 +16,9 @@ class RescatePublicService
 
     public function getAll(int $perPage = 15)
     {
-        return Rescate::with(['usuarioReporto', 'entidadResponsable'])
+        return Rescate::query()
+            ->selectFields()
+            ->with(['usuarioReporto:id,nombre,email', 'entidadResponsable'])
             ->where('estado', 'pendiente')
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
@@ -24,7 +26,9 @@ class RescatePublicService
 
     public function findById(int $id): Rescate
     {
-        return Rescate::with(['usuarioReporto', 'entidadResponsable', 'mascota'])
+        return Rescate::query()
+            ->selectFields()
+            ->with(['usuarioReporto:id,nombre,email', 'entidadResponsable', 'mascota:id,nombre_mascota,foto_principal,estado'])
             ->findOrFail($id);
     }
 

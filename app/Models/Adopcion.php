@@ -12,6 +12,18 @@ class Adopcion extends Model
 {
     use HasFactory, HasScopes;
     protected $table = 'adopciones';
+    protected $allowSelect = [
+        'id',
+        'estado',
+        'fecha_adopcion',
+        'observaciones',
+        'solicitud_id',
+        'user_id',
+        'mascota_id',
+        'fundacion_id',
+        'administrador_id',
+        'created_at',
+    ];
     protected $allowIncluded = [
         'solicitud',
         'adoptante',

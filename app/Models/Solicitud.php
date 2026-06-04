@@ -13,6 +13,27 @@ class Solicitud extends Model
 
     protected $table = 'solicitudes';
 
+    protected $allowSelect = [
+        'id',
+        'tipo_solicitud',
+        'contenido',
+        'fecha_solicitud',
+        'estado',
+        'razon_rechazo',
+        'notas_internas',
+        'user_id',
+        'nombre_solicitante',
+        'email_solicitante',
+        'telefono_solicitante',
+        'solicitable_type',
+        'solicitable_id',
+        'revisado_por',
+        'fecha_revision',
+        'datos_adicionales',
+        'created_at',
+        'updated_at',
+    ];
+
     protected $allowIncluded = [
         'usuario',
         'revisor',

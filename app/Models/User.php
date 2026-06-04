@@ -15,6 +15,40 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes, HasScopes;
 
+    protected $allowSelect = [
+        'id',
+        'nombre',
+        'apellidos',
+        'email',
+        'tipo',
+        'estado',
+        'fecha_nacimiento',
+        'direccion',
+        'telefono',
+        'avatar',
+        'avatar_public_id',
+        'tipo_documento',
+        'numero_documento',
+        'email_verified_at',
+        'biografia',
+        'pais',
+        'ciudad',
+        'codigo_postal',
+        'lat',
+        'lng',
+        'idioma',
+        'tema',
+        'ultimo_acceso',
+        'documento_verificado',
+        'telefono_verificado',
+        'total_mascotas_adoptadas',
+        'total_donaciones',
+        'puntos',
+        'rango',
+        'created_at',
+        'updated_at',
+    ];
+
     protected $allowIncluded = [
         'solicitudes',
         'adopciones',
@@ -253,7 +287,7 @@ class User extends Authenticatable
     }
     // app/Models/User.php
 
- function eventosAsistencia()
+    public function eventosAsistencia()
     {
         return $this->belongsToMany(Evento::class, 'evento_asistentes', 'user_id', 'evento_id')
                     ->withPivot('estado', 'created_at')

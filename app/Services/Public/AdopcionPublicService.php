@@ -8,7 +8,9 @@ class AdopcionPublicService
 {
     public function getMascotasDisponibles(array $filters = [], int $perPage = 15)
     {
-        $query = Mascota::with('fundacion')
+        $query = Mascota::query()
+            ->selectFields()
+            ->with('fundacion:id,Nombre_1,imagen_portada,ciudad')
             ->where('estado', 'En adopcion');
 
         // Filtros adicionales
@@ -37,7 +39,9 @@ class AdopcionPublicService
 
     public function findMascotaDisponible(int $id): Mascota
     {
-        return Mascota::with(['fundacion', 'razas', 'vacunas', 'historialMedico'])
+        return Mascota::query()
+            ->selectFields()
+            ->with(['fundacion:id,Nombre_1,Direccion,Telefono,Email,ciudad,imagen_portada,verificado', 'razas:id,nombre_raza', 'vacunas:id,nombre_vacuna', 'historialMedico:id,mascota_id,fecha,descripcion'])
             ->where('estado', 'En adopcion')
             ->findOrFail($id);
     }
@@ -68,7 +72,9 @@ class AdopcionPublicService
     }
     public function getDestacadas(int $limit = 6)
     {
-        return Mascota::with(['fundacion', 'razas'])
+        return Mascota::query()
+            ->selectFields()
+            ->with(['fundacion:id,Nombre_1,imagen_portada,ciudad', 'razas:id,nombre_raza'])
             ->where('estado', 'En adopcion')
             ->where('destacada', true)
             ->latest()

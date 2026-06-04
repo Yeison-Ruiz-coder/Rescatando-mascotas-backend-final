@@ -4,12 +4,23 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasScopes;
 
 class Comentario extends Model
 {
-    use HasFactory;
+    use HasFactory, HasScopes;
 
     protected $table = 'comentarios';
+
+    protected $allowSelect = [
+        'id',
+        'contenido',
+        'fecha',
+        'user_id',
+        'comentable_type',
+        'comentable_id',
+        'created_at',
+    ];
 
     protected $fillable = [
         'contenido',

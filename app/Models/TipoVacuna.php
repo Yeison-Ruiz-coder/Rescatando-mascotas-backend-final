@@ -4,12 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasScopes;
 
 class TipoVacuna extends Model
 {
-    use HasFactory;
+    use HasFactory, HasScopes;
 
     protected $table = 'tipos_vacunas';
+
+    protected $allowSelect = ['id','nombre_vacuna','frecuencia_dias','created_at','updated_at'];
+    protected $allowIncluded = ['mascotas'];
+    protected $allowFilter = ['id','nombre_vacuna'];
+    protected $allowSort = ['id','nombre_vacuna','frecuencia_dias','created_at'];
 
     protected $fillable = [
         'nombre_vacuna',

@@ -6,12 +6,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
+use App\Traits\HasScopes;
 
 class Valoracion extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasScopes;
 
     protected $table = 'valoraciones';
+
+    protected $allowSelect = ['id','calificable_id','calificable_type','user_id','puntuacion','comentario','puntuacion_atencion','puntuacion_profesionalismo','puntuacion_instalaciones','puntuacion_precio','respuesta','fecha_respuesta','aprobada','fecha_aprobacion','aprobada_por','fotos','anonima','ip_creacion','user_agent','created_at','updated_at'];
+    protected $allowIncluded = ['calificable','usuario','aprobadaPor'];
+    protected $allowFilter = ['id','aprobada','puntuacion','user_id'];
+    protected $allowSort = ['id','puntuacion','created_at'];
 
     protected $fillable = [
         'calificable_id',

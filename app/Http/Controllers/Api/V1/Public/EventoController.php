@@ -176,7 +176,12 @@ class EventoController extends Controller
             return $this->errorResponse('Debes iniciar sesión', null, 401);
         }
 
+        /** @var User|null $user */
         $user = auth()->user();
+
+        if (!$user instanceof User) {
+            return $this->errorResponse('Usuario no autenticado', null, 401);
+        }
 
         // ✅ CORREGIDO: Obtener eventos con la relación
         $eventos = $user->eventosAsistencia()

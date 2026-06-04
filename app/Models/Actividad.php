@@ -6,12 +6,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
+use App\Traits\HasScopes;
 
 class Actividad extends Model
 {
-    use HasFactory;
+    use HasFactory, HasScopes;
 
     protected $table = 'actividades';
+
+    protected $allowSelect = ['id','user_id','accion','tabla','registro_id','descripcion','valores_viejos','valores_nuevos','cambios','ip','user_agent','created_at','updated_at'];
+    protected $allowIncluded = ['usuario'];
+    protected $allowFilter = ['id','accion','tabla','user_id'];
+    protected $allowSort = ['id','created_at','accion','tabla'];
 
     protected $fillable = [
         'user_id',

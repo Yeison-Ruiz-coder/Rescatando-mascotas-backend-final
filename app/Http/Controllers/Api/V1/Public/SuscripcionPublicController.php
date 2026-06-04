@@ -20,11 +20,15 @@ class SuscripcionPublicController extends Controller
     public function planes()
     {
         // Aquí puedes devolver los planes predefinidos o las mascotas disponibles para apadrinar
-        $mascotasDisponibles = Mascota::with('fundacion')
+        $mascotasDisponibles = Mascota::query()
+            ->selectFields()
+            ->with(['fundacion:id,Nombre_1,imagen_portada,ciudad'])
             ->where('estado', 'En adopcion')
-            ->where('destacada', true)
-            ->orWhere('necesita_apadrinamiento', true)
-            ->get(['id', 'nombre_mascota', 'foto_principal', 'descripcion', 'fundacion_id']);
+            ->where(function ($query) {
+                $query->where('destacada', true)
+                    ->orWhere('necesita_apadrinamiento', true);
+            })
+            ->get();
 
         return $this->successResponse($mascotasDisponibles, 'Planes de apadrinamiento obtenidos');
     }
@@ -34,7 +38,9 @@ class SuscripcionPublicController extends Controller
      */
     public function planDetalle(int $id)
     {
-        $mascota = Mascota::with('fundacion')
+        $mascota = Mascota::query()
+            ->selectFields()
+            ->with(['fundacion:id,Nombre_1,imagen_portada,ciudad'])
             ->where('estado', 'En adopcion')
             ->findOrFail($id);
 
@@ -46,7 +52,14 @@ class SuscripcionPublicController extends Controller
      */
     public function misSuscripciones(Request $request)
     {
-        $suscripciones = Suscripcion::with(['mascota', 'mascota.fundacion'])
+        $suscripciones = Suscripcion::query()
+            ->selectFields()
+            ->with([
+                'mascota' => function ($query) {
+                    $query->selectFields()->with('fundacion:id,Nombre_1,imagen_portada,ciudad');
+                },
+                'user:id,nombre,email',
+            ])
             ->where('user_id', $request->user()->id)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -70,7 +83,9 @@ class SuscripcionPublicController extends Controller
             return $this->errorResponse('Error de validación', $validator->errors(), 422);
         }
 
-        $mascota = Mascota::findOrFail($request->mascota_id);
+        $mascota = Mascota::query()
+            ->select(['id', 'estado'])
+            ->findOrFail($request->mascota_id);
 
         // Verificar que la mascota esté disponible para apadrinar
         if ($mascota->estado !== 'En adopcion') {
@@ -87,7 +102,16 @@ class SuscripcionPublicController extends Controller
             'estado' => 'activo',
         ]);
 
-        return $this->successResponse($suscripcion->load(['mascota', 'mascota.fundacion']), 'Suscripción creada exitosamente', 201);
+        return $this->successResponse(
+            $suscripcion->load([
+                'mascota' => function ($query) {
+                    $query->selectFields()->with('fundacion:id,Nombre_1,imagen_portada,ciudad');
+                },
+                'user:id,nombre,email',
+            ]),
+            'Suscripción creada exitosamente',
+            201
+        );
     }
 
     /**
@@ -95,7 +119,14 @@ class SuscripcionPublicController extends Controller
      */
     public function show(Request $request,int $id)
     {
-        $suscripcion = Suscripcion::with(['mascota', 'mascota.fundacion'])
+        $suscripcion = Suscripcion::query()
+            ->selectFields()
+            ->with([
+                'mascota' => function ($query) {
+                    $query->selectFields()->with('fundacion:id,Nombre_1,imagen_portada,ciudad');
+                },
+                'user:id,nombre,email',
+            ])
             ->where('user_id', $request->user()->id)
             ->findOrFail($id);
 

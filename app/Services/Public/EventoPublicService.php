@@ -8,7 +8,8 @@ class EventoPublicService
 {
     public function getAll(array $filters = [], int $perPage = 15)
     {
-        $query = Evento::query();
+        $query = Evento::query()
+            ->selectFields();
 
         if (isset($filters['proximos']) && filter_var($filters['proximos'], FILTER_VALIDATE_BOOLEAN)) {
             $query->where('fecha_evento', '>=', now());
@@ -35,12 +36,17 @@ class EventoPublicService
 
     public function findById(int $id): Evento
     {
-        return Evento::with(['fundacion', 'asistentes'])->findOrFail($id);
+        return Evento::query()
+            ->selectFields()
+            ->with(['fundacion:id,Nombre_1,imagen_portada,ciudad', 'asistentes:id,nombre,email'])
+            ->findOrFail($id);
     }
 
     public function getCalendarData(): array
     {
-        return Evento::where('fecha_evento', '>=', now())
+        return Evento::query()
+            ->select(['id', 'nombre_evento', 'fecha_evento', 'fecha_fin', 'descripcion', 'lugar_evento', 'imagen_url'])
+            ->where('fecha_evento', '>=', now())
             ->orderBy('fecha_evento', 'asc')
             ->get()
             ->map(function ($evento) {
@@ -59,7 +65,7 @@ class EventoPublicService
 
     public function confirmarAsistencia(int $eventoId, int $userId): void
     {
-        $evento = Evento::findOrFail($eventoId);
+        $evento = Evento::query()->select(['id'])->findOrFail($eventoId);
 
         $existe = $evento->asistentes()->where('user_id', $userId)->exists();
 
@@ -72,13 +78,15 @@ class EventoPublicService
 
     public function cancelarAsistencia(int $eventoId, int $userId): void
     {
-        $evento = Evento::findOrFail($eventoId);
+        $evento = Evento::query()->select(['id'])->findOrFail($eventoId);
         $evento->asistentes()->detach($userId);
     }
 
     public function getProximos(int $limit = 5)
     {
-        return Evento::with('fundacion')
+        return Evento::query()
+            ->selectFields()
+            ->with('fundacion:id,Nombre_1,imagen_portada,ciudad')
             ->where('fecha_evento', '>=', now())
             ->orderBy('fecha_evento', 'asc')
             ->limit($limit)

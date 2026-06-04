@@ -4,12 +4,28 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasScopes;
 
 class Donacion extends Model
 {
-    use HasFactory;
+    use HasFactory, HasScopes;
 
     protected $table = 'donaciones';
+
+    protected $allowSelect = [
+        'id',
+        'valor_donacion',
+        'fecha_donacion',
+        'publica',
+        'user_id',
+        'fundacion_id',
+        'created_at',
+        'updated_at',
+    ];
+
+    protected $allowIncluded = ['usuario', 'fundacion'];
+    protected $allowFilter = ['id', 'valor_donacion', 'publica'];
+    protected $allowSort = ['id', 'valor_donacion', 'fecha_donacion', 'created_at'];
 
     protected $fillable = [
         'valor_donacion',

@@ -6,12 +6,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
+use App\Traits\HasScopes;
 
 class Configuracion extends Model
 {
-    use HasFactory;
+    use HasFactory, HasScopes;
 
     protected $table = 'configuraciones';
+
+    protected $allowSelect = ['id','clave','valor','tipo','grupo','subgrupo','descripcion','publica','editable','opciones','orden','created_at','updated_at'];
+    protected $allowFilter = ['id','clave','tipo','grupo','publica'];
+    protected $allowSort = ['id','clave','grupo','orden','created_at'];
 
     protected $fillable = [
         'clave',
