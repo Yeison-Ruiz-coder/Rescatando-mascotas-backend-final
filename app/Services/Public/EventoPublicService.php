@@ -31,6 +31,17 @@ class EventoPublicService
             $query->where('fundacion_id', $filters['fundacion_id']);
         }
 
+        if (!empty($filters['buscar'])) {
+            $buscar = trim($filters['buscar']);
+
+            $query->where(function ($q) use ($buscar) {
+                $q->where('nombre_evento', 'like', '%' . $buscar . '%')
+                  ->orWhere('descripcion', 'like', '%' . $buscar . '%')
+                  ->orWhere('lugar_evento', 'like', '%' . $buscar . '%')
+                  ->orWhere('tipo', 'like', '%' . $buscar . '%');
+            });
+        }
+
         return $query->orderBy('fecha_evento', 'asc')->paginate($perPage);
     }
 

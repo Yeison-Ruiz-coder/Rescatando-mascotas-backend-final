@@ -34,6 +34,18 @@ class VeterinariaPublicService
             });
         }
 
+        if (!empty($filters['buscar'])) {
+            $buscar = trim($filters['buscar']);
+
+            $query->where(function ($q) use ($buscar) {
+                $q->where('Nombre_vet', 'like', '%' . $buscar . '%')
+                  ->orWhere('Direccion', 'like', '%' . $buscar . '%')
+                  ->orWhere('ciudad', 'like', '%' . $buscar . '%')
+                  ->orWhere('descripcion', 'like', '%' . $buscar . '%')
+                  ->orWhere('servicios', 'like', '%' . $buscar . '%');
+            });
+        }
+
         return $query->orderBy('Nombre_vet')->paginate($perPage);
     }
 

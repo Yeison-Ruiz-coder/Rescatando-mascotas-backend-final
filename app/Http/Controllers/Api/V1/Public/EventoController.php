@@ -26,7 +26,7 @@ class EventoController extends Controller
      */
     public function index(Request $request)
     {
-        $filters = $request->only(['mes', 'anio', 'tipo', 'fundacion_id', 'proximos']);
+        $filters = $request->only(['mes', 'anio', 'tipo', 'fundacion_id', 'proximos', 'buscar']);
         $perPage = $request->get('per_page', 15);
 
         $eventos = $this->eventoService->getAll($filters, $perPage);
