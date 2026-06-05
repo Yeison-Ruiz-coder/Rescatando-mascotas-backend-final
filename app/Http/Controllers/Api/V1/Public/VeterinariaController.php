@@ -21,7 +21,7 @@ class VeterinariaController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['urgencias', 'ubicacion', 'verificado', 'servicio']);
+        $filters = $request->only(['urgencias', 'ubicacion', 'verificado', 'servicio', 'buscar']);
         $perPage = $request->get('per_page', 15);
 
         $veterinarias = $this->veterinariaService->getAll($filters, $perPage);
