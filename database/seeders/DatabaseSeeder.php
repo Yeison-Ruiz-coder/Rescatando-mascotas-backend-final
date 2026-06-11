@@ -11,8 +11,11 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UserSeeder::class,
             RazaSeeder::class,
+            VeterinariasSeeder::class,
+            FundacionesSeeder::class,
             TipoVacunaSeeder::class,
-            FundacionSeeder::class
+            EventosSeeder::class,
+            MascotasSeeder::class,
         ]);
     }
 }

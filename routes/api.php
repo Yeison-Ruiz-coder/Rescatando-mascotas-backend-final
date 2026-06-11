@@ -25,6 +25,7 @@ Route::prefix('auth')->name('auth.')->group(function () {
 });
 
 // Mascotas - Público
+Route::get('/mascotas/especies', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'getEspecies']);
 Route::get('/mascotas', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'index']);
 Route::get('/mascotas/{id}', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'show']);
 Route::get('/mascotas/especie/{especie}', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'porEspecie']);
