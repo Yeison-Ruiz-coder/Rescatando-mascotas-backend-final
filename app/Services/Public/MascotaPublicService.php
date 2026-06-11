@@ -44,17 +44,10 @@ class MascotaPublicService
             $query->where('destacada', true);
         }
 
-        // En MascotaPublicService.php - método getAll()
         if (!empty($filters['buscar'])) {
-            $search = $filters['buscar'];
-            $query->where(function ($q) use ($search) {
-                $q->where('nombre_mascota', 'like', '%' . $search . '%')
-                    ->orWhere('descripcion', 'like', '%' . $search . '%')
-                    ->orWhere('especie', 'like', '%' . $search . '%')
-                    ->orWhere('genero', 'like', '%' . $search . '%')
-                    ->orWhere('tamano', 'like', '%' . $search . '%')
-                    ->orWhere('color', 'like', '%' . $search . '%')
-                    ->orWhere('lugar_rescate', 'like', '%' . $search . '%');
+            $query->where(function ($q) use ($filters) {
+                $q->where('nombre_mascota', 'like', '%' . $filters['buscar'] . '%')
+                    ->orWhere('descripcion', 'like', '%' . $filters['buscar'] . '%');
             });
         }
 
