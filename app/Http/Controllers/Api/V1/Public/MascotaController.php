@@ -22,8 +22,15 @@ class MascotaController extends Controller
     public function index(Request $request)
     {
         $filters = $request->only([
-            'especie', 'fundacion_id', 'genero', 'tamano', 'buscar',
-            'apto_con_ninos', 'apto_con_otros_animales', 'destacada'
+            'especie',
+            'fundacion_id',
+            'genero',
+            'tamano',
+            'buscar',
+            'apto_con_ninos',
+            'apto_con_otros_animales',
+            'destacada',
+            'exclude_id'
         ]);
         $perPage = $request->get('per_page', 15);
 
@@ -58,5 +65,13 @@ class MascotaController extends Controller
     {
         $mascotas = $this->mascotaService->getDestacadas(6);
         return $this->successResponse($mascotas, 'Mascotas destacadas obtenidas exitosamente');
+    }
+
+    // Agrega este método al final de la clase, antes de la última llave }
+
+    public function getEspecies()
+    {
+        $especies = $this->mascotaService->getEspeciesUnicas();
+        return $this->successResponse($especies, 'Especies obtenidas exitosamente');
     }
 }

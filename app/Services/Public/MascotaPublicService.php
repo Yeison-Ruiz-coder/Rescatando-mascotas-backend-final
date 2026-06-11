@@ -44,10 +44,17 @@ class MascotaPublicService
             $query->where('destacada', true);
         }
 
+        // En MascotaPublicService.php - método getAll()
         if (!empty($filters['buscar'])) {
-            $query->where(function($q) use ($filters) {
-                $q->where('nombre_mascota', 'like', '%' . $filters['buscar'] . '%')
-                  ->orWhere('descripcion', 'like', '%' . $filters['buscar'] . '%');
+            $search = $filters['buscar'];
+            $query->where(function ($q) use ($search) {
+                $q->where('nombre_mascota', 'like', '%' . $search . '%')
+                    ->orWhere('descripcion', 'like', '%' . $search . '%')
+                    ->orWhere('especie', 'like', '%' . $search . '%')
+                    ->orWhere('genero', 'like', '%' . $search . '%')
+                    ->orWhere('tamano', 'like', '%' . $search . '%')
+                    ->orWhere('color', 'like', '%' . $search . '%')
+                    ->orWhere('lugar_rescate', 'like', '%' . $search . '%');
             });
         }
 
@@ -57,6 +64,9 @@ class MascotaPublicService
 
         if (isset($filters['apto_con_otros_animales'])) {
             $query->where('apto_con_otros_animales', $filters['apto_con_otros_animales']);
+        }
+        if (!empty($filters['exclude_id'])) {
+            $query->where('id', '!=', $filters['exclude_id']);
         }
 
         // Ordenamiento
@@ -111,5 +121,21 @@ class MascotaPublicService
             ->latest('created_at')
             ->limit($limit)
             ->get();
+    }
+
+    // Agrega este método al final de la clase
+
+    public function getEspeciesUnicas()
+    {
+        $especies = Mascota::query()
+            ->whereIn('estado', $this->getEstadosDisponibles())
+            ->whereNotNull('especie')
+            ->distinct()
+            ->pluck('especie')
+            ->filter()
+            ->values()
+            ->toArray();
+
+        return $especies;
     }
 }
