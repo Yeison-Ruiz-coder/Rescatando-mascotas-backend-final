@@ -7,6 +7,7 @@ use App\Services\Public\MascotaPublicService;
 use App\Traits\ApiResponses;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Log;
 
 class MascotaController extends Controller
 {
@@ -21,22 +22,33 @@ class MascotaController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only([
-            'especie',
-            'fundacion_id',
-            'genero',
-            'tamano',
-            'buscar',
-            'apto_con_ninos',
-            'apto_con_otros_animales',
-            'destacada',
-            'exclude_id'
-        ]);
-        $perPage = $request->get('per_page', 15);
+        try {
+            $filters = $request->only([
+                'especie',
+                'fundacion_id',
+                'genero',
+                'tamano',
+                'buscar',
+                'apto_con_ninos',
+                'apto_con_otros_animales',
+                'destacada',
+                'exclude_id'
+            ]);
+            $perPage = $request->get('per_page', 15);
 
-        $mascotas = $this->mascotaService->getAll($filters, $perPage);
+            $mascotas = $this->mascotaService->getAll($filters, $perPage);
 
-        return $this->successResponse($mascotas, 'Mascotas obtenidas exitosamente');
+            return $this->successResponse($mascotas, 'Mascotas obtenidas exitosamente');
+        } catch (\Throwable $e) {
+            Log::error('MascotaController@index error: ' . $e->getMessage(), [
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return $this->errorResponse('Error al obtener mascotas: ' . $e->getMessage(), null, 500);
+        }
     }
 
     public function show(int $id)
