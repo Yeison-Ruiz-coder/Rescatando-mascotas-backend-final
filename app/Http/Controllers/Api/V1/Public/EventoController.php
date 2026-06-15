@@ -27,7 +27,7 @@ class EventoController extends Controller
     public function index(Request $request)
     {
         $filters = $request->only(['mes', 'anio', 'tipo', 'fundacion_id', 'proximos', 'buscar']);
-        $perPage = $request->get('per_page', 15);
+        $perPage = $request->get('per_page', 12);
 
         $eventos = $this->eventoService->getAll($filters, $perPage);
 
@@ -37,8 +37,8 @@ class EventoController extends Controller
             }
         }
 
-        // ✅ Devolver SOLO los items del paginador para que el frontend reciba un array
-        return $this->successResponse($eventos->items(), 'Eventos obtenidos exitosamente');
+        // ✅ Devuelve el paginador COMPLETO (igual que Mascotas)
+        return $this->successResponse($eventos, 'Eventos obtenidos exitosamente');
     }
 
     /**
