@@ -7,6 +7,7 @@ use App\Services\Auth\AuthService;
 use App\Traits\ApiResponses;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use App\Models\User;
 
 class RegisterController extends Controller
 {
@@ -72,13 +73,45 @@ class RegisterController extends Controller
         }
     }
 
+    /**
+     * 🔥 VERIFICAR EMAIL - CON ESTADO DEL USUARIO
+     */
     public function checkEmail(Request $request)
     {
         $request->validate([
             'email' => 'required|email'
         ]);
 
-        $exists = $this->authService->checkEmail($request->query('email'));
-        return $this->successResponse(['exists' => $exists], 'Email verificado');
+        // Buscar el usuario por email
+        $user = User::where('email', $request->query('email'))->first();
+
+        if (!$user) {
+            return $this->successResponse([
+                'exists' => false,
+                'estado' => null,
+                'mensaje' => 'Correo disponible para registro'
+            ], 'Email verificado');
+        }
+
+        // Email existe, obtener estado
+        $estado = $user->estado; // 'activo', 'pendiente', 'inactivo', 'suspendido'
+
+        $mensaje = match($estado) {
+            'activo' => 'Este correo ya está registrado y activo. Por favor, inicia sesión.',
+            'pendiente' => 'Este correo ya está registrado y pendiente de aprobación por un administrador.',
+            'inactivo' => 'Este correo está inactivo. Contacta con el soporte.',
+            'suspendido' => 'Este correo está suspendido. Contacta con el soporte.',
+            default => 'Este correo ya está registrado'
+        };
+
+        // También obtener el tipo de usuario (útil para mostrar mensajes específicos)
+        $tipo = $user->tipo; // 'user', 'fundacion', 'veterinaria'
+
+        return $this->successResponse([
+            'exists' => true,
+            'estado' => $estado,
+            'tipo' => $tipo,
+            'mensaje' => $mensaje
+        ], 'Email verificado');
     }
 }
