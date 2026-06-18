@@ -111,47 +111,30 @@ class MascotaEntityService
             throw new \Exception('Perfil de fundación no encontrado');
         }
 
+        // ✅ TODOS LOS CAMPOS CON VALORES POR DEFECTO
         $mascotaData = [
             'fundacion_id' => $fundacion->id,
-            'nombre_mascota' => $data['nombre_mascota'],
-            'especie' => $data['especie'],
-            'edad_aprox' => $data['edad_aprox'],
-            'genero' => $data['genero'],
-            'estado' => $data['estado'],
+            'nombre_mascota' => $data['nombre_mascota'] ?? 'Mascota',
+            'especie' => $data['especie'] ?? null,
+            'edad_aprox' => isset($data['edad_aprox']) && $data['edad_aprox'] !== '' ? (float) $data['edad_aprox'] : null,
+            'genero' => $data['genero'] ?? null,
+            'estado' => $data['estado'] ?? 'En adopcion',
             'lugar_rescate' => $data['lugar_rescate'] ?? null,
-            'descripcion' => $data['descripcion'],
+            'descripcion' => $data['descripcion'] ?? null,
             'condiciones_especiales' => $data['condiciones_especiales'] ?? null,
-            'necesita_hogar_temporal' => $data['necesita_hogar_temporal'] ?? false,
-            'apto_con_ninos' => $data['apto_con_ninos'] ?? true,
-            'apto_con_otros_animales' => $data['apto_con_otros_animales'] ?? true,
-            'fecha_ingreso' => $data['fecha_ingreso'] ?? now(),
+            'necesita_hogar_temporal' => isset($data['necesita_hogar_temporal']) ? (bool) $data['necesita_hogar_temporal'] : false,
+            'apto_con_ninos' => isset($data['apto_con_ninos']) ? (bool) $data['apto_con_ninos'] : true,
+            'apto_con_otros_animales' => isset($data['apto_con_otros_animales']) ? (bool) $data['apto_con_otros_animales'] : true,
+            'fecha_ingreso' => $data['fecha_ingreso'] ?? now()->format('Y-m-d'),
+            'peso_aprox' => isset($data['peso_aprox']) && $data['peso_aprox'] !== '' ? (float) $data['peso_aprox'] : null,
+            'tamano' => $data['tamano'] ?? null,
+            'color' => $data['color'] ?? null,
+            'salud_general' => $data['salud_general'] ?? null,
+            'esterilizado' => isset($data['esterilizado']) ? (bool) $data['esterilizado'] : false,
+            'desparasitado' => isset($data['desparasitado']) ? (bool) $data['desparasitado'] : false,
+            'vacunado' => isset($data['vacunado']) ? (bool) $data['vacunado'] : false,
+            'video_url' => $data['video_url'] ?? null,
         ];
-
-        // Nuevos campos
-        if (isset($data['peso_aprox'])) {
-            $mascotaData['peso_aprox'] = $data['peso_aprox'];
-        }
-        if (isset($data['tamano'])) {
-            $mascotaData['tamano'] = $data['tamano'];
-        }
-        if (isset($data['color'])) {
-            $mascotaData['color'] = $data['color'];
-        }
-        if (isset($data['salud_general'])) {
-            $mascotaData['salud_general'] = $data['salud_general'];
-        }
-        if (isset($data['esterilizado'])) {
-            $mascotaData['esterilizado'] = $data['esterilizado'];
-        }
-        if (isset($data['desparasitado'])) {
-            $mascotaData['desparasitado'] = $data['desparasitado'];
-        }
-        if (isset($data['vacunado'])) {
-            $mascotaData['vacunado'] = $data['vacunado'];
-        }
-        if (isset($data['video_url'])) {
-            $mascotaData['video_url'] = $data['video_url'];
-        }
 
         $mascota = new Mascota();
         $mascota->fill($mascotaData);
@@ -195,12 +178,12 @@ class MascotaEntityService
         }
 
         // Sincronizar razas
-        if (!empty($data['razas'])) {
+        if (!empty($data['razas']) && is_array($data['razas'])) {
             $mascota->razas()->sync($data['razas']);
         }
 
         // Sincronizar vacunas
-        if (!empty($data['vacunas'])) {
+        if (!empty($data['vacunas']) && is_array($data['vacunas'])) {
             $vacunasData = [];
             foreach ($data['vacunas'] as $vacunaId) {
                 $vacunasData[$vacunaId] = ['fecha_aplicacion' => now()->format('Y-m-d')];
