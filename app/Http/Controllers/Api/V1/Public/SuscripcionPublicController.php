@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/Api/V1/Public/SuscripcionPublicController.php
 
 namespace App\Http\Controllers\Api\V1\Public;
 
@@ -19,7 +18,6 @@ class SuscripcionPublicController extends Controller
      */
     public function planes()
     {
-        // Aquí puedes devolver los planes predefinidos o las mascotas disponibles para apadrinar
         $mascotasDisponibles = Mascota::query()
             ->selectFields()
             ->with(['fundacion:id,Nombre_1,imagen_portada,ciudad'])
@@ -45,6 +43,68 @@ class SuscripcionPublicController extends Controller
             ->findOrFail($id);
 
         return $this->successResponse($mascota, 'Plan de apadrinamiento obtenido');
+    }
+
+    /**
+     * ✅ Crear una nueva suscripción (PÚBLICA - sin autenticación)
+     * POST /api/v1/public/suscripciones-crear
+     */
+    public function storePublic(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|unique:suscripciones,email',
+            'nombre' => 'nullable|string|max:255',
+            'telefono' => 'nullable|string|max:20',
+            'mascota_id' => 'nullable|exists:mascotas,id',
+            'monto_mensual' => 'nullable|numeric|min:5000',
+            'frecuencia' => 'nullable|in:unica,mensual,trimestral,anual',
+            'mensaje_apoyo' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse('Error de validación', $validator->errors(), 422);
+        }
+
+        try {
+            // Si se envía mascota_id, verificar que exista
+            if ($request->mascota_id) {
+                $mascota = Mascota::find($request->mascota_id);
+                if (!$mascota) {
+                    return $this->errorResponse('La mascota seleccionada no existe', null, 404);
+                }
+
+                // Verificar que la mascota esté disponible para apadrinar
+                if ($mascota->estado !== 'En adopcion') {
+                    return $this->errorResponse('Esta mascota no está disponible para apadrinamiento', null, 400);
+                }
+            }
+
+            $suscripcion = Suscripcion::create([
+                'email' => $request->email,
+                'nombre' => $request->nombre,
+                'telefono' => $request->telefono,
+                'mascota_id' => $request->mascota_id,
+                'monto_mensual' => $request->monto_mensual ?? 10000,
+                'frecuencia' => $request->frecuencia ?? 'mensual',
+                'mensaje_apoyo' => $request->mensaje_apoyo,
+                'estado' => 'activo',
+                'fecha_inicio' => now(),
+                'user_id' => null, // Sin usuario autenticado
+            ]);
+
+            return $this->successResponse(
+                $suscripcion,
+                '¡Suscripción creada exitosamente! Gracias por apoyar a las mascotas 🐾',
+                201
+            );
+
+        } catch (\Exception $e) {
+            return $this->errorResponse(
+                'Error al crear la suscripción',
+                $e->getMessage(),
+                500
+            );
+        }
     }
 
     /**
@@ -87,7 +147,6 @@ class SuscripcionPublicController extends Controller
             ->select(['id', 'estado'])
             ->findOrFail($request->mascota_id);
 
-        // Verificar que la mascota esté disponible para apadrinar
         if ($mascota->estado !== 'En adopcion') {
             return $this->errorResponse('Esta mascota no está disponible para apadrinamiento', null, 400);
         }
@@ -117,7 +176,7 @@ class SuscripcionPublicController extends Controller
     /**
      * Ver detalle de una suscripción (USUARIO AUTENTICADO)
      */
-    public function show(Request $request,int $id)
+    public function show(Request $request, int $id)
     {
         $suscripcion = Suscripcion::query()
             ->selectFields()
@@ -136,7 +195,7 @@ class SuscripcionPublicController extends Controller
     /**
      * Cancelar una suscripción (USUARIO AUTENTICADO)
      */
-    public function cancelar(Request $request,int $id)
+    public function cancelar(Request $request, int $id)
     {
         $suscripcion = Suscripcion::where('user_id', $request->user()->id)
             ->whereIn('estado', ['activo', 'pausado'])
@@ -153,7 +212,7 @@ class SuscripcionPublicController extends Controller
     /**
      * Pausar una suscripción (USUARIO AUTENTICADO)
      */
-    public function pausar(Request $request,int $id)
+    public function pausar(Request $request, int $id)
     {
         $suscripcion = Suscripcion::where('user_id', $request->user()->id)
             ->where('estado', 'activo')
@@ -167,7 +226,7 @@ class SuscripcionPublicController extends Controller
     /**
      * Reactivar una suscripción (USUARIO AUTENTICADO)
      */
-    public function reactivar(Request $request,int $id)
+    public function reactivar(Request $request, int $id)
     {
         $suscripcion = Suscripcion::where('user_id', $request->user()->id)
             ->where('estado', 'pausado')
