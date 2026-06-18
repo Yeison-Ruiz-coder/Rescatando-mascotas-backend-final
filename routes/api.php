@@ -130,6 +130,9 @@ Route::middleware(['auth:sanctum'])->prefix('user')->name('user.')->group(functi
     Route::get('/solicitudes', [App\Http\Controllers\Api\V1\User\SolicitudController::class, 'index']);
     Route::post('/solicitudes/adopcion', [App\Http\Controllers\Api\V1\User\SolicitudController::class, 'storeAdopcion']);
     Route::get('/solicitudes/{id}', [App\Http\Controllers\Api\V1\User\SolicitudController::class, 'show']);
+    Route::get('/solicitudes-recibidas', [App\Http\Controllers\Api\V1\User\SolicitudController::class, 'recibidas']);
+    Route::get('/solicitudes-recibidas/pendientes', [App\Http\Controllers\Api\V1\User\SolicitudController::class, 'pendientesRecibidas']);
+    Route::get('/solicitudes-recibidas/{id}', [App\Http\Controllers\Api\V1\User\SolicitudController::class, 'showRecibida']);
 
     // Donaciones
     Route::get('/donaciones', [App\Http\Controllers\Api\V1\User\DonacionController::class, 'index']);

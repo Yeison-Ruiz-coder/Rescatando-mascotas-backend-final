@@ -36,12 +36,12 @@ class SolicitudEntityService
             ->where('tipo_solicitud', 'adopcion');
 
         if ($user->tipo === 'fundacion') {
-            $query->whereHas('solicitable', function($q) use ($entidad) {
+            $query->whereHas('solicitable', function ($q) use ($entidad) {
                 $q->where('fundacion_id', $entidad->id);
             });
         } else {
-            $query->whereHas('solicitable', function($q) use ($entidad) {
-                $q->whereHas('historialMedico', function($h) use ($entidad) {
+            $query->whereHas('solicitable', function ($q) use ($entidad) {
+                $q->whereHas('historialMedico', function ($h) use ($entidad) {
                     $h->where('veterinaria_id', $entidad->id);
                 });
             });
@@ -114,7 +114,29 @@ class SolicitudEntityService
 
         $mascota->update(['estado' => 'Adoptado']);
 
+        // ✅ NUEVO: Notificar al solicitante que fue aprobada
         if ($solicitud->user_id) {
+            $solicitante = $solicitud->user;
+
+            // Notificación en base de datos
+            $solicitante->notify(new SolicitudAdopcionStatus(
+                $solicitud,
+                $mascota,
+                'aprobada'
+            ));
+
+            // Email al solicitante
+            try {
+                Mail::to($solicitante->email)->send(new SolicitudAdopcionStatusMail(
+                    $solicitud,
+                    $mascota,
+                    'aprobada'
+                ));
+            } catch (\Exception $e) {
+                Log::error("Error al enviar email de aprobación: " . $e->getMessage());
+            }
+
+            // Notificación antigua (para compatibilidad)
             Notificacion::create([
                 'user_id' => $solicitud->user_id,
                 'contenido' => "¡Felicidades! Tu solicitud de adopción para {$mascota->nombre_mascota} ha sido APROBADA. Un coordinador se pondrá en contacto contigo.",
@@ -154,7 +176,31 @@ class SolicitudEntityService
             'fecha_revision' => now(),
         ]);
 
+        // ✅ NUEVO: Notificar al solicitante que fue rechazada
         if ($solicitud->user_id) {
+            $solicitante = $solicitud->user;
+
+            // Notificación en base de datos
+            $solicitante->notify(new SolicitudAdopcionStatus(
+                $solicitud,
+                $mascota,
+                'rechazada',
+                $razonRechazo
+            ));
+
+            // Email al solicitante
+            try {
+                Mail::to($solicitante->email)->send(new SolicitudAdopcionStatusMail(
+                    $solicitud,
+                    $mascota,
+                    'rechazada',
+                    $razonRechazo
+                ));
+            } catch (\Exception $e) {
+                Log::error("Error al enviar email de rechazo: " . $e->getMessage());
+            }
+
+            // Notificación antigua (para compatibilidad)
             Notificacion::create([
                 'user_id' => $solicitud->user_id,
                 'contenido' => "Tu solicitud de adopción para {$mascota->nombre_mascota} ha sido RECHAZADA. Motivo: {$razonRechazo}",
@@ -177,12 +223,12 @@ class SolicitudEntityService
         $query = Solicitud::where('tipo_solicitud', 'adopcion');
 
         if ($user->tipo === 'fundacion') {
-            $query->whereHas('solicitable', function($q) use ($entidad) {
+            $query->whereHas('solicitable', function ($q) use ($entidad) {
                 $q->where('fundacion_id', $entidad->id);
             });
         } else {
-            $query->whereHas('solicitable', function($q) use ($entidad) {
-                $q->whereHas('historialMedico', function($h) use ($entidad) {
+            $query->whereHas('solicitable', function ($q) use ($entidad) {
+                $q->whereHas('historialMedico', function ($h) use ($entidad) {
                     $h->where('veterinaria_id', $entidad->id);
                 });
             });

@@ -41,6 +41,56 @@ class SolicitudController extends Controller
             return $this->notFoundResponse('Solicitud no encontrada');
         }
     }
+    public function recibidas(Request $request)
+    {
+        try {
+            $filters = $request->only(['estado', 'fecha_desde', 'fecha_hasta', 'per_page']);
+            $solicitudes = $this->solicitudService->getSolicitudesRecibidasAll(
+                auth()->id(),
+                $filters
+            );
+
+            $pendientes = $this->solicitudService->getSolicitudesRecibidas(auth()->id());
+
+            return $this->successResponse([
+                'solicitudes' => $solicitudes,
+                'pendientes_count' => $pendientes->count()
+            ], 'Solicitudes recibidas obtenidas exitosamente');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al cargar solicitudes recibidas', $e->getMessage(), 500);
+        }
+    }
+    public function pendientesRecibidas()
+    {
+        try {
+            $pendientes = $this->solicitudService->getSolicitudesRecibidas(auth()->id());
+            return $this->successResponse([
+                'count' => $pendientes->count()
+            ], 'Solicitudes pendientes contadas');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al contar solicitudes pendientes', $e->getMessage(), 500);
+        }
+    }
+
+    // ✅ NUEVO: Obtener detalle de una solicitud recibida
+    public function showRecibida(int $id)
+    {
+        try {
+            $solicitud = Solicitud::with(['usuario', 'solicitable'])
+                ->findOrFail($id);
+
+            // Verificar que la solicitud pertenece a una mascota del usuario
+            if (!$solicitud->esParaUsuario(auth()->id())) {
+                return $this->errorResponse('No autorizado', null, 403);
+            }
+
+            return $this->successResponse($solicitud, 'Solicitud obtenida exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Solicitud no encontrada');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), null, 500);
+        }
+    }
 
     public function storeAdopcion(Request $request)
     {
