@@ -304,7 +304,52 @@ class Solicitud extends Model
             }
         });
     }
+    public function getDuenoAttribute()
+    {
+        if ($this->solicitable_type === Mascota::class) {
+            $mascota = $this->solicitable;
+            if ($mascota && $mascota->fundacion_id) {
+                return $mascota->fundacion?->usuario;
+            }
+            // Si la mascota tiene veterinaria asociada
+            if ($mascota && $mascota->veterinaria_id) {
+                return $mascota->veterinaria?->usuario;
+            }
+        }
+        return null;
+    }
 
+    public function getEntidadDuenoAttribute()
+    {
+        if ($this->solicitable_type === Mascota::class) {
+            $mascota = $this->solicitable;
+            if ($mascota && $mascota->fundacion_id) {
+                return $mascota->fundacion;
+            }
+            if ($mascota && $mascota->veterinaria_id) {
+                return $mascota->veterinaria;
+            }
+        }
+        return null;
+    }
+
+    public function esParaUsuario($userId): bool
+    {
+        if ($this->solicitable_type === Mascota::class) {
+            $mascota = $this->solicitable;
+            if ($mascota) {
+                // Verificar si el usuario es dueño de la fundación
+                if ($mascota->fundacion_id) {
+                    return $mascota->fundacion?->user_id === $userId;
+                }
+                // Verificar si el usuario es dueño de la veterinaria
+                if ($mascota->veterinaria_id) {
+                    return $mascota->veterinaria?->user_id === $userId;
+                }
+            }
+        }
+        return false;
+    }
     // Agregar relación con mascota (helper)
     public function mascota()
     {
