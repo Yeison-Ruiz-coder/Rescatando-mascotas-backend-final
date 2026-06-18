@@ -5,22 +5,40 @@ namespace App\Traits;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
-use Cloudinary\Cloudinary;  // Solo esta clase necesitas
+use Cloudinary\Cloudinary;
 
 trait ImageUploadTrait
 {
     private $cloudinary;
 
+    /**
+     * Obtener instancia de Cloudinary
+     */
     private function getCloudinary(): Cloudinary
     {
         if ($this->cloudinary === null) {
+            // ✅ Usar config() en lugar de env()
+            $cloudName = config('cloudinary.cloud.cloud_name');
+            $apiKey = config('cloudinary.cloud.api_key');
+            $apiSecret = config('cloudinary.cloud.api_secret');
+
+            // Validar que las variables existan
+            if (empty($cloudName) || empty($apiKey) || empty($apiSecret)) {
+                Log::error('Cloudinary no configurado correctamente', [
+                    'cloud_name' => $cloudName ? 'presente' : 'vacío',
+                    'api_key' => $apiKey ? 'presente' : 'vacío',
+                    'api_secret' => $apiSecret ? 'presente' : 'vacío',
+                ]);
+                throw new \Exception('Cloudinary no está configurado correctamente. Verifica las variables de entorno.');
+            }
+
             $this->cloudinary = new Cloudinary([
                 'cloud' => [
-                    'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
-                    'api_key'    => env('CLOUDINARY_API_KEY'),
-                    'api_secret' => env('CLOUDINARY_API_SECRET'),
+                    'cloud_name' => $cloudName,
+                    'api_key'    => $apiKey,
+                    'api_secret' => $apiSecret,
                 ],
-                'url' => ['secure' => true]
+                'url' => ['secure' => config('cloudinary.url.secure', true)]
             ]);
         }
         return $this->cloudinary;
@@ -36,12 +54,14 @@ trait ImageUploadTrait
                 $this->deleteImage($oldPath);
             }
 
-            // ✅ Sintaxis correcta v2 del SDK [citation:7]
             $result = $this->getCloudinary()->uploadApi()->upload($file->getRealPath(), [
                 'folder' => $path,
                 'transformation' => [
                     'quality' => 'auto',
-                    'fetch_format' => 'auto'
+                    'fetch_format' => 'auto',
+                    'width' => 800,
+                    'height' => 800,
+                    'crop' => 'limit'
                 ]
             ]);
 
@@ -58,7 +78,7 @@ trait ImageUploadTrait
     }
 
     /**
-     * Subir múltiples imágenes
+     * Subir múltiples imágenes a Cloudinary
      */
     protected function uploadMultipleImages(array $files, string $path): array
     {
@@ -78,16 +98,15 @@ trait ImageUploadTrait
     /**
      * Eliminar una imagen de Cloudinary
      */
-    protected function deleteImage(?string $path): void
+    protected function deleteImage(?string $url): void
     {
-        if (!$path || strpos($path, 'cloudinary.com') === false) {
+        if (!$url || strpos($url, 'cloudinary.com') === false) {
             return;
         }
 
         try {
-            $publicId = $this->extractPublicIdFromUrl($path);
+            $publicId = $this->extractPublicIdFromUrl($url);
             if ($publicId) {
-                // ✅ Sintaxis correcta para eliminar [citation:1][citation:4]
                 $this->getCloudinary()->uploadApi()->destroy($publicId);
                 Log::info('Imagen eliminada de Cloudinary', ['public_id' => $publicId]);
             }
@@ -97,7 +116,7 @@ trait ImageUploadTrait
     }
 
     /**
-     * Eliminar múltiples imágenes
+     * Eliminar múltiples imágenes de Cloudinary
      */
     protected function deleteMultipleImages(array $urls): void
     {
@@ -111,7 +130,11 @@ trait ImageUploadTrait
      */
     private function extractPublicIdFromUrl(string $url): ?string
     {
+        // Busca el public_id en la URL de Cloudinary
+        // Ejemplo: https://res.cloudinary.com/cloud_name/image/upload/v1234567890/folder/image.jpg
+        // Resultado: folder/image
         if (preg_match('/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-zA-Z]+)?$/', $url, $matches)) {
+            // Eliminar la extensión del archivo
             return preg_replace('/\.[^.]+$/', '', $matches[1]);
         }
         return null;
