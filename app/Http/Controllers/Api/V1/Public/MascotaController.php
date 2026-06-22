@@ -79,11 +79,47 @@ class MascotaController extends Controller
         return $this->successResponse($mascotas, 'Mascotas destacadas obtenidas exitosamente');
     }
 
-    // Agrega este método al final de la clase, antes de la última llave }
-
     public function getEspecies()
     {
         $especies = $this->mascotaService->getEspeciesUnicas();
         return $this->successResponse($especies, 'Especies obtenidas exitosamente');
+    }
+
+    /**
+     * Obtener sugerencias para autocompletado de búsqueda
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function sugerencias(Request $request)
+    {
+        try {
+            $searchTerm = $request->input('q', '');
+            $limit = $request->input('limit', 10);
+
+            // Validar que la búsqueda tenga al menos 2 caracteres
+            if (strlen($searchTerm) < 2) {
+                return $this->successResponse([], 'No hay suficientes caracteres para buscar');
+            }
+
+            // Obtener sugerencias
+            $sugerencias = $this->mascotaService->getSugerencias($searchTerm, $limit);
+
+            return $this->successResponse($sugerencias, 'Sugerencias obtenidas exitosamente', [
+                'total' => count($sugerencias),
+                'limit' => $limit,
+                'search_term' => $searchTerm
+            ]);
+
+        } catch (\Throwable $e) {
+            Log::error('MascotaController@sugerencias error: ' . $e->getMessage(), [
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'searchTerm' => $request->input('q', ''),
+            ]);
+
+            return $this->errorResponse('Error al obtener sugerencias: ' . $e->getMessage(), null, 500);
+        }
     }
 }
