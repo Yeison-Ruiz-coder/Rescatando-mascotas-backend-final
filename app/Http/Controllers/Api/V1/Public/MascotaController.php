@@ -105,11 +105,7 @@ class MascotaController extends Controller
             // Obtener sugerencias
             $sugerencias = $this->mascotaService->getSugerencias($searchTerm, $limit);
 
-            return $this->successResponse($sugerencias, 'Sugerencias obtenidas exitosamente', [
-                'total' => count($sugerencias),
-                'limit' => $limit,
-                'search_term' => $searchTerm
-            ]);
+            return $this->successResponse($sugerencias, 'Sugerencias obtenidas exitosamente');
 
         } catch (\Throwable $e) {
             Log::error('MascotaController@sugerencias error: ' . $e->getMessage(), [
