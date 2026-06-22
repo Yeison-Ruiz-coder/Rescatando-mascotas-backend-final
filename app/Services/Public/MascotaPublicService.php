@@ -100,7 +100,7 @@ class MascotaPublicService
             ->selectFields()
             ->with('fundacion:id,Nombre_1,imagen_portada,ciudad')
             ->where('especie', $especie)
-            ->whereIn('estado', $this->getEstadosDisponibles()) // ← Cambiado
+            ->whereIn('estado', $this->getEstadosDisponibles())
             ->paginate($perPage);
     }
 
@@ -110,7 +110,7 @@ class MascotaPublicService
             ->selectFields()
             ->with('fundacion:id,Nombre_1,imagen_portada,ciudad')
             ->where('fundacion_id', $fundacionId)
-            ->whereIn('estado', $this->getEstadosDisponibles()) // ← Cambiado
+            ->whereIn('estado', $this->getEstadosDisponibles())
             ->paginate($perPage);
     }
 
@@ -129,8 +129,6 @@ class MascotaPublicService
             ->get();
     }
 
-    // Agrega este método al final de la clase
-
     public function getEspeciesUnicas()
     {
         $especies = Mascota::query()
@@ -143,5 +141,89 @@ class MascotaPublicService
             ->toArray();
 
         return $especies;
+    }
+
+    /**
+     * Obtener sugerencias para autocompletado
+     * Busca en: nombre_mascota, especie, color, lugar_rescate
+     *
+     * @param string $searchTerm Término de búsqueda
+     * @param int $limit Límite de resultados
+     * @return array
+     */
+    public function getSugerencias(string $searchTerm, int $limit = 10): array
+    {
+        // Si la búsqueda es muy corta, retornar vacío
+        if (strlen($searchTerm) < 2) {
+            return [];
+        }
+
+        try {
+            $results = collect();
+
+            // Buscar por nombre
+            $nombres = Mascota::query()
+                ->whereIn('estado', $this->getEstadosDisponibles())
+                ->where('nombre_mascota', 'LIKE', "%{$searchTerm}%")
+                ->whereNotNull('nombre_mascota')
+                ->limit($limit)
+                ->pluck('nombre_mascota')
+                ->filter()
+                ->values()
+                ->toArray();
+            $results = $results->merge($nombres);
+
+            // Buscar por especie
+            $especies = Mascota::query()
+                ->whereIn('estado', $this->getEstadosDisponibles())
+                ->where('especie', 'LIKE', "%{$searchTerm}%")
+                ->whereNotNull('especie')
+                ->limit($limit)
+                ->pluck('especie')
+                ->filter()
+                ->values()
+                ->toArray();
+            $results = $results->merge($especies);
+
+            // Buscar por color
+            $colores = Mascota::query()
+                ->whereIn('estado', $this->getEstadosDisponibles())
+                ->where('color', 'LIKE', "%{$searchTerm}%")
+                ->whereNotNull('color')
+                ->limit($limit)
+                ->pluck('color')
+                ->filter()
+                ->values()
+                ->toArray();
+            $results = $results->merge($colores);
+
+            // Buscar por lugar_rescate
+            $lugares = Mascota::query()
+                ->whereIn('estado', $this->getEstadosDisponibles())
+                ->where('lugar_rescate', 'LIKE', "%{$searchTerm}%")
+                ->whereNotNull('lugar_rescate')
+                ->limit($limit)
+                ->pluck('lugar_rescate')
+                ->filter()
+                ->values()
+                ->toArray();
+            $results = $results->merge($lugares);
+
+            // Eliminar duplicados y limitar
+            return $results
+                ->unique()
+                ->values()
+                ->take($limit)
+                ->toArray();
+
+        } catch (\Throwable $e) {
+            Log::error('MascotaPublicService@getSugerencias error: ' . $e->getMessage(), [
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'searchTerm' => $searchTerm,
+            ]);
+            return [];
+        }
     }
 }
