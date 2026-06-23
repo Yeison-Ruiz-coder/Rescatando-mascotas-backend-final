@@ -112,7 +112,6 @@ class RescateEntityService
         $entidad = $this->getEntidad();
 
         if (!$entidad) {
-            // ✅ Si no hay entidad, devolver colección vacía
             return collect([]);
         }
 
@@ -121,15 +120,9 @@ class RescateEntityService
         $radio = $entidad->radio_atencion ?? 10;
         $userTipo = $user->tipo;
 
-        // ✅ Si no hay coordenadas, devolver todos los rescates pendientes
-        if (!$lat || !$lng) {
-            return Rescate::where('estado', 'pendiente')
-                ->orderBy('prioridad', 'desc')
-                ->orderBy('created_at', 'asc')
-                ->paginate(15);
-        }
-
+        // ✅ "otro" NO se muestra a las entidades (solo Admin)
         $rescates = Rescate::where('estado', 'pendiente')
+            ->where('tipo_emergencia', '!=', 'otro')
             ->where(function ($query) use ($userTipo) {
                 if ($userTipo === 'veterinaria') {
                     $query->whereIn('tipo_emergencia', ['herido', 'urgente']);
@@ -140,15 +133,15 @@ class RescateEntityService
 
         if ($lat && $lng) {
             $rescates = $rescates->selectRaw("
-                *,
-                (6371 * acos(
-                    cos(radians(?)) *
-                    cos(radians(lat)) *
-                    cos(radians(lng) - radians(?)) +
-                    sin(radians(?)) *
-                    sin(radians(lat))
-                )) AS distance
-            ", [$lat, $lng, $lat])
+            *,
+            (6371 * acos(
+                cos(radians(?)) *
+                cos(radians(lat)) *
+                cos(radians(lng) - radians(?)) +
+                sin(radians(?)) *
+                sin(radians(lat))
+            )) AS distance
+        ", [$lat, $lng, $lat])
                 ->having('distance', '<', $radio)
                 ->orderBy('distance');
         }
@@ -157,7 +150,7 @@ class RescateEntityService
             ->orderBy('created_at', 'asc')
             ->paginate(15);
     }
-    
+
     public function aceptarRescate(int $id)
     {
         $user = Auth::user();
@@ -168,6 +161,11 @@ class RescateEntityService
         }
 
         $rescate = Rescate::where('estado', 'pendiente')->findOrFail($id);
+
+        // ✅ "otro" NO puede ser aceptado por entidades (solo Admin)
+        if ($rescate->tipo_emergencia === 'otro') {
+            throw new \Exception('Este tipo de rescate solo puede ser asignado por un administrador');
+        }
 
         $puedeAceptar = false;
         if ($user->tipo === 'veterinaria' && in_array($rescate->tipo_emergencia, ['herido', 'urgente'])) {
@@ -229,6 +227,7 @@ class RescateEntityService
 
         return Rescate::where('entidad_responsable_type', get_class($entidad))
             ->where('entidad_responsable_id', $entidad->id)
+            ->where('tipo_emergencia', '!=', 'otro') // ✅ "otro" no aparece en mis rescates
             ->with(['usuarioReporto', 'mascota'])
             ->orderBy('created_at', 'desc')
             ->paginate(15);
