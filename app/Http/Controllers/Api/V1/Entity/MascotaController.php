@@ -9,6 +9,7 @@ use App\Traits\ApiResponses;
 use App\Traits\TransactionTrait;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Request;
 
 class MascotaController extends Controller
 {
@@ -19,6 +20,33 @@ class MascotaController extends Controller
     public function __construct(MascotaEntityService $mascotaService)
     {
         $this->mascotaService = $mascotaService;
+    }
+
+    public function actualizarEstado(Request $request, int $id)
+    {
+        try {
+            // ✅ Validación solo del campo estado
+            $request->validate([
+                'estado' => 'required|in:Adoptado,En adopcion,Rescatada,En acogida'
+            ]);
+
+            // ✅ Obtener la mascota (ya valida que pertenezca a la fundación)
+            $mascota = $this->mascotaService->findMascota($id);
+
+            // ✅ Actualizar SOLO el estado
+            $mascota->estado = $request->estado;
+            $mascota->save();
+
+            return $this->successResponse(
+                $mascota->load(['razas', 'vacunas']),
+                'Estado actualizado exitosamente'
+            );
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Mascota no encontrada');
+        } catch (\Exception $e) {
+            Log::error('Error en actualizarEstado: ' . $e->getMessage());
+            return $this->errorResponse('Error al actualizar estado', $e->getMessage(), 500);
+        }
     }
 
     public function index()
@@ -63,7 +91,6 @@ class MascotaController extends Controller
         }
     }
 
-    // app/Http/Controllers/Api/V1/Entity/MascotaController.php
 
     public function update(MascotaRequest $request, int $id)
     {

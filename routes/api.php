@@ -14,96 +14,95 @@ use App\Http\Controllers\Api\V1\Public\SuscripcionPublicController as PublicSusc
 
 Route::middleware(['cache.public:10'])->group(function () {
 
-Route::prefix('auth')->name('auth.')->group(function () {
-    Route::post('/login', [App\Http\Controllers\Api\V1\Auth\LoginController::class, 'login']);
-    Route::post('/register', [App\Http\Controllers\Api\V1\Auth\RegisterController::class, 'register']);
-    Route::get('/check-email', [App\Http\Controllers\Api\V1\Auth\RegisterController::class, 'checkEmail']);
-    Route::post('/logout', [App\Http\Controllers\Api\V1\Auth\LogoutController::class, 'logout'])
-        ->middleware('auth:sanctum');
-    Route::post('/password/email', [App\Http\Controllers\Api\V1\Auth\PasswordResetController::class, 'sendResetLink']);
-    Route::post('/password/reset', [App\Http\Controllers\Api\V1\Auth\PasswordResetController::class, 'resetPassword']);
-});
-
-// Mascotas - Público
-Route::get('/mascotas/especies', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'getEspecies']);
-Route::get('/mascotas/sugerencias', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'sugerencias']);
-Route::get('/mascotas', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'index']);
-Route::get('/mascotas/{id}', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'show']);
-Route::get('/mascotas/especie/{especie}', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'porEspecie']);
-Route::get('/mascotas/fundacion/{fundacionId}', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'porFundacion']);
-
-// Adopciones - Público
-Route::prefix('adopciones')->name('adopciones.')->group(function () {
-    Route::get('/', [App\Http\Controllers\Api\V1\Public\AdopcionController::class, 'index']);
-    Route::get('/disponibles', [App\Http\Controllers\Api\V1\Public\AdopcionController::class, 'disponibles']);
-    Route::get('/destacadas', [App\Http\Controllers\Api\V1\Public\AdopcionController::class, 'destacadas']);
-    Route::get('/{id}', [App\Http\Controllers\Api\V1\Public\AdopcionController::class, 'show']);
-    Route::get('/{id}/disponibilidad', [App\Http\Controllers\Api\V1\Public\AdopcionController::class, 'verificarDisponibilidad']);
-});
-
-// Rescates - Público
-Route::prefix('rescates')->name('rescates.')->group(function () {
-    Route::get('/', [App\Http\Controllers\Api\V1\Public\RescateController::class, 'index']);
-    Route::post('/reportar', [App\Http\Controllers\Api\V1\Public\RescateController::class, 'reportar']);
-    Route::get('/{id}', [App\Http\Controllers\Api\V1\Public\RescateController::class, 'show']);
-});
-
-// Fundaciones - Público
-Route::prefix('fundaciones')->name('fundaciones.')->group(function () {
-    Route::get('/', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'index']);
-    Route::get('/estadisticas', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'estadisticas']);
-    Route::get('/verificadas', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'verificadas']);
-    Route::get('/reciben-voluntarios', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'recibenVoluntarios']);
-    Route::get('/ciudad/{ciudad}', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'porCiudad']);
-    Route::get('/search', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'search']);
-    Route::get('/cercanas', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'cercanas']);
-    Route::get('/{id}', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'show']);
-});
-
-// Veterinarias - Público
-Route::get('/veterinarias', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'index']);
-Route::get('/veterinarias/{id}', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'show']);
-Route::get('/veterinarias/urgencias/mapa', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'mapa']);
-Route::get('/veterinarias/cercanas', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'cercanas']);
-
-// =========================================================================
-// RUTAS PÚBLICAS - EVENTOS
-// =========================================================================
-Route::prefix('eventos')->name('eventos.')->group(function () {
-    Route::get('/', [PublicEventoController::class, 'index']);
-    Route::get('/proximos', [PublicEventoController::class, 'proximos']);
-    Route::get('/tipo/{tipo}', [PublicEventoController::class, 'porTipo']);
-    Route::get('/{id}', [PublicEventoController::class, 'show']);
-    Route::get('/calendario/data', [PublicEventoController::class, 'calendario']);
-    Route::post('/{id}/like', [PublicEventoController::class, 'like']);
-
-    // Rutas con autenticación
-    Route::middleware(['auth:sanctum'])->group(function () {
-        Route::get('/mis-eventos', [PublicEventoController::class, 'misEventos']);
-        Route::post('/{id}/confirmar-asistencia', [PublicEventoController::class, 'confirmarAsistencia']);
-        Route::delete('/{id}/cancelar-asistencia', [PublicEventoController::class, 'cancelarAsistencia']);
+    Route::prefix('auth')->name('auth.')->group(function () {
+        Route::post('/login', [App\Http\Controllers\Api\V1\Auth\LoginController::class, 'login']);
+        Route::post('/register', [App\Http\Controllers\Api\V1\Auth\RegisterController::class, 'register']);
+        Route::get('/check-email', [App\Http\Controllers\Api\V1\Auth\RegisterController::class, 'checkEmail']);
+        Route::post('/logout', [App\Http\Controllers\Api\V1\Auth\LogoutController::class, 'logout'])
+            ->middleware('auth:sanctum');
+        Route::post('/password/email', [App\Http\Controllers\Api\V1\Auth\PasswordResetController::class, 'sendResetLink']);
+        Route::post('/password/reset', [App\Http\Controllers\Api\V1\Auth\PasswordResetController::class, 'resetPassword']);
     });
-});
 
-// =========================================================================
-// RUTAS PÚBLICAS - SUSCRIPCIONES (SOLO PARA VER PLANES)
-// =========================================================================
-Route::prefix('suscripciones')->name('suscripciones.')->group(function () {
-    // Público - Ver planes disponibles (sin autenticación)
-    Route::get('/planes', [PublicSuscripcionController::class, 'planes']);
-    Route::get('/planes/{id}', [PublicSuscripcionController::class, 'planDetalle']);
+    // Mascotas - Público
+    Route::get('/mascotas/especies', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'getEspecies']);
+    Route::get('/mascotas/sugerencias', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'sugerencias']);
+    Route::get('/mascotas', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'index']);
+    Route::get('/mascotas/{id}', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'show']);
+    Route::get('/mascotas/especie/{especie}', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'porEspecie']);
+    Route::get('/mascotas/fundacion/{fundacionId}', [App\Http\Controllers\Api\V1\Public\MascotaController::class, 'porFundacion']);
 
-    // Rutas con autenticación (para usuarios)
-    Route::middleware(['auth:sanctum'])->prefix('user')->name('user.')->group(function () {
-        Route::get('/mis-suscripciones', [PublicSuscripcionController::class, 'misSuscripciones']);
-        Route::post('/crear', [PublicSuscripcionController::class, 'store']);
-        Route::get('/{id}', [PublicSuscripcionController::class, 'show']);
-        Route::patch('/{id}/cancelar', [PublicSuscripcionController::class, 'cancelar']);
-        Route::patch('/{id}/pausar', [PublicSuscripcionController::class, 'pausar']);
-        Route::patch('/{id}/reactivar', [PublicSuscripcionController::class, 'reactivar']);
+    // Adopciones - Público
+    Route::prefix('adopciones')->name('adopciones.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\V1\Public\AdopcionController::class, 'index']);
+        Route::get('/disponibles', [App\Http\Controllers\Api\V1\Public\AdopcionController::class, 'disponibles']);
+        Route::get('/destacadas', [App\Http\Controllers\Api\V1\Public\AdopcionController::class, 'destacadas']);
+        Route::get('/{id}', [App\Http\Controllers\Api\V1\Public\AdopcionController::class, 'show']);
+        Route::get('/{id}/disponibilidad', [App\Http\Controllers\Api\V1\Public\AdopcionController::class, 'verificarDisponibilidad']);
     });
-});
 
+    // Rescates - Público
+    Route::prefix('rescates')->name('rescates.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\V1\Public\RescateController::class, 'index']);
+        Route::post('/reportar', [App\Http\Controllers\Api\V1\Public\RescateController::class, 'reportar']);
+        Route::get('/{id}', [App\Http\Controllers\Api\V1\Public\RescateController::class, 'show']);
+    });
+
+    // Fundaciones - Público
+    Route::prefix('fundaciones')->name('fundaciones.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'index']);
+        Route::get('/estadisticas', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'estadisticas']);
+        Route::get('/verificadas', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'verificadas']);
+        Route::get('/reciben-voluntarios', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'recibenVoluntarios']);
+        Route::get('/ciudad/{ciudad}', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'porCiudad']);
+        Route::get('/search', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'search']);
+        Route::get('/cercanas', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'cercanas']);
+        Route::get('/{id}', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'show']);
+    });
+
+    // Veterinarias - Público
+    Route::get('/veterinarias', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'index']);
+    Route::get('/veterinarias/{id}', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'show']);
+    Route::get('/veterinarias/urgencias/mapa', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'mapa']);
+    Route::get('/veterinarias/cercanas', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'cercanas']);
+
+    // =========================================================================
+    // RUTAS PÚBLICAS - EVENTOS
+    // =========================================================================
+    Route::prefix('eventos')->name('eventos.')->group(function () {
+        Route::get('/', [PublicEventoController::class, 'index']);
+        Route::get('/proximos', [PublicEventoController::class, 'proximos']);
+        Route::get('/tipo/{tipo}', [PublicEventoController::class, 'porTipo']);
+        Route::get('/{id}', [PublicEventoController::class, 'show']);
+        Route::get('/calendario/data', [PublicEventoController::class, 'calendario']);
+        Route::post('/{id}/like', [PublicEventoController::class, 'like']);
+
+        // Rutas con autenticación
+        Route::middleware(['auth:sanctum'])->group(function () {
+            Route::get('/mis-eventos', [PublicEventoController::class, 'misEventos']);
+            Route::post('/{id}/confirmar-asistencia', [PublicEventoController::class, 'confirmarAsistencia']);
+            Route::delete('/{id}/cancelar-asistencia', [PublicEventoController::class, 'cancelarAsistencia']);
+        });
+    });
+
+    // =========================================================================
+    // RUTAS PÚBLICAS - SUSCRIPCIONES (SOLO PARA VER PLANES)
+    // =========================================================================
+    Route::prefix('suscripciones')->name('suscripciones.')->group(function () {
+        // Público - Ver planes disponibles (sin autenticación)
+        Route::get('/planes', [PublicSuscripcionController::class, 'planes']);
+        Route::get('/planes/{id}', [PublicSuscripcionController::class, 'planDetalle']);
+
+        // Rutas con autenticación (para usuarios)
+        Route::middleware(['auth:sanctum'])->prefix('user')->name('user.')->group(function () {
+            Route::get('/mis-suscripciones', [PublicSuscripcionController::class, 'misSuscripciones']);
+            Route::post('/crear', [PublicSuscripcionController::class, 'store']);
+            Route::get('/{id}', [PublicSuscripcionController::class, 'show']);
+            Route::patch('/{id}/cancelar', [PublicSuscripcionController::class, 'cancelar']);
+            Route::patch('/{id}/pausar', [PublicSuscripcionController::class, 'pausar']);
+            Route::patch('/{id}/reactivar', [PublicSuscripcionController::class, 'reactivar']);
+        });
+    });
 });
 
 // =========================================================================
@@ -166,6 +165,7 @@ Route::middleware(['auth:sanctum'])->prefix('entity')->name('entity.')->group(fu
         Route::get('/{id}', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'show']);
         Route::put('/{id}', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'update']);
         Route::delete('/{id}', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'destroy']);
+        Route::patch('/{id}/estado', [App\Http\Controllers\Api\V1\Entity\MascotaController::class, 'actualizarEstado']);
     });
 
     // Solicitudes de adopción
