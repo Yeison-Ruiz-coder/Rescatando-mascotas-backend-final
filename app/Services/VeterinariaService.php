@@ -13,11 +13,11 @@ class VeterinariaService
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('Nombre_vet', 'like', "%{$search}%")
-                  ->orWhere('Email', 'like', "%{$search}%")
-                  ->orWhere('Telefono', 'like', "%{$search}%")
-                  ->orWhere('Direccion', 'like', "%{$search}%");
+                    ->orWhere('Email', 'like', "%{$search}%")
+                    ->orWhere('Telefono', 'like', "%{$search}%")
+                    ->orWhere('Direccion', 'like', "%{$search}%");
             });
         }
 
@@ -188,10 +188,10 @@ class VeterinariaService
             "*, (6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distancia",
             [$lat, $lng, $lat]
         )
-        ->whereNotNull('lat')
-        ->whereNotNull('lng')
-        ->having('distancia', '<=', $radio)
-        ->orderBy('distancia')
-        ->get();
+            ->whereNotNull('lat')
+            ->whereNotNull('lng')
+            ->having('distancia', '<=', $radio)
+            ->orderBy('distancia')
+            ->get();
     }
 }

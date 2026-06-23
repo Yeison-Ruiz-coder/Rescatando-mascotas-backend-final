@@ -5,7 +5,9 @@ namespace App\Services\Entity;
 use App\Models\Solicitud;
 use App\Models\Adopcion;
 use App\Models\Notificacion;
+use App\Notifications\Adopcion\SolicitudAdopcionStatus;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class SolicitudEntityService
@@ -39,12 +41,12 @@ class SolicitudEntityService
             $query->whereHas('solicitable', function ($q) use ($entidad) {
                 $q->where('fundacion_id', $entidad->id);
             });
-        } else {
+        } elseif ($user->tipo === 'veterinaria') {
             $query->whereHas('solicitable', function ($q) use ($entidad) {
-                $q->whereHas('historialMedico', function ($h) use ($entidad) {
-                    $h->where('veterinaria_id', $entidad->id);
-                });
+                $q->where('veterinaria_id', $entidad->id);
             });
+        } else {
+            throw new \Exception('Tipo de usuario no válido para entidad');
         }
 
         if (!empty($filters['estado'])) {
@@ -114,26 +116,18 @@ class SolicitudEntityService
 
         $mascota->update(['estado' => 'Adoptado']);
 
-        // ✅ NUEVO: Notificar al solicitante que fue aprobada
+        // ✅ Notificar al solicitante (solo base de datos)
         if ($solicitud->user_id) {
             $solicitante = $solicitud->user;
 
-            // Notificación en base de datos
-            $solicitante->notify(new SolicitudAdopcionStatus(
-                $solicitud,
-                $mascota,
-                'aprobada'
-            ));
-
-            // Email al solicitante
             try {
-                Mail::to($solicitante->email)->send(new SolicitudAdopcionStatusMail(
+                $solicitante->notify(new SolicitudAdopcionStatus(
                     $solicitud,
                     $mascota,
                     'aprobada'
                 ));
             } catch (\Exception $e) {
-                Log::error("Error al enviar email de aprobación: " . $e->getMessage());
+                Log::error("Error al notificar aprobación: " . $e->getMessage());
             }
 
             // Notificación antigua (para compatibilidad)
@@ -176,28 +170,19 @@ class SolicitudEntityService
             'fecha_revision' => now(),
         ]);
 
-        // ✅ NUEVO: Notificar al solicitante que fue rechazada
+        // ✅ Notificar al solicitante (solo base de datos)
         if ($solicitud->user_id) {
             $solicitante = $solicitud->user;
 
-            // Notificación en base de datos
-            $solicitante->notify(new SolicitudAdopcionStatus(
-                $solicitud,
-                $mascota,
-                'rechazada',
-                $razonRechazo
-            ));
-
-            // Email al solicitante
             try {
-                Mail::to($solicitante->email)->send(new SolicitudAdopcionStatusMail(
+                $solicitante->notify(new SolicitudAdopcionStatus(
                     $solicitud,
                     $mascota,
                     'rechazada',
                     $razonRechazo
                 ));
             } catch (\Exception $e) {
-                Log::error("Error al enviar email de rechazo: " . $e->getMessage());
+                Log::error("Error al notificar rechazo: " . $e->getMessage());
             }
 
             // Notificación antigua (para compatibilidad)
@@ -228,9 +213,7 @@ class SolicitudEntityService
             });
         } else {
             $query->whereHas('solicitable', function ($q) use ($entidad) {
-                $q->whereHas('historialMedico', function ($h) use ($entidad) {
-                    $h->where('veterinaria_id', $entidad->id);
-                });
+                $q->where('veterinaria_id', $entidad->id);
             });
         }
 
