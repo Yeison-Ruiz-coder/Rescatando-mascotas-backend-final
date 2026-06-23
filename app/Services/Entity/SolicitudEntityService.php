@@ -5,7 +5,6 @@ namespace App\Services\Entity;
 use App\Models\Solicitud;
 use App\Models\Adopcion;
 use App\Models\Notificacion;
-use App\Notifications\Adopcion\SolicitudAdopcionStatus;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -116,21 +115,8 @@ class SolicitudEntityService
 
         $mascota->update(['estado' => 'Adoptado']);
 
-        // ✅ Notificar al solicitante (solo base de datos)
+        // Notificar al solicitante
         if ($solicitud->user_id) {
-            $solicitante = $solicitud->user;
-
-            try {
-                $solicitante->notify(new SolicitudAdopcionStatus(
-                    $solicitud,
-                    $mascota,
-                    'aprobada'
-                ));
-            } catch (\Exception $e) {
-                Log::error("Error al notificar aprobación: " . $e->getMessage());
-            }
-
-            // Notificación antigua (para compatibilidad)
             Notificacion::create([
                 'user_id' => $solicitud->user_id,
                 'contenido' => "¡Felicidades! Tu solicitud de adopción para {$mascota->nombre_mascota} ha sido APROBADA. Un coordinador se pondrá en contacto contigo.",
@@ -170,22 +156,8 @@ class SolicitudEntityService
             'fecha_revision' => now(),
         ]);
 
-        // ✅ Notificar al solicitante (solo base de datos)
+        // Notificar al solicitante
         if ($solicitud->user_id) {
-            $solicitante = $solicitud->user;
-
-            try {
-                $solicitante->notify(new SolicitudAdopcionStatus(
-                    $solicitud,
-                    $mascota,
-                    'rechazada',
-                    $razonRechazo
-                ));
-            } catch (\Exception $e) {
-                Log::error("Error al notificar rechazo: " . $e->getMessage());
-            }
-
-            // Notificación antigua (para compatibilidad)
             Notificacion::create([
                 'user_id' => $solicitud->user_id,
                 'contenido' => "Tu solicitud de adopción para {$mascota->nombre_mascota} ha sido RECHAZADA. Motivo: {$razonRechazo}",
