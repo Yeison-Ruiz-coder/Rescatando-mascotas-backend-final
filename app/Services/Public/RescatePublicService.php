@@ -1,5 +1,4 @@
 <?php
-// app/Services/Public/RescatePublicService.php
 
 namespace App\Services\Public;
 
