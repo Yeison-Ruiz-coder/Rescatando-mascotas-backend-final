@@ -115,6 +115,13 @@ class Mascota extends Model
         'vistas',
         'interesados',
         'created_at',
+        'apto_con_ninos',
+        'apto_con_otros_animales',
+        'necesita_hogar_temporal',
+        'enfermedades_cronicas',
+        'medicamentos',
+        'fecha_ingreso',
+        'hogar_recomendado',
     ];
 
     protected $allowFilter = [
