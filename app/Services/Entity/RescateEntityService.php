@@ -104,29 +104,51 @@ class RescateEntityService
     public function getRescatesDisponibles(Request $request)
     {
         $user = Auth::user();
+
+        if (!$user) {
+            throw new \Exception('Usuario no autenticado');
+        }
+
         $entidad = $this->getEntidad();
 
         if (!$entidad) {
-            throw new \Exception('No se encontró la entidad asociada');
+            // ✅ Si no hay entidad, devolver colección vacía
+            return collect([]);
         }
 
         $lat = $entidad->lat ?? null;
         $lng = $entidad->lng ?? null;
         $radio = $entidad->radio_atencion ?? 10;
-
         $userTipo = $user->tipo;
+
+        // ✅ Si no hay coordenadas, devolver todos los rescates pendientes
+        if (!$lat || !$lng) {
+            return Rescate::where('estado', 'pendiente')
+                ->orderBy('prioridad', 'desc')
+                ->orderBy('created_at', 'asc')
+                ->paginate(15);
+        }
 
         $rescates = Rescate::where('estado', 'pendiente')
             ->where(function ($query) use ($userTipo) {
                 if ($userTipo === 'veterinaria') {
                     $query->whereIn('tipo_emergencia', ['herido', 'urgente']);
-                } else {
+                } elseif ($userTipo === 'fundacion') {
                     $query->whereIn('tipo_emergencia', ['abandonado', 'urgente']);
                 }
             });
 
         if ($lat && $lng) {
-            $rescates = $rescates->selectRaw("*, (6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distance", [$lat, $lng, $lat])
+            $rescates = $rescates->selectRaw("
+                *,
+                (6371 * acos(
+                    cos(radians(?)) *
+                    cos(radians(lat)) *
+                    cos(radians(lng) - radians(?)) +
+                    sin(radians(?)) *
+                    sin(radians(lat))
+                )) AS distance
+            ", [$lat, $lng, $lat])
                 ->having('distance', '<', $radio)
                 ->orderBy('distance');
         }
@@ -135,7 +157,7 @@ class RescateEntityService
             ->orderBy('created_at', 'asc')
             ->paginate(15);
     }
-
+    
     public function aceptarRescate(int $id)
     {
         $user = Auth::user();

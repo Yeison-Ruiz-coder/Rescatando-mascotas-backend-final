@@ -8,6 +8,7 @@ use App\Services\Entity\RescateEntityService;
 use App\Traits\ApiResponses;
 use App\Traits\TransactionTrait;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Validator;
 
@@ -60,10 +61,34 @@ class RescateController extends Controller
     public function disponibles(Request $request)
     {
         try {
+            // ✅ Verificar que el usuario tenga una entidad asociada
+            $user = auth()->user();
+            if (!$user) {
+                return $this->errorResponse('Usuario no autenticado', null, 401);
+            }
+
+            // ✅ Verificar si el usuario tiene fundacion o veterinaria
+            $tieneEntidad = false;
+            if ($user->tipo === 'fundacion' && $user->fundacion) {
+                $tieneEntidad = true;
+            } elseif ($user->tipo === 'veterinaria' && $user->veterinaria) {
+                $tieneEntidad = true;
+            }
+
+            if (!$tieneEntidad) {
+                return $this->successResponse([], 'El usuario no tiene entidad asociada');
+            }
+
             $rescates = $this->rescateService->getRescatesDisponibles($request);
             return $this->successResponse($rescates, 'Rescates disponibles obtenidos exitosamente');
         } catch (\Exception $e) {
-            return $this->errorResponse($e->getMessage(), null, 404);
+            // ✅ Mostrar el error real
+            Log::error('❌ Error en disponibles:', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return $this->errorResponse($e->getMessage(), null, 500);
         }
     }
 
@@ -109,7 +134,7 @@ class RescateController extends Controller
         }
     }
 
-    public function registrarMascota(RegistrarMascotaRescateRequest $request,int $id)
+    public function registrarMascota(RegistrarMascotaRescateRequest $request, int $id)
     {
         try {
             $files = [];
@@ -137,7 +162,7 @@ class RescateController extends Controller
         }
     }
 
-    public function agregarFotos(Request $request,int $id)
+    public function agregarFotos(Request $request, int $id)
     {
         $validator = Validator::make($request->all(), [
             'fotos' => 'required|array',
@@ -162,7 +187,7 @@ class RescateController extends Controller
         }
     }
 
-    public function actualizarEstado(Request $request,int $id)
+    public function actualizarEstado(Request $request, int $id)
     {
         $validator = Validator::make($request->all(), [
             'estado' => 'required|in:pendiente,en_proceso,completado,seguimiento'
