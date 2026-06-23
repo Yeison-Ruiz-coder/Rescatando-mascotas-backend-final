@@ -5,10 +5,7 @@ namespace App\Services\User;
 use App\Models\Solicitud;
 use App\Models\Mascota;
 use App\Models\User;
-use App\Notifications\Adopcion\NuevaSolicitudAdopcion;
-use App\Notifications\Adopcion\NuevaSolicitudAdopcionAdmin;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Notification;
 
 class SolicitudUserService
 {
@@ -145,60 +142,6 @@ class SolicitudUserService
             'email_solicitante' => $solicitud->email_solicitante,
         ]);
 
-        // ✅ ENVIAR NOTIFICACIONES (SOLO BASE DE DATOS)
-        $this->enviarNotificaciones($solicitud, $mascota, $userId);
-
         return $solicitud;
-    }
-
-    // ✅ ENVIAR NOTIFICACIONES - SOLO BASE DE DATOS
-    protected function enviarNotificaciones(Solicitud $solicitud, Mascota $mascota, int $solicitanteId)
-    {
-        $solicitante = User::find($solicitanteId);
-
-        // 1. Obtener al dueño de la mascota (Fundación o Veterinaria)
-        $duenoUsuario = null;
-
-        if ($mascota->fundacion_id) {
-            $entidad = $mascota->fundacion;
-            $duenoUsuario = $entidad?->usuarioPrincipal;
-        } elseif ($mascota->veterinaria_id) {
-            $entidad = $mascota->veterinaria;
-            $duenoUsuario = $entidad?->usuarioPrincipal;
-        }
-
-        // 2. Notificar al dueño de la mascota (solo base de datos)
-        if ($duenoUsuario) {
-            try {
-                $duenoUsuario->notify(new NuevaSolicitudAdopcion($solicitud, $mascota, $solicitante));
-                Log::info("Notificación enviada al dueño", [
-                    'dueno_id' => $duenoUsuario->id,
-                    'solicitud_id' => $solicitud->id
-                ]);
-            } catch (\Exception $e) {
-                Log::error("Error al enviar notificación al dueño: " . $e->getMessage());
-            }
-        }
-
-        // 3. Notificar a los Administradores (solo base de datos)
-        $this->notificarAdministradores($solicitud, $mascota, $solicitante);
-    }
-
-    // ✅ Notificar a administradores - SOLO BASE DE DATOS
-    protected function notificarAdministradores(Solicitud $solicitud, Mascota $mascota, User $solicitante)
-    {
-        $administradores = User::where('tipo', 'admin')->get();
-
-        foreach ($administradores as $admin) {
-            try {
-                $admin->notify(new NuevaSolicitudAdopcionAdmin(
-                    $solicitud,
-                    $mascota,
-                    $solicitante
-                ));
-            } catch (\Exception $e) {
-                Log::error("Error al notificar a admin {$admin->id}: " . $e->getMessage());
-            }
-        }
     }
 }
