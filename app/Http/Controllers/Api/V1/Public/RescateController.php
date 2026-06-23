@@ -1,79 +1,151 @@
 <?php
-// app/Http/Controllers/Api/V1/Public/RescateController.php
 
-namespace App\Http\Controllers\Api\V1\Public;
+namespace App\Services\Public;
 
-use App\Http\Controllers\Controller;
-use App\Services\Public\RescatePublicService;
-use App\Traits\ApiResponses;
-use App\Traits\TransactionTrait;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Models\Rescate;
+use App\Models\Fundacion;
+use App\Models\Veterinaria;
+use App\Traits\ImageUploadTrait;
+use Illuminate\Support\Facades\DB;
 
-class RescateController extends Controller
+class RescatePublicService
 {
-    use ApiResponses, TransactionTrait;
+    use ImageUploadTrait;
 
-    protected RescatePublicService $rescateService;
-
-    public function __construct(RescatePublicService $rescateService)
+    public function getAll($perPage = 15)
     {
-        $this->rescateService = $rescateService;
+        return Rescate::with(['mascota', 'usuarioReporto'])
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
     }
 
-    public function index(Request $request)
+    public function findById(int $id)
     {
-        $perPage = $request->get('per_page', 15);
-        $rescates = $this->rescateService->getAll($perPage);
-        return $this->successResponse($rescates, 'Rescates obtenidos exitosamente');
+        return Rescate::with(['mascota', 'usuarioReporto'])
+            ->findOrFail($id);
     }
 
-    public function show(int $id)
+    /**
+     * Reportar un rescate (PÚBLICO)
+     * Asigna automáticamente la entidad responsable más cercana
+     */
+    public function reportar(array $data, $fotoPrincipal = null, array $galeriaFotos = [])
     {
-        try {
-            $rescate = $this->rescateService->findById($id);
-            return $this->successResponse($rescate, 'Rescate obtenido exitosamente');
-        } catch (ModelNotFoundException $e) {
-            return $this->notFoundResponse('Rescate no encontrado');
+        // ✅ Subir fotos si existen
+        if ($fotoPrincipal) {
+            $data['foto_principal'] = $this->uploadImage($fotoPrincipal, 'rescates');
         }
-    }
 
-    public function reportar(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'lugar_rescate'      => 'required|string|max:255',
-            'descripcion_rescate'=> 'required|string',
-            'fecha_rescate'      => 'required|date',
-            'lat'                => 'nullable|numeric',
-            'lng'                => 'nullable|numeric',
-            'tipo_emergencia'    => 'nullable|in:herido,abandonado,urgente,otro',
-            'prioridad'          => 'nullable|in:alta,media,baja',
-            'nombre_reportante'  => 'nullable|string|max:255',
-            'email_reportante'   => 'nullable|email|max:255',
-            'telefono_reportante'=> 'nullable|string|max:20',
-            'foto_principal'     => 'nullable|image|max:5120',
-            'galeria_fotos'      => 'nullable|array',
-            'galeria_fotos.*'    => 'image|max:5120',
+        if (!empty($galeriaFotos)) {
+            $galeriaUrls = [];
+            foreach ($galeriaFotos as $foto) {
+                if ($foto) {
+                    $galeriaUrls[] = $this->uploadImage($foto, 'rescates/galeria');
+                }
+            }
+            $data['galeria_fotos'] = json_encode($galeriaUrls);
+        }
+
+        // ✅ ASIGNAR ENTIDAD RESPONSABLE MÁS CERCANA
+        $entidad = $this->findNearestEntity($data['lat'] ?? null, $data['lng'] ?? null);
+
+        $data['estado'] = 'pendiente';
+        $data['tipo_emergencia'] = $data['tipo_emergencia'] ?? 'otro';
+        $data['prioridad'] = $data['prioridad'] ?? 'baja';
+
+        // ✅ Guardar el rescate con la entidad asignada (si existe)
+        $rescate = Rescate::create([
+            'fecha_rescate' => $data['fecha_rescate'],
+            'lugar_rescate' => $data['lugar_rescate'],
+            'descripcion_rescate' => $data['descripcion_rescate'],
+            'foto_principal' => $data['foto_principal'] ?? null,
+            'galeria_fotos' => $data['galeria_fotos'] ?? null,
+            'estado' => $data['estado'],
+            'tipo_emergencia' => $data['tipo_emergencia'],
+            'prioridad' => $data['prioridad'],
+            'lat' => $data['lat'] ?? null,
+            'lng' => $data['lng'] ?? null,
+            'nombre_reportante' => $data['nombre_reportante'] ?? null,
+            'email_reportante' => $data['email_reportante'] ?? null,
+            'telefono_reportante' => $data['telefono_reportante'] ?? null,
+            'usuario_reporto_id' => auth()->id() ?? null,
+            // ✅ ENTIDAD RESPONSABLE ASIGNADA
+            'entidad_responsable_type' => $entidad ? get_class($entidad) : null,
+            'entidad_responsable_id' => $entidad ? $entidad->id : null,
         ]);
 
-        if ($validator->fails()) {
-            return $this->errorResponse('Error de validación', $validator->errors(), 422);
+        return $rescate;
+    }
+
+    /**
+     * Encuentra la entidad (fundación o veterinaria) más cercana
+     */
+    private function findNearestEntity(?float $lat, ?float $lng, int $radius = 50)
+    {
+        if (!$lat || !$lng) {
+            return null;
         }
 
-        try {
-            $rescate = $this->runInTransaction(
-                fn() => $this->rescateService->reportar(
-                    $request->all(),
-                    $request->file('foto_principal'),
-                    $request->file('galeria_fotos', [])
-                ),
-                'Error al reportar rescate'
-            );
+        // Buscar en fundaciones
+        $fundacion = Fundacion::select(
+            'id',
+            'user_id',
+            'Nombre_1 as nombre',
+            'lat',
+            'lng',
+            DB::raw("
+                ( 6371 * acos(
+                    cos( radians(?) ) *
+                    cos( radians( lat ) ) *
+                    cos( radians( lng ) - radians(?) ) +
+                    sin( radians(?) ) *
+                    sin( radians( lat ) )
+                ) ) AS distance
+            ")
+        )
+        ->setBindings([$lat, $lng, $lat])
+        ->having('distance', '<', $radius)
+        ->orderBy('distance')
+        ->first();
 
-            return $this->successResponse($rescate, 'Rescate reportado exitosamente', 201);
-        } catch (\Exception $e) {
-            return $this->errorResponse('Error al reportar rescate', $e->getMessage(), 500);
+        if ($fundacion) {
+            return $fundacion;
         }
+
+        // Buscar en veterinarias
+        $veterinaria = Veterinaria::select(
+            'id',
+            'user_id',
+            'Nombre_vet as nombre',
+            'lat',
+            'lng',
+            DB::raw("
+                ( 6371 * acos(
+                    cos( radians(?) ) *
+                    cos( radians( lat ) ) *
+                    cos( radians( lng ) - radians(?) ) +
+                    sin( radians(?) ) *
+                    sin( radians( lat ) )
+                ) ) AS distance
+            ")
+        )
+        ->setBindings([$lat, $lng, $lat])
+        ->having('distance', '<', $radius)
+        ->orderBy('distance')
+        ->first();
+
+        return $veterinaria;
+    }
+
+    /**
+     * Marcar rescate como disponible para administradores
+     */
+    public function marcarDisponibleParaAdmin(int $rescateId)
+    {
+        $rescate = Rescate::findOrFail($rescateId);
+        $rescate->update([
+            'disponible_para_admin' => true
+        ]);
+        return $rescate;
     }
 }

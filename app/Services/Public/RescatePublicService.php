@@ -7,6 +7,7 @@ use App\Models\Rescate;
 use App\Models\Fundacion;
 use App\Models\Veterinaria;
 use App\Models\Notificacion;
+use App\Models\User;
 use App\Traits\ImageUploadTrait;
 use Illuminate\Support\Facades\Log;
 
@@ -43,6 +44,13 @@ class RescatePublicService
             $prioridad = $this->calcularPrioridad($tipoEmergencia);
         }
 
+        // ✅ 1. ASIGNAR ENTIDAD RESPONSABLE MÁS CERCANA (según tipo de emergencia)
+        $entidadAsignada = $this->asignarEntidadResponsable(
+            $data['lat'] ?? null,
+            $data['lng'] ?? null,
+            $tipoEmergencia
+        );
+
         $rescateData = [
             'lugar_rescate'       => $data['lugar_rescate'],
             'descripcion_rescate' => $data['descripcion_rescate'],
@@ -56,6 +64,9 @@ class RescatePublicService
             'email_reportante'    => $data['email_reportante'] ?? null,
             'telefono_reportante' => $data['telefono_reportante'] ?? null,
             'usuario_reporto_id'  => auth()->id(),
+            // ✅ 2. ASIGNAR ENTIDAD RESPONSABLE
+            'entidad_responsable_type' => $entidadAsignada ? get_class($entidadAsignada) : null,
+            'entidad_responsable_id'   => $entidadAsignada ? $entidadAsignada->id : null,
         ];
 
         // Subir foto principal si existe
@@ -79,10 +90,138 @@ class RescatePublicService
             }
         }
 
-        $this->notificarEntidadesCercanas($rescate);
+        // ✅ 3. NOTIFICAR a las entidades cercanas
+        $this->notificarEntidadesCercanas($rescate, $entidadAsignada);
+
+        // ✅ 4. ESCALAR a admin si es necesario
         $this->verificarEscalamientoAutomatico($rescate);
 
+        Log::info('✅ Rescate creado', [
+            'id' => $rescate->id,
+            'tipo' => $tipoEmergencia,
+            'prioridad' => $prioridad,
+            'entidad_asignada' => $entidadAsignada ? get_class($entidadAsignada) . ' #' . $entidadAsignada->id : 'Ninguna'
+        ]);
+
         return $rescate;
+    }
+
+    /**
+     * ✅ ASIGNAR ENTIDAD RESPONSABLE (NUEVO MÉTODO)
+     * Busca la mejor entidad según el tipo de emergencia
+     */
+    private function asignarEntidadResponsable(?float $lat, ?float $lng, string $tipoEmergencia, int $radio = 30)
+    {
+        // Si no hay coordenadas, no se puede asignar
+        if (!$lat || !$lng) {
+            Log::info('📍 Sin coordenadas, no se asigna entidad');
+            return null;
+        }
+
+        Log::info('📍 Buscando entidad responsable', ['lat' => $lat, 'lng' => $lng, 'tipo' => $tipoEmergencia]);
+
+        // ✅ Para emergencias urgentes/heridas: priorizar veterinarias con urgencias 24h
+        if (in_array($tipoEmergencia, ['urgente', 'herido'])) {
+            $veterinaria = $this->buscarVeterinariaCercana($lat, $lng, $radio);
+            if ($veterinaria) {
+                Log::info('🏥 Veterinaria asignada', [
+                    'id' => $veterinaria->id,
+                    'nombre' => $veterinaria->Nombre_vet,
+                    'distancia' => round($veterinaria->distance ?? 0, 2) . ' km'
+                ]);
+                return $veterinaria;
+            }
+        }
+
+        // ✅ Para abandonados o si no hay veterinaria: buscar fundación
+        if (in_array($tipoEmergencia, ['urgente', 'abandonado', 'otro'])) {
+            $fundacion = $this->buscarFundacionCercana($lat, $lng, $radio);
+            if ($fundacion) {
+                Log::info('🏢 Fundación asignada', [
+                    'id' => $fundacion->id,
+                    'nombre' => $fundacion->Nombre_1,
+                    'distancia' => round($fundacion->distance ?? 0, 2) . ' km'
+                ]);
+                return $fundacion;
+            }
+        }
+
+        Log::info('⚠️ No se encontró entidad en el radio de ' . $radio . ' km');
+        return null;
+    }
+
+    /**
+     * Buscar veterinaria más cercana (con urgencias 24h prioritarias)
+     */
+    private function buscarVeterinariaCercana(float $lat, float $lng, int $radio)
+    {
+        // Primero buscar con urgencias 24h
+        $veterinaria = Veterinaria::selectRaw("
+                id,
+                Nombre_vet,
+                user_id,
+                lat,
+                lng,
+                urgencias_24h,
+                (6371 * acos(
+                    cos(radians(?)) * cos(radians(lat)) *
+                    cos(radians(lng) - radians(?)) +
+                    sin(radians(?)) * sin(radians(lat))
+                )) AS distance
+            ", [$lat, $lng, $lat])
+            ->whereNotNull('lat')
+            ->whereNotNull('lng')
+            ->having('distance', '<', $radio)
+            ->orderBy('urgencias_24h', 'desc')
+            ->orderBy('distance')
+            ->first();
+
+        if ($veterinaria) {
+            return $veterinaria;
+        }
+
+        // Si no hay con urgencias, buscar cualquier veterinaria
+        return Veterinaria::selectRaw("
+                id,
+                Nombre_vet,
+                user_id,
+                lat,
+                lng,
+                (6371 * acos(
+                    cos(radians(?)) * cos(radians(lat)) *
+                    cos(radians(lng) - radians(?)) +
+                    sin(radians(?)) * sin(radians(lat))
+                )) AS distance
+            ", [$lat, $lng, $lat])
+            ->whereNotNull('lat')
+            ->whereNotNull('lng')
+            ->having('distance', '<', $radio)
+            ->orderBy('distance')
+            ->first();
+    }
+
+    /**
+     * Buscar fundación más cercana
+     */
+    private function buscarFundacionCercana(float $lat, float $lng, int $radio)
+    {
+        return Fundacion::selectRaw("
+                id,
+                Nombre_1,
+                user_id,
+                lat,
+                lng,
+                (6371 * acos(
+                    cos(radians(?)) * cos(radians(lat)) *
+                    cos(radians(lng) - radians(?)) +
+                    sin(radians(?)) * sin(radians(lat))
+                )) AS distance
+            ", [$lat, $lng, $lat])
+            ->whereNotNull('lat')
+            ->whereNotNull('lng')
+            ->having('distance', '<', $radio)
+            ->orderBy('distance')
+            ->first();
     }
 
     private function analizarEmergencia(string $descripcion): string
@@ -115,27 +254,39 @@ class RescatePublicService
         };
     }
 
-    private function notificarEntidadesCercanas(Rescate $rescate): void
+    /**
+     * Notificar a entidades cercanas (MODIFICADO)
+     */
+    private function notificarEntidadesCercanas(Rescate $rescate, $entidadAsignada = null): void
     {
         $tipo = $rescate->tipo_emergencia;
         $lat = $rescate->lat;
         $lng = $rescate->lng;
-        $radio = 10;
+        $radio = 30;
 
         $entidades = collect();
 
-        if (in_array($tipo, ['urgente', 'herido'])) {
-            $entidades = $entidades->concat($this->buscarVeterinariasCercanas($lat, $lng, $radio));
-        }
-        if (in_array($tipo, ['urgente', 'abandonado'])) {
-            $entidades = $entidades->concat($this->buscarFundacionesCercanas($lat, $lng, $radio));
+        // ✅ Si ya hay una entidad asignada, notificar solo a esa
+        if ($entidadAsignada) {
+            $entidades->push($entidadAsignada);
+            Log::info('📨 Notificando a entidad asignada', ['id' => $entidadAsignada->id]);
+        } else {
+            // Si no hay entidad asignada, buscar y notificar a todas las cercanas
+            if (in_array($tipo, ['urgente', 'herido'])) {
+                $veterinarias = $this->buscarVeterinariasCercanas($lat, $lng, $radio);
+                $entidades = $entidades->concat($veterinarias);
+            }
+            if (in_array($tipo, ['urgente', 'abandonado'])) {
+                $fundaciones = $this->buscarFundacionesCercanas($lat, $lng, $radio);
+                $entidades = $entidades->concat($fundaciones);
+            }
         }
 
         foreach ($entidades as $entidad) {
             if ($entidad->user_id) {
                 Notificacion::create([
                     'user_id'      => $entidad->user_id,
-                    'contenido'    => "Nuevo rescate {$rescate->tipo_emergencia} cerca de ti: {$rescate->lugar_rescate}",
+                    'contenido'    => "🚨 Nuevo rescate {$rescate->tipo_emergencia} cerca de ti: {$rescate->lugar_rescate}",
                     'creado_por_id' => 1,
                     'tipo' => 'alert',
                     'prioridad' => $rescate->prioridad === 'alta' ? 'urgente' : 'media',
@@ -143,12 +294,15 @@ class RescatePublicService
             }
         }
 
-        Log::info("Rescate #{$rescate->id} notificado a " . count($entidades) . " entidades");
+        Log::info("📨 Rescate #{$rescate->id} notificado a " . count($entidades) . " entidades");
     }
 
     private function buscarVeterinariasCercanas(float|null $lat, float|null $lng, int|float $radio)
     {
-        $query = Veterinaria::where('urgencias_24h', true);
+        $query = Veterinaria::where('urgencias_24h', true)
+            ->whereNotNull('lat')
+            ->whereNotNull('lng');
+
         if ($lat && $lng) {
             return $query->selectRaw("*, (6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distance", [$lat, $lng, $lat])
                 ->having('distance', '<', $radio)
@@ -160,7 +314,10 @@ class RescatePublicService
 
     private function buscarFundacionesCercanas(float|null $lat, float|null $lng, int|float $radio)
     {
-        $query = Fundacion::where('capacidad_maxima', '>', 0);
+        $query = Fundacion::where('capacidad_maxima', '>', 0)
+            ->whereNotNull('lat')
+            ->whereNotNull('lng');
+
         if ($lat && $lng) {
             return $query->selectRaw("*, (6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distance", [$lat, $lng, $lat])
                 ->having('distance', '<', $radio)
@@ -183,17 +340,29 @@ class RescatePublicService
         }
 
         if (!$hayEntidades) {
-            $admins = \App\Models\User::where('tipo', 'admin')->get();
+            $admins = User::where('tipo', 'admin')->get();
             foreach ($admins as $admin) {
                 Notificacion::create([
                     'user_id'      => $admin->id,
-                    'contenido'    => "Rescate #{$rescate->id} (tipo {$tipo}) no tiene entidades cercanas. Requiere asignación manual.",
+                    'contenido'    => "⚠️ Rescate #{$rescate->id} (tipo {$tipo}) no tiene entidades cercanas. Requiere asignación manual.",
                     'creado_por_id' => 1,
                     'tipo' => 'warning',
                     'prioridad' => 'alta',
                 ]);
             }
-            Log::warning("Rescate #{$rescate->id} escalado a admin por falta de entidades.");
+            Log::warning("⚠️ Rescate #{$rescate->id} escalado a admin por falta de entidades.");
         }
+    }
+
+    /**
+     * Marcar rescate como disponible para administradores
+     */
+    public function marcarDisponibleParaAdmin(int $rescateId)
+    {
+        $rescate = Rescate::findOrFail($rescateId);
+        $rescate->update([
+            'disponible_para_admin' => true
+        ]);
+        return $rescate;
     }
 }
