@@ -244,8 +244,26 @@ class RescateEntityService
             ->findOrFail($id);
 
         // ============================================
-        // 1. DATOS BÁSICOS DE LA MASCOTA
+        // ✅ DETERMINAR EL ESTADO DE LA MASCOTA
         // ============================================
+
+        // 1. Si el usuario seleccionó un estado en el formulario, usarlo
+        if (isset($data['estado']) && !empty($data['estado'])) {
+            $estado = $data['estado'];
+        } else {
+            // 2. Si no seleccionó estado, usar "Rescatada" (por defecto para rescates)
+            $estado = 'Rescatada';
+        }
+
+        // 3. Si necesita hogar temporal, forzar "En acogida"
+        if ($data['necesita_hogar_temporal'] ?? false) {
+            $estado = 'En acogida';
+        }
+
+        // ============================================
+        // 1. CREAR LA MASCOTA
+        // ============================================
+
         $mascotaData = [
             'nombre_mascota' => $data['nombre_mascota'],
             'especie' => $data['especie'],
@@ -257,11 +275,11 @@ class RescateEntityService
             'apto_con_otros_animales' => $data['apto_con_otros_animales'] ?? true,
             'condiciones_especiales' => $data['condiciones_especiales'] ?? null,
             'fecha_ingreso' => $data['fecha_ingreso'],
-            'estado' => ($data['necesita_hogar_temporal'] ?? false) ? 'En acogida' : 'En adopcion',
+            // ✅ ESTADO CON LÓGICA COMPLETA
+            'estado' => $estado,
             'fundacion_id' => $user->tipo === 'fundacion' ? $entidad->id : null,
             'lugar_rescate' => $rescate->lugar_rescate,
 
-            // ===== NUEVOS CAMPOS =====
             'peso_aprox' => $data['peso_aprox'] ?? null,
             'tamano' => $data['tamano'] ?? null,
             'color' => $data['color'] ?? null,
