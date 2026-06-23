@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\Solicitud;
 use App\Services\User\SolicitudUserService;
 use App\Traits\ApiResponses;
 use App\Traits\TransactionTrait;
@@ -72,14 +73,12 @@ class SolicitudController extends Controller
         }
     }
 
-    // ✅ NUEVO: Obtener detalle de una solicitud recibida
     public function showRecibida(int $id)
     {
         try {
             $solicitud = Solicitud::with(['usuario', 'solicitable'])
                 ->findOrFail($id);
 
-            // Verificar que la solicitud pertenece a una mascota del usuario
             if (!$solicitud->esParaUsuario(auth()->id())) {
                 return $this->errorResponse('No autorizado', null, 403);
             }
@@ -91,7 +90,7 @@ class SolicitudController extends Controller
             return $this->errorResponse($e->getMessage(), null, 500);
         }
     }
-
+    
     public function storeAdopcion(Request $request)
     {
         try {
@@ -131,7 +130,6 @@ class SolicitudController extends Controller
             );
 
             return $this->successResponse($solicitud, 'Solicitud enviada exitosamente', 201);
-
         } catch (ValidationException $e) {
             return $this->errorResponse('Error de validación', $e->errors(), 422);
         } catch (\Exception $e) {

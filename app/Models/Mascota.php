@@ -24,7 +24,7 @@ class Mascota extends Model
         'descripcion',
         'condiciones_especiales',
         'foto_principal',
-        'foto_principal_public_id', //  NUEVO
+        'foto_principal_public_id',
         'galeria_fotos',
         'necesita_hogar_temporal',
         'apto_con_ninos',
@@ -32,7 +32,6 @@ class Mascota extends Model
         'fecha_ingreso',
         'fecha_salida',
         'fundacion_id',
-        // ===== NUEVOS CAMPOS =====
         'peso_aprox',
         'tamano',
         'color',
@@ -58,28 +57,30 @@ class Mascota extends Model
 
     protected $casts = [
         'galeria_fotos' => 'array',
-        'enfermedades_cronicas' => 'array', //  NUEVO
-        'medicamentos' => 'array', //  NUEVO
-        'requisitos_adopcion' => 'array', // NUEVO
-        'padrinos' => 'array', //  NUEVO
+        'enfermedades_cronicas' => 'array',
+        'medicamentos' => 'array',
+        'requisitos_adopcion' => 'array',
+        'padrinos' => 'array',
         'necesita_hogar_temporal' => 'boolean',
         'apto_con_ninos' => 'boolean',
         'apto_con_otros_animales' => 'boolean',
-        'esterilizado' => 'boolean', //  NUEVO
-        'desparasitado' => 'boolean', //  NUEVO
-        'vacunado' => 'boolean', //  NUEVO
-        'destacada' => 'boolean', //  NUEVO
+        'esterilizado' => 'boolean',
+        'desparasitado' => 'boolean',
+        'vacunado' => 'boolean',
+        'destacada' => 'boolean',
         'fecha_ingreso' => 'date',
         'fecha_salida' => 'date',
-        'fecha_publicacion' => 'datetime', // UEVO
+        'fecha_publicacion' => 'datetime',
         'edad_aprox' => 'decimal:2',
-        'peso_aprox' => 'decimal:2', //  NUEVO
-        'vistas' => 'integer', //  NUEVO
-        'interesados' => 'integer', //  NUEVO
+        'peso_aprox' => 'decimal:2',
+        'vistas' => 'integer',
+        'interesados' => 'integer',
     ];
 
+    // ✅ AGREGAR 'veterinaria' a allowIncluded
     protected $allowIncluded = [
         'fundacion',
+        'veterinaria', // ✅ NUEVA
         'razas',
         'vacunas',
         'solicitudes',
@@ -131,10 +132,21 @@ class Mascota extends Model
         'created_at'
     ];
 
-    // Relaciones
+    // ============================================
+    // ✅ RELACIONES
+    // ============================================
+
     public function fundacion()
     {
         return $this->belongsTo(Fundacion::class, 'fundacion_id');
+    }
+
+    /**
+     * ✅ RELACIÓN CON VETERINARIA - AGREGAR
+     */
+    public function veterinaria()
+    {
+        return $this->belongsTo(Veterinaria::class, 'veterinaria_id', 'id');
     }
 
     public function razas()
@@ -175,7 +187,10 @@ class Mascota extends Model
         return $this->hasMany(HistorialMedico::class, 'mascota_id');
     }
 
-    // Scopes
+    // ============================================
+    // ✅ SCOPES
+    // ============================================
+
     public function scopeDisponibles(Builder $query)
     {
         return $query->where('estado', 'En adopcion');
@@ -186,7 +201,10 @@ class Mascota extends Model
         return $query->where('especie', $especie);
     }
 
-    // Helpers
+    // ============================================
+    // ✅ HELPERS
+    // ============================================
+
     public function isDisponible(): bool
     {
         return $this->estado === 'En adopcion';
@@ -215,21 +233,15 @@ class Mascota extends Model
             return null;
         }
 
-        // Convertir a número y redondear
         $edadNum = (float) $value;
 
-        // Si es 0, devolver null
         if ($edadNum == 0) {
             return null;
         }
 
-        // Redondear al entero más cercano
         return (int) round($edadNum);
     }
 
-    /**
-     * Mutator para la edad - Guarda siempre como entero
-     */
     public function setEdadAproxAttribute(mixed $value)
     {
         if (is_null($value) || $value === '') {
@@ -237,7 +249,6 @@ class Mascota extends Model
             return;
         }
 
-        // Convertir a entero
         $this->attributes['edad_aprox'] = (int) round((float) $value);
     }
 }

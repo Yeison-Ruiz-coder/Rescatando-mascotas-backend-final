@@ -17,4 +17,12 @@ class CambiarEstadoUsuarioRequest extends FormRequest
             'estado' => 'required|in:activo,inactivo,suspendido,pendiente'
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'estado.required' => 'El estado es requerido',
+            'estado.in' => 'El estado no es válido. Los estados permitidos son: activo, inactivo, suspendido, pendiente',
+        ];
+    }
 }

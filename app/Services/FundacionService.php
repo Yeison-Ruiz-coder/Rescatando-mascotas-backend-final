@@ -13,12 +13,12 @@ class FundacionService
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('Nombre_1', 'like', "%{$search}%")
-                  ->orWhere('Email', 'like', "%{$search}%")
-                  ->orWhere('Telefono', 'like', "%{$search}%")
-                  ->orWhere('Direccion', 'like', "%{$search}%")
-                  ->orWhere('ciudad', 'like', "%{$search}%");
+                    ->orWhere('Email', 'like', "%{$search}%")
+                    ->orWhere('Telefono', 'like', "%{$search}%")
+                    ->orWhere('Direccion', 'like', "%{$search}%")
+                    ->orWhere('ciudad', 'like', "%{$search}%");
             });
         }
 
@@ -51,7 +51,7 @@ class FundacionService
     {
         return Fundacion::with([
             'usuarioPrincipal',
-            'mascotas' => function($q) {
+            'mascotas' => function ($q) {
                 $q->whereIn('estado', ['En adopcion', 'Rescatada', 'En acogida']);
             },
             'rescates',
@@ -163,10 +163,10 @@ class FundacionService
             "*, (6371 * acos(cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) + sin(radians(?)) * sin(radians(lat)))) AS distancia",
             [$lat, $lng, $lat]
         )
-        ->whereNotNull('lat')
-        ->whereNotNull('lng')
-        ->having('distancia', '<=', $radio)
-        ->orderBy('distancia')
-        ->get();
+            ->whereNotNull('lat')
+            ->whereNotNull('lng')
+            ->having('distancia', '<=', $radio)
+            ->orderBy('distancia')
+            ->get();
     }
 }

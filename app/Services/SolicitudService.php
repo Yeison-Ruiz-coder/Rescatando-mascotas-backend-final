@@ -99,7 +99,7 @@ class SolicitudService
 
         if ($estado === 'aprobada' &&
             $solicitud->tipo_solicitud === 'adopcion' &&
-            $solicitud->solicitable_type === 'App\Models\Mascota') {
+            $solicitud->solicitable_type === Mascota::class) {
 
             Adopcion::create([
                 'solicitud_id' => $solicitud->id,
