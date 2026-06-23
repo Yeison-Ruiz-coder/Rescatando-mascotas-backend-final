@@ -119,6 +119,12 @@ class RescatePublicService
 
         Log::info('📍 Buscando entidad responsable', ['lat' => $lat, 'lng' => $lng, 'tipo' => $tipoEmergencia]);
 
+        // ✅ "otro" NO se asigna a nadie → va a Admin
+        if ($tipoEmergencia === 'otro') {
+            Log::info('🔄 Tipo "otro" → va a administrador para evaluación manual');
+            return null;
+        }
+
         // ✅ Para emergencias urgentes/heridas: priorizar veterinarias con urgencias 24h
         if (in_array($tipoEmergencia, ['urgente', 'herido'])) {
             $veterinaria = $this->buscarVeterinariaCercana($lat, $lng, $radio);
@@ -132,8 +138,8 @@ class RescatePublicService
             }
         }
 
-        // ✅ Para abandonados o si no hay veterinaria: buscar fundación
-        if (in_array($tipoEmergencia, ['urgente', 'abandonado', 'otro'])) {
+        // ✅ Para abandonados: buscar fundación
+        if ($tipoEmergencia === 'abandonado') {
             $fundacion = $this->buscarFundacionCercana($lat, $lng, $radio);
             if ($fundacion) {
                 Log::info('🏢 Fundación asignada', [
@@ -265,6 +271,13 @@ class RescatePublicService
 
         $entidades = collect();
 
+        // ✅ "otro" no notifica a entidades (solo Admin)
+        if ($tipo === 'otro') {
+            Log::info('🔄 Tipo "otro" → solo Admin notificado');
+            $this->notificarAdministradores($rescate);
+            return;
+        }
+
         // ✅ Si ya hay una entidad asignada, notificar solo a esa
         if ($entidadAsignada) {
             $entidades->push($entidadAsignada);
@@ -294,6 +307,21 @@ class RescatePublicService
         }
 
         Log::info("📨 Rescate #{$rescate->id} notificado a " . count($entidades) . " entidades");
+    }
+
+    private function notificarAdministradores(Rescate $rescate): void
+    {
+        $admins = User::where('tipo', 'admin')->get();
+        foreach ($admins as $admin) {
+            Notificacion::create([
+                'user_id'      => $admin->id,
+                'contenido'    => "🆕 Nuevo rescate tipo 'OTRO' necesita evaluación: {$rescate->lugar_rescate}",
+                'creado_por_id' => 1,
+                'tipo' => 'warning',
+                'prioridad' => 'alta',
+            ]);
+        }
+        Log::info("📨 Rescate #{$rescate->id} (OTRO) notificado a " . count($admins) . " administradores");
     }
 
     private function buscarVeterinariasCercanas(float|null $lat, float|null $lng, int|float $radio)
