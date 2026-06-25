@@ -22,46 +22,38 @@ class MascotaController extends Controller
         $this->mascotaService = $mascotaService;
     }
 
-    public function actualizarEstado(Request $request, int $id)
+    /**
+     * ✅ OBTENER MASCOTAS DE LA FUNDACIÓN CON FILTROS
+     */
+    public function index(Request $request)
     {
         try {
-            // ✅ Validación solo del campo estado
-            $request->validate([
-                'estado' => 'required|in:Adoptado,En adopcion,Rescatada,En acogida'
+            $filters = $request->only([
+                'buscar',
+                'especie',
+                'genero',
+                'estado',
+                'tamano',
+                'per_page',
+                'page',
             ]);
 
-            // ✅ Obtener la mascota (ya valida que pertenezca a la fundación)
-            $mascota = $this->mascotaService->findMascota($id);
+            $perPage = $request->get('per_page', 15);
 
-            // ✅ Actualizar SOLO el estado
-            $mascota->estado = $request->estado;
-            $mascota->save();
-
-            return $this->successResponse(
-                $mascota->load(['razas', 'vacunas']),
-                'Estado actualizado exitosamente'
-            );
-        } catch (ModelNotFoundException $e) {
-            return $this->notFoundResponse('Mascota no encontrada');
-        } catch (\Exception $e) {
-            Log::error('Error en actualizarEstado: ' . $e->getMessage());
-            return $this->errorResponse('Error al actualizar estado', $e->getMessage(), 500);
-        }
-    }
-
-    public function index()
-    {
-        try {
-            $mascotas = $this->mascotaService->getAllMascotas();
+            $mascotas = $this->mascotaService->getAllMascotas($filters, $perPage);
             return $this->successResponse($mascotas, 'Mascotas obtenidas exitosamente');
         } catch (\Exception $e) {
+            Log::error('Error en index mascotas: ' . $e->getMessage());
             return $this->errorResponse($e->getMessage(), null, 403);
         }
     }
+
+    /**
+     * ✅ CREAR MASCOTA
+     */
     public function store(MascotaRequest $request)
     {
         try {
-            // Preparar los archivos para enviar al servicio
             $files = [];
 
             if ($request->hasFile('foto_principal')) {
@@ -91,10 +83,11 @@ class MascotaController extends Controller
         }
     }
 
-
+    /**
+     * ✅ ACTUALIZAR MASCOTA
+     */
     public function update(MascotaRequest $request, int $id)
     {
-        // ✅ LOG PARA VER QUÉ LLEGA
         Log::info('📝 UPDATE MASCOTA - DATOS:', $request->all());
         Log::info('📝 UPDATE MASCOTA - FILES:', array_keys($request->allFiles()));
 
@@ -110,7 +103,6 @@ class MascotaController extends Controller
                 Log::info('📸 Galería recibida:', ['count' => count($files['galeria_fotos'])]);
             }
 
-            // ✅ PROCESAR fotos_eliminar (viene en el request, no en validated)
             $validatedData = $request->validated();
 
             if ($request->has('fotos_eliminar')) {
@@ -140,6 +132,9 @@ class MascotaController extends Controller
         }
     }
 
+    /**
+     * ✅ OBTENER UNA MASCOTA
+     */
     public function show(int $id)
     {
         try {
@@ -152,7 +147,9 @@ class MascotaController extends Controller
         }
     }
 
-
+    /**
+     * ✅ ELIMINAR MASCOTA
+     */
     public function destroy(int $id)
     {
         try {

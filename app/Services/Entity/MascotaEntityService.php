@@ -51,7 +51,10 @@ class MascotaEntityService
         return $fundacion;
     }
 
-    public function getAllMascotas()
+    /**
+     * ✅ OBTENER MASCOTAS DE LA FUNDACIÓN CON FILTROS Y PAGINACIÓN
+     */
+    public function getAllMascotas(array $filters = [], int $perPage = 15)
     {
         $fundacion = $this->getFundacion();
 
@@ -59,9 +62,54 @@ class MascotaEntityService
             throw new \Exception('Perfil de fundación no encontrado');
         }
 
-        return Mascota::where('fundacion_id', $fundacion->id)->get();
+        $query = Mascota::where('fundacion_id', $fundacion->id)
+            ->with(['razas', 'vacunas']);
+
+        // 🔥 FILTRO POR BÚSQUEDA (nombre, descripción, especie, lugar)
+        if (!empty($filters['buscar'])) {
+            $search = $filters['buscar'];
+            $query->where(function ($q) use ($search) {
+                $q->where('nombre_mascota', 'like', '%' . $search . '%')
+                    ->orWhere('descripcion', 'like', '%' . $search . '%')
+                    ->orWhere('especie', 'like', '%' . $search . '%')
+                    ->orWhere('lugar_rescate', 'like', '%' . $search . '%');
+            });
+        }
+
+        // 🔥 FILTRO POR ESPECIE
+        if (!empty($filters['especie'])) {
+            $query->where('especie', $filters['especie']);
+        }
+
+        // 🔥 FILTRO POR GÉNERO
+        if (!empty($filters['genero'])) {
+            $query->where('genero', $filters['genero']);
+        }
+
+        // 🔥 FILTRO POR ESTADO
+        if (!empty($filters['estado'])) {
+            $query->where('estado', $filters['estado']);
+        }
+
+        // 🔥 FILTRO POR TAMAÑO
+        if (!empty($filters['tamano'])) {
+            $query->where('tamano', $filters['tamano']);
+        }
+
+        // Ordenar por más reciente
+        $query->orderBy('created_at', 'desc');
+
+        // Paginación o todos
+        if ($perPage === -1) {
+            return $query->get();
+        }
+
+        return $query->paginate($perPage);
     }
 
+    /**
+     * ✅ BUSCAR UNA MASCOTA POR ID
+     */
     public function findMascota(int $id)
     {
         $fundacion = $this->getFundacion();
@@ -78,12 +126,11 @@ class MascotaEntityService
             throw new ModelNotFoundException('Mascota no encontrada');
         }
 
-        // ✅ Normalizar galeria_fotos para que siempre sea array de strings
+        // Normalizar galeria_fotos
         if ($mascota->galeria_fotos) {
             if (is_string($mascota->galeria_fotos)) {
                 $galeria = json_decode($mascota->galeria_fotos, true);
                 if (is_array($galeria)) {
-                    // Filtrar solo strings válidos (eliminar objetos vacíos)
                     $mascota->galeria_fotos = array_values(array_filter($galeria, function ($item) {
                         return is_string($item) && !empty($item);
                     }));
@@ -91,7 +138,6 @@ class MascotaEntityService
                     $mascota->galeria_fotos = [];
                 }
             } elseif (is_array($mascota->galeria_fotos)) {
-                // Filtrar solo strings válidos
                 $mascota->galeria_fotos = array_values(array_filter($mascota->galeria_fotos, function ($item) {
                     return is_string($item) && !empty($item);
                 }));
@@ -103,6 +149,9 @@ class MascotaEntityService
         return $mascota;
     }
 
+    /**
+     * ✅ CREAR MASCOTA
+     */
     public function createMascota(array $data, $files = null)
     {
         $fundacion = $this->getFundacion();
@@ -111,7 +160,6 @@ class MascotaEntityService
             throw new \Exception('Perfil de fundación no encontrado');
         }
 
-        // ✅ TODOS LOS CAMPOS CON VALORES POR DEFECTO
         $mascotaData = [
             'fundacion_id' => $fundacion->id,
             'nombre_mascota' => $data['nombre_mascota'] ?? 'Mascota',
@@ -139,14 +187,13 @@ class MascotaEntityService
         $mascota = new Mascota();
         $mascota->fill($mascotaData);
 
-        // Guardar foto principal
         if (!empty($files['foto_principal']) && $files['foto_principal']->isValid()) {
             $mascota->foto_principal = $this->uploadImage($files['foto_principal'], 'mascotas');
         }
 
         $mascota->save();
 
-        // Guardar galería de fotos
+        // Galería
         if (!empty($files['galeria_fotos']) && is_array($files['galeria_fotos'])) {
             $galeriaPaths = [];
             foreach ($files['galeria_fotos'] as $foto) {
@@ -161,7 +208,7 @@ class MascotaEntityService
             }
         }
 
-        // Procesar arrays JSON
+        // Arrays JSON
         if (isset($data['enfermedades_cronicas']) && is_array($data['enfermedades_cronicas'])) {
             $mascota->enfermedades_cronicas = json_encode(array_values($data['enfermedades_cronicas']), JSON_UNESCAPED_UNICODE);
             $mascota->save();
@@ -177,12 +224,12 @@ class MascotaEntityService
             $mascota->save();
         }
 
-        // Sincronizar razas
+        // Razas
         if (!empty($data['razas']) && is_array($data['razas'])) {
             $mascota->razas()->sync($data['razas']);
         }
 
-        // Sincronizar vacunas
+        // Vacunas
         if (!empty($data['vacunas']) && is_array($data['vacunas'])) {
             $vacunasData = [];
             foreach ($data['vacunas'] as $vacunaId) {
@@ -194,24 +241,21 @@ class MascotaEntityService
         return $mascota->load(['razas', 'vacunas']);
     }
 
+    /**
+     * ✅ NORMALIZAR URL DE IMAGEN
+     */
     private function normalizeImageUrl(?string $url): ?string
     {
         if (!$url) return null;
 
-        // Si es una URL completa de Cloudinary, extraer la parte relevante
         if (strpos($url, 'cloudinary.com') !== false) {
-            // Extraer todo después de /upload/v{numero}/
             if (preg_match('/\/upload\/(?:v\d+\/)?(.+?)(?:\?|$)/', $url, $matches)) {
-                // Eliminar la extensión del archivo
                 $normalized = preg_replace('/\.[^.]+$/', '', $matches[1]);
-                Log::info('Normalizando URL:', ['original' => $url, 'normalized' => $normalized]);
                 return $normalized;
             }
         }
 
-        // Si ya es un path limpio (como 'mascotas/galeria/abc123')
         if (strpos($url, 'mascotas/') === 0) {
-            // Eliminar extensión si existe
             $normalized = preg_replace('/\.[^.]+$/', '', $url);
             return $normalized;
         }
@@ -220,23 +264,19 @@ class MascotaEntityService
     }
 
     /**
-     * Extrae el public_id de Cloudinary desde una URL
+     * ✅ EXTRAER PUBLIC_ID DE CLOUDINARY
      */
     private function extractPublicIdFromUrl(string $url): ?string
     {
-        // Si ya es un public_id limpio
         if (strpos($url, 'cloudinary.com') === false && strpos($url, '/') === false) {
             return $url;
         }
 
-        // Extraer de URL completa de Cloudinary
         if (preg_match('/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-zA-Z]+)?$/', $url, $matches)) {
-            // Eliminar la extensión del archivo
             $publicId = preg_replace('/\.[^.]+$/', '', $matches[1]);
             return $publicId;
         }
 
-        // Si es un path como 'mascotas/galeria/abc123'
         if (strpos($url, 'mascotas/') === 0) {
             return preg_replace('/\.[^.]+$/', '', $url);
         }
@@ -244,28 +284,25 @@ class MascotaEntityService
         return null;
     }
 
+    /**
+     * ✅ ACTUALIZAR MASCOTA
+     */
     public function updateMascota(int $id, array $data, $files = null)
     {
         Log::info('=== UPDATE MASCOTA ===');
         Log::info('ID: ' . $id);
-        Log::info('FILES recibidos:', $files ?? []);
 
         $mascota = $this->findMascota($id);
 
-        // ============================================
-        // 1. ACTUALIZAR FOTO PRINCIPAL
-        // ============================================
+        // Foto principal
         if (!empty($files['foto_principal']) && $files['foto_principal']->isValid()) {
-            // Eliminar foto anterior si existe
             if ($mascota->foto_principal) {
                 $this->deleteImage($mascota->foto_principal);
             }
             $data['foto_principal'] = $this->uploadImage($files['foto_principal'], 'mascotas');
         }
 
-        // ============================================
-        // 2. OBTENER GALERÍA ACTUAL
-        // ============================================
+        // Galería actual
         $galeriaActual = [];
         if ($mascota->galeria_fotos) {
             if (is_string($mascota->galeria_fotos)) {
@@ -274,24 +311,15 @@ class MascotaEntityService
                 $galeriaActual = $mascota->galeria_fotos;
             }
         }
-
-        // Filtrar solo strings válidos
         $galeriaActual = array_values(array_filter($galeriaActual, function ($item) {
             return is_string($item) && !empty($item);
         }));
 
-        Log::info('Galería actual:', $galeriaActual);
-
-        // ============================================
-        // 3. ELIMINAR FOTOS MARCADAS
-        // ============================================
+        // Eliminar fotos marcadas
         if (isset($data['fotos_eliminar']) && is_array($data['fotos_eliminar'])) {
-            Log::info('Fotos a eliminar:', $data['fotos_eliminar']);
-
             foreach ($data['fotos_eliminar'] as $fotoPath) {
                 if (!$fotoPath || !is_string($fotoPath)) continue;
 
-                // Encontrar la URL completa que coincide
                 $fotoAEliminar = null;
                 $indexToRemove = null;
 
@@ -307,55 +335,32 @@ class MascotaEntityService
                 }
 
                 if ($fotoAEliminar) {
-                    // Eliminar de Cloudinary
                     $publicId = $this->extractPublicIdFromUrl($fotoAEliminar);
                     if ($publicId) {
-                        Log::info('🗑️ Eliminando de Cloudinary:', ['public_id' => $publicId]);
                         $this->deleteImage($publicId);
                     }
-
-                    // Eliminar del array
                     unset($galeriaActual[$indexToRemove]);
-                    Log::info('✅ Foto eliminada:', ['url' => $fotoAEliminar]);
-                } else {
-                    Log::warning('⚠️ Foto no encontrada para eliminar:', ['path' => $fotoPath]);
                 }
             }
-
-            // Reindexar el array después de eliminaciones
             $galeriaActual = array_values($galeriaActual);
-            Log::info('Galería después de eliminar:', $galeriaActual);
         }
 
-        // ============================================
-        // 4. AGREGAR NUEVAS FOTOS (UN SOLO BLOQUE)
-        // ============================================
+        // Agregar nuevas fotos
         if (!empty($files['galeria_fotos']) && is_array($files['galeria_fotos'])) {
-            Log::info('Nuevas fotos a subir:', ['count' => count($files['galeria_fotos'])]);
-
-            foreach ($files['galeria_fotos'] as $index => $foto) {
+            foreach ($files['galeria_fotos'] as $foto) {
                 if ($foto && $foto->isValid()) {
                     $url = $this->uploadImage($foto, 'mascotas/galeria');
                     $galeriaActual[] = $url;
-                    Log::info("Foto nueva {$index} subida: " . $url);
                 }
             }
         }
 
-        // ============================================
-        // 5. GUARDAR GALERÍA
-        // ============================================
         $data['galeria_fotos'] = json_encode(array_values($galeriaActual));
-        Log::info('Galería final guardada:', $galeriaActual);
 
-        // ============================================
-        // 6. ACTUALIZAR EL RESTO DE DATOS
-        // ============================================
+        // Actualizar
         $mascota->update($data);
 
-        // ============================================
-        // 7. PROCESAR ARRAYS JSON
-        // ============================================
+        // Arrays JSON
         if (isset($data['enfermedades_cronicas']) && is_array($data['enfermedades_cronicas'])) {
             $mascota->enfermedades_cronicas = json_encode(array_values($data['enfermedades_cronicas']), JSON_UNESCAPED_UNICODE);
             $mascota->save();
@@ -371,13 +376,12 @@ class MascotaEntityService
             $mascota->save();
         }
 
-        // ============================================
-        // 8. SINCRONIZAR RELACIONES
-        // ============================================
+        // Razas
         if (isset($data['razas']) && is_array($data['razas'])) {
             $mascota->razas()->sync($data['razas']);
         }
 
+        // Vacunas
         if (isset($data['vacunas']) && is_array($data['vacunas'])) {
             $vacunasData = [];
             foreach ($data['vacunas'] as $vacunaId) {
@@ -389,16 +393,17 @@ class MascotaEntityService
         return $mascota->load(['razas', 'vacunas']);
     }
 
+    /**
+     * ✅ ELIMINAR MASCOTA
+     */
     public function deleteMascota(int $id)
     {
         $mascota = $this->findMascota($id);
 
-        // Eliminar foto principal
         if ($mascota->foto_principal && is_string($mascota->foto_principal)) {
             $this->deleteImage($mascota->foto_principal);
         }
 
-        // Eliminar imágenes de galería
         if ($mascota->galeria_fotos) {
             $galeria = is_string($mascota->galeria_fotos)
                 ? json_decode($mascota->galeria_fotos, true)
@@ -418,6 +423,9 @@ class MascotaEntityService
         $mascota->delete();
     }
 
+    /**
+     * ✅ ALTERNAR DESTACADA
+     */
     public function toggleDestacada(int $id): Mascota
     {
         $mascota = $this->findMascota($id);
