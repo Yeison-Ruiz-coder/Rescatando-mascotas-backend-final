@@ -10,6 +10,7 @@ use App\Traits\TransactionTrait;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class MascotaController extends Controller
 {
@@ -163,6 +164,33 @@ class MascotaController extends Controller
             return $this->notFoundResponse('Mascota no encontrada');
         } catch (\Exception $e) {
             return $this->errorResponse('Error al eliminar', $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * ✅ ACTUALIZAR ESTADO DE MASCOTA (PATCH) - 🔥 NUEVO
+     */
+    public function actualizarEstado(Request $request, int $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'estado' => 'required|string|in:En adopcion,Adoptado,Rescatada,En acogida'
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse('Error de validación', $validator->errors(), 422);
+        }
+
+        try {
+            $mascota = $this->runInTransaction(
+                fn() => $this->mascotaService->actualizarEstado($id, $request->estado),
+                'Error al actualizar estado'
+            );
+
+            return $this->successResponse($mascota, 'Estado actualizado exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Mascota no encontrada');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al actualizar estado', $e->getMessage(), 500);
         }
     }
 }
