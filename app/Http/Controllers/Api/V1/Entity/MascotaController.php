@@ -41,6 +41,7 @@ class MascotaController extends Controller
 
             $perPage = $request->get('per_page', 15);
 
+            // 🔥 ELIMINADA LA VALIDACIÓN DE FUNDACIÓN
             $mascotas = $this->mascotaService->getAllMascotas($filters, $perPage);
             return $this->successResponse($mascotas, 'Mascotas obtenidas exitosamente');
         } catch (\Exception $e) {
@@ -168,7 +169,7 @@ class MascotaController extends Controller
     }
 
     /**
-     * ✅ ACTUALIZAR ESTADO DE MASCOTA (PATCH) - 🔥 NUEVO
+     * ✅ ACTUALIZAR ESTADO DE MASCOTA (PATCH)
      */
     public function actualizarEstado(Request $request, int $id)
     {
