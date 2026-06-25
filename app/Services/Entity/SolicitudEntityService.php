@@ -33,7 +33,7 @@ class SolicitudEntityService
             throw new \Exception('No se encontró la entidad asociada');
         }
 
-        $query = Solicitud::with(['user', 'solicitable'])
+        $query = Solicitud::with(['usuario', 'solicitable'])
             ->where('tipo_solicitud', 'adopcion');
 
         if ($user->tipo === 'fundacion') {
