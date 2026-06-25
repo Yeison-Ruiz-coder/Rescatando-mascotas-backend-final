@@ -6,12 +6,51 @@ use App\Models\Mascota;
 use App\Models\Fundacion;
 use App\Traits\ImageUploadTrait;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class MascotaEntityService
 {
     use ImageUploadTrait;
+
+    // ============================================
+    // 🔥 CONSTANTES DE CACHÉ
+    // ============================================
+    private const CACHE_TTL = 300; // 5 minutos
+
+    // ============================================
+    // 🔥 FUNDACIÓN CON CACHÉ
+    // ============================================
+
+    private function getFundacionCached()
+    {
+        $user = Auth::user();
+
+        if ($user->tipo !== 'fundacion') {
+            return null;
+        }
+
+        $cacheKey = 'fundacion_user_' . $user->id;
+
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($user) {
+            $fundacion = Fundacion::where('user_id', $user->id)->first();
+
+            if (!$fundacion) {
+                $fundacion = Fundacion::create([
+                    'Nombre_1' => $user->nombre ?? 'Fundación',
+                    'Direccion' => $user->direccion ?? 'Pendiente',
+                    'Telefono' => $user->telefono ?? '000000000',
+                    'Email' => $user->email,
+                    'registro_sanitario' => 'PENDIENTE_' . $user->id,
+                    'user_id' => $user->id,
+                    'ciudad' => $user->ciudad ?? null,
+                ]);
+            }
+
+            return $fundacion;
+        });
+    }
 
     public function getEntidad()
     {
@@ -28,44 +67,48 @@ class MascotaEntityService
 
     public function getFundacion()
     {
-        $user = Auth::user();
-
-        if ($user->tipo !== 'fundacion') {
-            return null;
-        }
-
-        $fundacion = Fundacion::where('user_id', $user->id)->first();
-
-        if (!$fundacion) {
-            $fundacion = Fundacion::create([
-                'Nombre_1' => $user->nombre ?? 'Fundación',
-                'Direccion' => $user->direccion ?? 'Pendiente',
-                'Telefono' => $user->telefono ?? '000000000',
-                'Email' => $user->email,
-                'registro_sanitario' => 'PENDIENTE_' . $user->id,
-                'user_id' => $user->id,
-                'ciudad' => $user->ciudad ?? null,
-            ]);
-        }
-
-        return $fundacion;
+        return $this->getFundacionCached();
     }
 
-    /**
-     * ✅ OBTENER MASCOTAS DE LA FUNDACIÓN CON FILTROS Y PAGINACIÓN
-     */
+    // ============================================
+    // ✅ OBTENER MASCOTAS - OPTIMIZADO
+    // ============================================
+
     public function getAllMascotas(array $filters = [], int $perPage = 15)
     {
-        $fundacion = $this->getFundacion();
+        $fundacion = $this->getFundacionCached();
 
         if (!$fundacion) {
             throw new \Exception('Perfil de fundación no encontrado');
         }
 
+        // 🔥 SOLO LOS CAMPOS NECESARIOS
         $query = Mascota::where('fundacion_id', $fundacion->id)
-            ->with(['razas', 'vacunas']);
+            ->select([
+                'id',
+                'nombre_mascota',
+                'especie',
+                'genero',
+                'edad_aprox',
+                'estado',
+                'foto_principal',
+                'created_at',
+                'descripcion',
+                'lugar_rescate',
+                'tamano',
+                'color',
+                'peso_aprox',
+            ])
+            ->with([
+                'razas' => function($q) {
+                    $q->select('id', 'nombre_raza');
+                },
+                'vacunas' => function($q) {
+                    $q->select('id', 'nombre');
+                }
+            ]);
 
-        // 🔥 FILTRO POR BÚSQUEDA (nombre, descripción, especie, lugar)
+        // 🔥 FILTROS
         if (!empty($filters['buscar'])) {
             $search = $filters['buscar'];
             $query->where(function ($q) use ($search) {
@@ -76,50 +119,48 @@ class MascotaEntityService
             });
         }
 
-        // 🔥 FILTRO POR ESPECIE
         if (!empty($filters['especie'])) {
             $query->where('especie', $filters['especie']);
         }
 
-        // 🔥 FILTRO POR GÉNERO
         if (!empty($filters['genero'])) {
             $query->where('genero', $filters['genero']);
         }
 
-        // 🔥 FILTRO POR ESTADO
         if (!empty($filters['estado'])) {
             $query->where('estado', $filters['estado']);
         }
 
-        // 🔥 FILTRO POR TAMAÑO
         if (!empty($filters['tamano'])) {
             $query->where('tamano', $filters['tamano']);
         }
 
-        // Ordenar por más reciente
         $query->orderBy('created_at', 'desc');
-
-        // Paginación o todos
-        if ($perPage === -1) {
-            return $query->get();
-        }
 
         return $query->paginate($perPage);
     }
 
-    /**
-     * ✅ BUSCAR UNA MASCOTA POR ID
-     */
+    // ============================================
+    // ✅ BUSCAR UNA MASCOTA POR ID
+    // ============================================
+
     public function findMascota(int $id)
     {
-        $fundacion = $this->getFundacion();
+        $fundacion = $this->getFundacionCached();
 
         if (!$fundacion) {
             throw new \Exception('Perfil de fundación no encontrado');
         }
 
         $mascota = Mascota::where('fundacion_id', $fundacion->id)
-            ->with(['razas', 'vacunas'])
+            ->with([
+                'razas' => function($q) {
+                    $q->select('id', 'nombre_raza');
+                },
+                'vacunas' => function($q) {
+                    $q->select('id', 'nombre');
+                }
+            ])
             ->find($id);
 
         if (!$mascota) {
@@ -149,12 +190,13 @@ class MascotaEntityService
         return $mascota;
     }
 
-    /**
-     * ✅ CREAR MASCOTA
-     */
+    // ============================================
+    // ✅ CREAR MASCOTA
+    // ============================================
+
     public function createMascota(array $data, $files = null)
     {
-        $fundacion = $this->getFundacion();
+        $fundacion = $this->getFundacionCached();
 
         if (!$fundacion) {
             throw new \Exception('Perfil de fundación no encontrado');
@@ -238,12 +280,16 @@ class MascotaEntityService
             $mascota->vacunas()->sync($vacunasData);
         }
 
+        // 🔥 LIMPIAR CACHÉ DE FUNDACIÓN
+        $this->clearFundacionCache();
+
         return $mascota->load(['razas', 'vacunas']);
     }
 
-    /**
-     * ✅ NORMALIZAR URL DE IMAGEN
-     */
+    // ============================================
+    // ✅ NORMALIZAR URL DE IMAGEN
+    // ============================================
+
     private function normalizeImageUrl(?string $url): ?string
     {
         if (!$url) return null;
@@ -263,9 +309,10 @@ class MascotaEntityService
         return $url;
     }
 
-    /**
-     * ✅ EXTRAER PUBLIC_ID DE CLOUDINARY
-     */
+    // ============================================
+    // ✅ EXTRAER PUBLIC_ID DE CLOUDINARY
+    // ============================================
+
     private function extractPublicIdFromUrl(string $url): ?string
     {
         if (strpos($url, 'cloudinary.com') === false && strpos($url, '/') === false) {
@@ -284,9 +331,10 @@ class MascotaEntityService
         return null;
     }
 
-    /**
-     * ✅ ACTUALIZAR MASCOTA
-     */
+    // ============================================
+    // ✅ ACTUALIZAR MASCOTA
+    // ============================================
+
     public function updateMascota(int $id, array $data, $files = null)
     {
         Log::info('=== UPDATE MASCOTA ===');
@@ -390,12 +438,16 @@ class MascotaEntityService
             $mascota->vacunas()->sync($vacunasData);
         }
 
+        // 🔥 LIMPIAR CACHÉ DE FUNDACIÓN
+        $this->clearFundacionCache();
+
         return $mascota->load(['razas', 'vacunas']);
     }
 
-    /**
-     * ✅ ELIMINAR MASCOTA
-     */
+    // ============================================
+    // ✅ ELIMINAR MASCOTA
+    // ============================================
+
     public function deleteMascota(int $id)
     {
         $mascota = $this->findMascota($id);
@@ -421,16 +473,37 @@ class MascotaEntityService
         $mascota->razas()->detach();
         $mascota->vacunas()->detach();
         $mascota->delete();
+
+        // 🔥 LIMPIAR CACHÉ DE FUNDACIÓN
+        $this->clearFundacionCache();
     }
 
-    /**
-     * ✅ ALTERNAR DESTACADA
-     */
+    // ============================================
+    // ✅ ALTERNAR DESTACADA
+    // ============================================
+
     public function toggleDestacada(int $id): Mascota
     {
         $mascota = $this->findMascota($id);
         $mascota->destacada = !$mascota->destacada;
         $mascota->save();
+
+        // 🔥 LIMPIAR CACHÉ DE FUNDACIÓN
+        $this->clearFundacionCache();
+
         return $mascota;
+    }
+
+    // ============================================
+    // 🔥 LIMPIAR CACHÉ DE FUNDACIÓN
+    // ============================================
+
+    private function clearFundacionCache(): void
+    {
+        $user = Auth::user();
+        if ($user && $user->tipo === 'fundacion') {
+            Cache::forget('fundacion_user_' . $user->id);
+            Log::info('🧹 Caché de fundación limpiado para usuario: ' . $user->id);
+        }
     }
 }

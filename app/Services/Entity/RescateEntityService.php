@@ -7,6 +7,7 @@ use App\Models\Mascota;
 use App\Models\Notificacion;
 use App\Traits\ImageUploadTrait;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Log;
@@ -14,6 +15,15 @@ use Illuminate\Support\Facades\Log;
 class RescateEntityService
 {
     use ImageUploadTrait;
+
+    // ============================================
+    // 🔥 CONSTANTES DE CACHÉ
+    // ============================================
+    private const CACHE_TTL = 300; // 5 minutos
+
+    // ============================================
+    // 🔥 ENTIDAD CON CACHÉ
+    // ============================================
 
     public function getEntidad()
     {
@@ -28,9 +38,31 @@ class RescateEntityService
         return null;
     }
 
-    /**
-     * Extrae el public_id de Cloudinary desde una URL
-     */
+    private function getEntidadCached()
+    {
+        $user = Auth::user();
+        if (!$user) return null;
+
+        $cacheKey = 'entidad_' . $user->id . '_' . $user->tipo;
+
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($user) {
+            return $this->getEntidad();
+        });
+    }
+
+    private function clearEntidadCache(): void
+    {
+        $user = Auth::user();
+        if ($user) {
+            Cache::forget('entidad_' . $user->id . '_' . $user->tipo);
+            Log::info('🧹 Caché de entidad limpiado para usuario: ' . $user->id);
+        }
+    }
+
+    // ============================================
+    // ✅ UTILIDADES DE IMAGEN
+    // ============================================
+
     private function extractPublicIdFromUrl(string $url): ?string
     {
         if (strpos($url, 'cloudinary.com') === false && strpos($url, '/') === false) {
@@ -49,9 +81,6 @@ class RescateEntityService
         return null;
     }
 
-    /**
-     * Normaliza una URL de imagen para comparación
-     */
     private function normalizeImageUrl(?string $url): ?string
     {
         if (!$url) return null;
@@ -71,29 +100,50 @@ class RescateEntityService
         return $url;
     }
 
-    public function findById(int $id): Rescate
-    {
-        return Rescate::with(['usuarioReporto', 'mascota', 'entidadResponsable'])
-            ->findOrFail($id);
-    }
+    // ============================================
+    // ✅ OBTENER MIS RESCATES - OPTIMIZADO
+    // ============================================
 
-    public function completarRescate(int $id)
+    public function getMisRescates()
     {
-        $entidad = $this->getEntidad();
+        $entidad = $this->getEntidadCached();
 
         if (!$entidad) {
             throw new \Exception('No se encontró la entidad asociada');
         }
 
-        $rescate = Rescate::where('entidad_responsable_type', get_class($entidad))
+        // 🔥 SOLO LOS CAMPOS NECESARIOS
+        return Rescate::where('entidad_responsable_type', get_class($entidad))
             ->where('entidad_responsable_id', $entidad->id)
-            ->where('estado', 'en_proceso')
-            ->findOrFail($id);
-
-        $rescate->update(['estado' => 'completado']);
-
-        return $rescate;
+            ->where('tipo_emergencia', '!=', 'otro')
+            ->select([
+                'id',
+                'fecha_rescate',
+                'lugar_rescate',
+                'descripcion_rescate',
+                'estado',
+                'tipo_emergencia',
+                'prioridad',
+                'lat',
+                'lng',
+                'nombre_reportante',
+                'email_reportante',
+                'telefono_reportante',
+                'mascota_id',
+                'usuario_reporto_id',
+                'created_at',
+            ])
+            ->with([
+                'usuarioReporto:id,nombre,email',
+                'mascota:id,nombre_mascota,foto_principal,estado,especie,genero'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
     }
+
+    // ============================================
+    // ✅ OBTENER RESCATES DISPONIBLES - OPTIMIZADO
+    // ============================================
 
     public function getRescatesDisponibles(Request $request)
     {
@@ -103,7 +153,7 @@ class RescateEntityService
             throw new \Exception('Usuario no autenticado');
         }
 
-        $entidad = $this->getEntidad();
+        $entidad = $this->getEntidadCached();
 
         if (!$entidad) {
             return collect([]);
@@ -114,7 +164,24 @@ class RescateEntityService
         $radio = $entidad->radio_atencion ?? 10;
         $userTipo = $user->tipo;
 
-        $rescates = Rescate::where('estado', 'pendiente')
+        // 🔥 SOLO LOS CAMPOS NECESARIOS
+        $query = Rescate::select([
+                'id',
+                'fecha_rescate',
+                'lugar_rescate',
+                'descripcion_rescate',
+                'estado',
+                'tipo_emergencia',
+                'prioridad',
+                'lat',
+                'lng',
+                'nombre_reportante',
+                'email_reportante',
+                'telefono_reportante',
+                'usuario_reporto_id',
+                'created_at',
+            ])
+            ->where('estado', 'pendiente')
             ->where('tipo_emergencia', '!=', 'otro')
             ->where(function ($query) use ($userTipo) {
                 if ($userTipo === 'veterinaria') {
@@ -122,11 +189,15 @@ class RescateEntityService
                 } elseif ($userTipo === 'fundacion') {
                     $query->whereIn('tipo_emergencia', ['abandonado', 'urgente']);
                 }
-            });
+            })
+            ->with([
+                'usuarioReporto:id,nombre,email',
+                'mascota:id,nombre_mascota,foto_principal'
+            ]);
 
+        // 🔥 CÁLCULO DE DISTANCIA
         if ($lat && $lng) {
-            $rescates = $rescates->selectRaw("
-                *,
+            $query->selectRaw("
                 (6371 * acos(
                     cos(radians(?)) *
                     cos(radians(lat)) *
@@ -135,19 +206,56 @@ class RescateEntityService
                     sin(radians(lat))
                 )) AS distance
             ", [$lat, $lng, $lat])
-                ->having('distance', '<', $radio)
-                ->orderBy('distance');
+            ->having('distance', '<', $radio)
+            ->orderBy('distance');
         }
 
-        return $rescates->orderBy('prioridad', 'desc')
+        return $query->orderBy('prioridad', 'desc')
             ->orderBy('created_at', 'asc')
             ->paginate(15);
     }
 
+    // ============================================
+    // ✅ ENCONTRAR POR ID
+    // ============================================
+
+    public function findById(int $id): Rescate
+    {
+        return Rescate::select([
+                'id',
+                'fecha_rescate',
+                'lugar_rescate',
+                'descripcion_rescate',
+                'estado',
+                'tipo_emergencia',
+                'prioridad',
+                'lat',
+                'lng',
+                'nombre_reportante',
+                'email_reportante',
+                'telefono_reportante',
+                'mascota_id',
+                'usuario_reporto_id',
+                'entidad_responsable_type',
+                'entidad_responsable_id',
+                'created_at',
+            ])
+            ->with([
+                'usuarioReporto:id,nombre,email',
+                'mascota:id,nombre_mascota,foto_principal,estado,especie,genero',
+                'entidadResponsable'
+            ])
+            ->findOrFail($id);
+    }
+
+    // ============================================
+    // ✅ ACEPTAR RESCATE
+    // ============================================
+
     public function aceptarRescate(int $id)
     {
         $user = Auth::user();
-        $entidad = $this->getEntidad();
+        $entidad = $this->getEntidadCached();
 
         if (!$entidad) {
             throw new \Exception('No se encontró la entidad asociada');
@@ -177,6 +285,9 @@ class RescateEntityService
             'entidad_responsable_id' => $entidad->id,
         ]);
 
+        // 🔥 LIMPIAR CACHÉ
+        $this->clearEntidadCache();
+
         if ($rescate->usuario_reporto_id) {
             $nombreEntidad = $user->tipo === 'veterinaria'
                 ? ($entidad->Nombre_vet ?? $entidad->nombre)
@@ -192,9 +303,13 @@ class RescateEntityService
         return $rescate->load(['usuarioReporto', 'entidadResponsable']);
     }
 
+    // ============================================
+    // ✅ RECHAZAR RESCATE
+    // ============================================
+
     public function rechazarRescate(int $id)
     {
-        $entidad = $this->getEntidad();
+        $entidad = $this->getEntidadCached();
 
         if (!$entidad) {
             throw new \Exception('No se encontró la entidad asociada');
@@ -206,33 +321,19 @@ class RescateEntityService
             'estado' => 'pendiente'
         ]);
 
+        // 🔥 LIMPIAR CACHÉ
+        $this->clearEntidadCache();
+
         return $rescate;
     }
 
-    public function getMisRescates()
+    // ============================================
+    // ✅ COMPLETAR RESCATE
+    // ============================================
+
+    public function completarRescate(int $id)
     {
-        $entidad = $this->getEntidad();
-
-        if (!$entidad) {
-            throw new \Exception('No se encontró la entidad asociada');
-        }
-
-        return Rescate::where('entidad_responsable_type', get_class($entidad))
-            ->where('entidad_responsable_id', $entidad->id)
-            ->where('tipo_emergencia', '!=', 'otro')
-            ->with(['usuarioReporto', 'mascota'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
-    }
-
-    /**
-     * ✅ REGISTRAR MASCOTA DESDE RESCATE - CORREGIDO
-     * Ahora guarda razas, vacunas, enfermedades, medicamentos y requisitos
-     */
-    public function registrarMascotaDesdeRescate(int $id, array $data, $files = null)
-    {
-        $user = Auth::user();
-        $entidad = $this->getEntidad();
+        $entidad = $this->getEntidadCached();
 
         if (!$entidad) {
             throw new \Exception('No se encontró la entidad asociada');
@@ -243,27 +344,44 @@ class RescateEntityService
             ->where('estado', 'en_proceso')
             ->findOrFail($id);
 
-        // ============================================
-        // ✅ DETERMINAR EL ESTADO DE LA MASCOTA
-        // ============================================
+        $rescate->update(['estado' => 'completado']);
 
-        // 1. Si el usuario seleccionó un estado en el formulario, usarlo
+        // 🔥 LIMPIAR CACHÉ
+        $this->clearEntidadCache();
+
+        return $rescate;
+    }
+
+    // ============================================
+    // ✅ REGISTRAR MASCOTA DESDE RESCATE
+    // ============================================
+
+    public function registrarMascotaDesdeRescate(int $id, array $data, $files = null)
+    {
+        $user = Auth::user();
+        $entidad = $this->getEntidadCached();
+
+        if (!$entidad) {
+            throw new \Exception('No se encontró la entidad asociada');
+        }
+
+        $rescate = Rescate::where('entidad_responsable_type', get_class($entidad))
+            ->where('entidad_responsable_id', $entidad->id)
+            ->where('estado', 'en_proceso')
+            ->findOrFail($id);
+
+        // Determinar estado
         if (isset($data['estado']) && !empty($data['estado'])) {
             $estado = $data['estado'];
         } else {
-            // 2. Si no seleccionó estado, usar "Rescatada" (por defecto para rescates)
             $estado = 'Rescatada';
         }
 
-        // 3. Si necesita hogar temporal, forzar "En acogida"
         if ($data['necesita_hogar_temporal'] ?? false) {
             $estado = 'En acogida';
         }
 
-        // ============================================
-        // 1. CREAR LA MASCOTA
-        // ============================================
-
+        // Crear mascota
         $mascotaData = [
             'nombre_mascota' => $data['nombre_mascota'],
             'especie' => $data['especie'],
@@ -275,11 +393,9 @@ class RescateEntityService
             'apto_con_otros_animales' => $data['apto_con_otros_animales'] ?? true,
             'condiciones_especiales' => $data['condiciones_especiales'] ?? null,
             'fecha_ingreso' => $data['fecha_ingreso'],
-            // ✅ ESTADO CON LÓGICA COMPLETA
             'estado' => $estado,
             'fundacion_id' => $user->tipo === 'fundacion' ? $entidad->id : null,
             'lugar_rescate' => $rescate->lugar_rescate,
-
             'peso_aprox' => $data['peso_aprox'] ?? null,
             'tamano' => $data['tamano'] ?? null,
             'color' => $data['color'] ?? null,
@@ -291,24 +407,19 @@ class RescateEntityService
             'hogar_recomendado' => $data['hogar_recomendado'] ?? null,
         ];
 
-        // Agregar foto del rescate si existe
         if ($rescate->foto_principal) {
             $mascotaData['foto_principal'] = $rescate->foto_principal;
         }
 
         $mascota = Mascota::create($mascotaData);
 
-        // ============================================
-        // 2. SUBIR FOTO PRINCIPAL (si se envió una nueva)
-        // ============================================
+        // Subir foto principal
         if (!empty($files['foto_principal']) && $files['foto_principal']->isValid()) {
             $mascota->foto_principal = $this->uploadImage($files['foto_principal'], 'mascotas');
             $mascota->save();
         }
 
-        // ============================================
-        // 3. PROCESAR GALERÍA DE FOTOS
-        // ============================================
+        // Galería
         if (!empty($files['galeria_fotos']) && is_array($files['galeria_fotos'])) {
             $galeriaPaths = [];
             foreach ($files['galeria_fotos'] as $foto) {
@@ -322,16 +433,12 @@ class RescateEntityService
             }
         }
 
-        // ============================================
-        // 4. ✅ GUARDAR RAZAS
-        // ============================================
+        // Razas
         if (isset($data['razas']) && is_array($data['razas']) && !empty($data['razas'])) {
             $mascota->razas()->sync($data['razas']);
         }
 
-        // ============================================
-        // 5. ✅ GUARDAR VACUNAS
-        // ============================================
+        // Vacunas
         if (isset($data['vacunas']) && is_array($data['vacunas']) && !empty($data['vacunas'])) {
             $vacunasData = [];
             foreach ($data['vacunas'] as $vacunaId) {
@@ -340,45 +447,36 @@ class RescateEntityService
             $mascota->vacunas()->sync($vacunasData);
         }
 
-        // ============================================
-        // 6. ✅ GUARDAR ENFERMEDADES CRÓNICAS
-        // ============================================
+        // Enfermedades crónicas
         if (isset($data['enfermedades_cronicas']) && is_array($data['enfermedades_cronicas']) && !empty($data['enfermedades_cronicas'])) {
             $mascota->enfermedades_cronicas = json_encode(array_values($data['enfermedades_cronicas']), JSON_UNESCAPED_UNICODE);
             $mascota->save();
         }
 
-        // ============================================
-        // 7. ✅ GUARDAR MEDICAMENTOS
-        // ============================================
+        // Medicamentos
         if (isset($data['medicamentos']) && is_array($data['medicamentos']) && !empty($data['medicamentos'])) {
             $mascota->medicamentos = json_encode(array_values($data['medicamentos']), JSON_UNESCAPED_UNICODE);
             $mascota->save();
         }
 
-        // ============================================
-        // 8. ✅ GUARDAR REQUISITOS DE ADOPCIÓN
-        // ============================================
+        // Requisitos de adopción
         if (isset($data['requisitos_adopcion']) && is_array($data['requisitos_adopcion']) && !empty($data['requisitos_adopcion'])) {
             $mascota->requisitos_adopcion = json_encode(array_values($data['requisitos_adopcion']), JSON_UNESCAPED_UNICODE);
             $mascota->save();
         }
 
-        // ============================================
-        // 9. ACTUALIZAR EL RESCATE
-        // ============================================
         $rescate->update([
             'mascota_id' => $mascota->id,
             'estado' => 'completado'
         ]);
 
-        // ============================================
-        // 10. NOTIFICAR AL REPORTANTE
-        // ============================================
+        // 🔥 LIMPIAR CACHÉ
+        $this->clearEntidadCache();
+
         if ($rescate->usuario_reporto_id) {
             Notificacion::create([
                 'user_id' => $rescate->usuario_reporto_id,
-                'contenido' => "La mascota que reportaste ({$mascota->nombre_mascota}) ha sido registrada y está en proceso de adopción",
+                'contenido' => "La mascota que reportaste ({$mascota->nombre_mascota}) ha sido registrada",
                 'creado_por_id' => $user->id,
             ]);
         }
@@ -386,9 +484,13 @@ class RescateEntityService
         return $mascota->load(['razas', 'vacunas']);
     }
 
+    // ============================================
+    // ✅ AGREGAR FOTOS
+    // ============================================
+
     public function agregarFotos(int $id, array $nuevasFotos): Rescate
     {
-        $entidad = $this->getEntidad();
+        $entidad = $this->getEntidadCached();
 
         if (!$entidad) {
             throw new \Exception('No se encontró la entidad asociada');
@@ -415,15 +517,19 @@ class RescateEntityService
         $rescate->galeria_fotos = json_encode($galeriaActual);
         $rescate->save();
 
+        // 🔥 LIMPIAR CACHÉ
+        $this->clearEntidadCache();
+
         return $rescate;
     }
 
-    /**
-     * Eliminar fotos específicas de la galería
-     */
+    // ============================================
+    // ✅ ELIMINAR FOTOS
+    // ============================================
+
     public function eliminarFotos(int $id, array $fotosAEliminar): Rescate
     {
-        $entidad = $this->getEntidad();
+        $entidad = $this->getEntidadCached();
 
         if (!$entidad) {
             throw new \Exception('No se encontró la entidad asociada');
@@ -443,8 +549,6 @@ class RescateEntityService
         $galeriaActual = array_values(array_filter($galeriaActual, function ($item) {
             return is_string($item) && !empty($item);
         }));
-
-        Log::info('Eliminando fotos de rescate:', ['fotos_a_eliminar' => $fotosAEliminar]);
 
         foreach ($fotosAEliminar as $fotoPath) {
             if (!$fotoPath || !is_string($fotoPath)) continue;
@@ -466,28 +570,29 @@ class RescateEntityService
             if ($fotoAEliminar) {
                 $publicId = $this->extractPublicIdFromUrl($fotoAEliminar);
                 if ($publicId) {
-                    Log::info('🗑️ Eliminando foto de Cloudinary:', ['public_id' => $publicId]);
                     $this->deleteImage($publicId);
                 }
                 unset($galeriaActual[$indexToRemove]);
-            } else {
-                Log::warning('⚠️ Foto no encontrada para eliminar:', ['path' => $fotoPath]);
             }
         }
 
         $galeriaActual = array_values($galeriaActual);
-
         $rescate->galeria_fotos = json_encode($galeriaActual);
         $rescate->save();
 
-        Log::info('Galería después de eliminar:', $galeriaActual);
+        // 🔥 LIMPIAR CACHÉ
+        $this->clearEntidadCache();
 
         return $rescate;
     }
 
+    // ============================================
+    // ✅ ACTUALIZAR ESTADO
+    // ============================================
+
     public function updateEstado(int $id, string $estado): Rescate
     {
-        $entidad = $this->getEntidad();
+        $entidad = $this->getEntidadCached();
 
         if (!$entidad) {
             throw new \Exception('No se encontró la entidad asociada');
@@ -500,15 +605,19 @@ class RescateEntityService
         $rescate->estado = $estado;
         $rescate->save();
 
+        // 🔥 LIMPIAR CACHÉ
+        $this->clearEntidadCache();
+
         return $rescate;
     }
 
-    /**
-     * Actualizar rescate con manejo de eliminación de fotos
-     */
+    // ============================================
+    // ✅ ACTUALIZAR RESCATE
+    // ============================================
+
     public function update(int $id, array $data, $fotoPrincipal = null, array $fotosAEliminar = []): Rescate
     {
-        $entidad = $this->getEntidad();
+        $entidad = $this->getEntidadCached();
 
         if (!$entidad) {
             throw new \Exception('No se encontró la entidad asociada');
@@ -530,6 +639,9 @@ class RescateEntityService
         }
 
         $rescate->update($data);
+
+        // 🔥 LIMPIAR CACHÉ
+        $this->clearEntidadCache();
 
         return $rescate;
     }
