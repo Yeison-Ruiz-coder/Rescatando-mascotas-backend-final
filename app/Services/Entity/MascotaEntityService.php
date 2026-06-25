@@ -25,11 +25,19 @@ class MascotaEntityService
     // 🔥 FUNDACIÓN CON CACHÉ
     // ============================================
 
+    // En getFundacionCached()
     private function getFundacionCached()
     {
         $user = Auth::user();
 
+        Log::info('🔍 getFundacionCached - Usuario:', [
+            'id' => $user?->id,
+            'tipo' => $user?->tipo,
+            'email' => $user?->email,
+        ]);
+
         if ($user->tipo !== 'fundacion') {
+            Log::warning('⚠️ Usuario no es fundación:', ['tipo' => $user?->tipo]);
             return null;
         }
 
@@ -37,6 +45,12 @@ class MascotaEntityService
 
         return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($user) {
             $fundacion = Fundacion::where('user_id', $user->id)->first();
+
+            Log::info('🔍 Buscando fundación:', [
+                'user_id' => $user->id,
+                'found' => $fundacion ? 'SÍ' : 'NO',
+                'fundacion_id' => $fundacion?->id,
+            ]);
 
             if (!$fundacion) {
                 $fundacion = Fundacion::create([
@@ -50,12 +64,13 @@ class MascotaEntityService
                     'recibe_voluntarios' => false,
                     'capacidad_maxima' => 0,
                 ]);
+                Log::info('✅ Fundación creada:', ['id' => $fundacion->id]);
             }
 
             return $fundacion;
         });
     }
-
+    
     public function getEntidad()
     {
         $user = Auth::user();
@@ -138,10 +153,10 @@ class MascotaEntityService
                     'peso_aprox',
                 ])
                 ->with([
-                    'razas' => function($q) {
+                    'razas' => function ($q) {
                         $q->select('id', 'nombre_raza');
                     },
-                    'vacunas' => function($q) {
+                    'vacunas' => function ($q) {
                         $q->select('id', 'nombre');
                     }
                 ]);
@@ -193,10 +208,10 @@ class MascotaEntityService
 
         $mascota = Mascota::where('fundacion_id', $fundacion->id)
             ->with([
-                'razas' => function($q) {
+                'razas' => function ($q) {
                     $q->select('id', 'nombre_raza');
                 },
-                'vacunas' => function($q) {
+                'vacunas' => function ($q) {
                     $q->select('id', 'nombre');
                 }
             ])
