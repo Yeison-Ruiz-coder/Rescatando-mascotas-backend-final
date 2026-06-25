@@ -3,19 +3,50 @@
 namespace App\Services\Fundacion;
 
 use App\Models\User;
+use App\Models\Fundacion;
 use App\Traits\ImageUploadTrait;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class FundacionProfileService
 {
     use ImageUploadTrait;
 
     /**
+     * Obtener o crear fundación para el usuario
+     */
+    private function getOrCreateFundacion(User $user)
+    {
+        $fundacion = $user->fundacion;
+
+        if (!$fundacion) {
+            Log::info('🆕 Creando fundación automáticamente para usuario: ' . $user->id);
+
+            $fundacion = Fundacion::create([
+                'Nombre_1' => $user->nombre ?? 'Fundación de ' . $user->email,
+                'user_id' => $user->id,
+                'Email' => $user->email,
+                'Direccion' => $user->direccion ?? 'Por definir',
+                'Telefono' => $user->telefono ?? '000000000',
+                'registro_sanitario' => 'PENDIENTE_' . $user->id,
+                'ciudad' => $user->ciudad ?? null,
+                'recibe_voluntarios' => false,
+                'capacidad_maxima' => 0,
+            ]);
+
+            // Recargar el usuario para que tenga la fundación
+            $user->refresh();
+        }
+
+        return $fundacion;
+    }
+
+    /**
      * Obtener perfil completo (users + fundacion)
      */
     public function getCompleteProfile(User $user): array
     {
-        $fundacion = $user->fundacion;
+        $fundacion = $this->getOrCreateFundacion($user);
 
         return [
             'user' => $user->only([
@@ -23,11 +54,11 @@ class FundacionProfileService
                 'biografia', 'direccion', 'pais', 'ciudad', 'lat', 'lng',
                 'telefono_verificado', 'email_verified_at', 'puntos', 'rango'
             ]),
-            'fundacion' => $fundacion ? $fundacion->toArray() : null,
+            'fundacion' => $fundacion->toArray(),
             'stats' => [
-                'total_mascotas' => $fundacion ? $fundacion->mascotas()->count() : 0,
-                'total_adopciones' => $fundacion ? $fundacion->adopciones()->count() : 0,
-                'total_donaciones' => $fundacion ? $fundacion->donaciones()->sum('monto') : 0,
+                'total_mascotas' => $fundacion->mascotas()->count(),
+                'total_adopciones' => $fundacion->adopciones()->count(),
+                'total_donaciones' => $fundacion->donaciones()->sum('monto'),
             ]
         ];
     }
@@ -37,6 +68,9 @@ class FundacionProfileService
      */
     public function updateCompleteProfile(User $user, array $data, $avatar = null): array
     {
+        // 🔥 Asegurar que la fundación existe
+        $fundacion = $this->getOrCreateFundacion($user);
+
         // Actualizar datos de User
         $userData = array_intersect_key($data, array_flip([
             'nombre', 'apellidos', 'telefono', 'biografia'
@@ -54,15 +88,14 @@ class FundacionProfileService
         }
 
         // Actualizar datos de Fundación
-        $fundacion = $user->fundacion;
-        if ($fundacion) {
-            $fundacionData = array_intersect_key($data, array_flip([
-                'Nombre_1', 'Direccion', 'Email', 'registro_sanitario',
-                'capacidad_maxima', 'necesidades_actuales', 'horario_atencion',
-                'recibe_voluntarios', 'ciudad', 'fecha_fundacion', 'lat', 'lng',
-                'radio_atencion'
-            ]));
+        $fundacionData = array_intersect_key($data, array_flip([
+            'Nombre_1', 'Direccion', 'Email', 'registro_sanitario',
+            'capacidad_maxima', 'necesidades_actuales', 'horario_atencion',
+            'recibe_voluntarios', 'ciudad', 'fecha_fundacion', 'lat', 'lng',
+            'radio_atencion'
+        ]));
 
+        if (!empty($fundacionData)) {
             // Procesar JSON
             if (isset($fundacionData['necesidades_actuales']) && is_array($fundacionData['necesidades_actuales'])) {
                 $fundacionData['necesidades_actuales'] = json_encode($fundacionData['necesidades_actuales']);
@@ -79,7 +112,7 @@ class FundacionProfileService
      */
     public function updateGeneralInfo(User $user, array $data)
     {
-        $fundacion = $user->fundacion;
+        $fundacion = $this->getOrCreateFundacion($user);
         $fundacion->update(array_intersect_key($data, array_flip([
             'Nombre_1', 'Direccion', 'Email', 'registro_sanitario',
             'capacidad_maxima', 'ciudad', 'fecha_fundacion'
@@ -93,7 +126,7 @@ class FundacionProfileService
      */
     public function updateNeeds(User $user, array $needs)
     {
-        $fundacion = $user->fundacion;
+        $fundacion = $this->getOrCreateFundacion($user);
         $fundacion->update([
             'necesidades_actuales' => json_encode($needs)
         ]);
@@ -106,7 +139,7 @@ class FundacionProfileService
      */
     public function updateSchedule(User $user, string $schedule, bool $recibeVoluntarios)
     {
-        $fundacion = $user->fundacion;
+        $fundacion = $this->getOrCreateFundacion($user);
         $fundacion->update([
             'horario_atencion' => $schedule,
             'recibe_voluntarios' => $recibeVoluntarios
@@ -120,7 +153,7 @@ class FundacionProfileService
      */
     public function uploadCoverImage(User $user, $imageFile)
     {
-        $fundacion = $user->fundacion;
+        $fundacion = $this->getOrCreateFundacion($user);
 
         if ($fundacion->imagen_portada_public_id) {
             $this->deleteImage($fundacion->imagen_portada_public_id);
@@ -141,7 +174,7 @@ class FundacionProfileService
      */
     public function deleteCoverImage(User $user)
     {
-        $fundacion = $user->fundacion;
+        $fundacion = $this->getOrCreateFundacion($user);
 
         if ($fundacion->imagen_portada_public_id) {
             $this->deleteImage($fundacion->imagen_portada_public_id);
