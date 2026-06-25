@@ -6,12 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Entity\MascotaRequest;
 use App\Services\Entity\MascotaEntityService;
 use App\Traits\ApiResponses;
-use App\Models\Fundacion;
 use App\Traits\TransactionTrait;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class MascotaController extends Controller
 {
@@ -24,67 +23,16 @@ class MascotaController extends Controller
         $this->mascotaService = $mascotaService;
     }
 
-    /**
-     * ✅ OBTENER MASCOTAS DE LA FUNDACIÓN CON FILTROS
-     */
-    public function index(Request $request)
+    public function index()
     {
         try {
-            // 🔥 VERIFICAR QUE EL USUARIO ESTÁ AUTENTICADO
-            $user = auth()->user();
-
-            if (!$user) {
-                return $this->errorResponse('Usuario no autenticado', null, 401);
-            }
-
-            // 🔥 VERIFICAR QUE EL USUARIO SEA FUNDACIÓN
-            if ($user->tipo !== 'fundacion') {
-                return $this->errorResponse('El usuario debe ser de tipo fundación', null, 403);
-            }
-
-            // 🔥 VERIFICAR QUE TENGA FUNDACIÓN ASOCIADA
-            $fundacion = $user->fundacion;
-
-            // Si no tiene fundación, crearla automáticamente
-            if (!$fundacion) {
-                $fundacion = Fundacion::create([
-                    'Nombre_1' => $user->nombre ?? 'Fundación de ' . $user->email,
-                    'user_id' => $user->id,
-                    'Email' => $user->email,
-                    'Direccion' => $user->direccion ?? 'Por definir',
-                    'Telefono' => $user->telefono ?? '000000000',
-                    'registro_sanitario' => 'PENDIENTE_' . $user->id,
-                    'ciudad' => $user->ciudad ?? null,
-                    'recibe_voluntarios' => false,
-                    'capacidad_maxima' => 0,
-                ]);
-                Log::info('✅ Fundación creada automáticamente para usuario: ' . $user->id);
-            }
-
-            $filters = $request->only([
-                'buscar',
-                'especie',
-                'genero',
-                'estado',
-                'tamano',
-                'per_page',
-                'page',
-            ]);
-
-            $perPage = $request->get('per_page', 15);
-
-            // Pasar el ID de la fundación al service
-            $mascotas = $this->mascotaService->getAllMascotas($fundacion->id, $filters, $perPage);
+            $mascotas = $this->mascotaService->getAllMascotas();
             return $this->successResponse($mascotas, 'Mascotas obtenidas exitosamente');
         } catch (\Exception $e) {
-            Log::error('Error en index mascotas: ' . $e->getMessage());
             return $this->errorResponse($e->getMessage(), null, 403);
         }
     }
 
-    /**
-     * ✅ CREAR MASCOTA
-     */
     public function store(MascotaRequest $request)
     {
         try {
@@ -117,9 +65,6 @@ class MascotaController extends Controller
         }
     }
 
-    /**
-     * ✅ ACTUALIZAR MASCOTA
-     */
     public function update(MascotaRequest $request, int $id)
     {
         Log::info('📝 UPDATE MASCOTA - DATOS:', $request->all());
@@ -166,9 +111,6 @@ class MascotaController extends Controller
         }
     }
 
-    /**
-     * ✅ OBTENER UNA MASCOTA
-     */
     public function show(int $id)
     {
         try {
@@ -181,9 +123,6 @@ class MascotaController extends Controller
         }
     }
 
-    /**
-     * ✅ ELIMINAR MASCOTA
-     */
     public function destroy(int $id)
     {
         try {
@@ -201,7 +140,7 @@ class MascotaController extends Controller
     }
 
     /**
-     * ✅ ACTUALIZAR ESTADO DE MASCOTA (PATCH)
+     * ✅ ACTUALIZAR ESTADO DE MASCOTA - AGREGADO
      */
     public function actualizarEstado(Request $request, int $id)
     {
