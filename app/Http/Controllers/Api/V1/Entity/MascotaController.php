@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Entity\MascotaRequest;
 use App\Services\Entity\MascotaEntityService;
 use App\Traits\ApiResponses;
+use App\Models\Fundacion;
 use App\Traits\TransactionTrait;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -29,6 +30,37 @@ class MascotaController extends Controller
     public function index(Request $request)
     {
         try {
+            // 🔥 VERIFICAR QUE EL USUARIO ESTÁ AUTENTICADO
+            $user = auth()->user();
+
+            if (!$user) {
+                return $this->errorResponse('Usuario no autenticado', null, 401);
+            }
+
+            // 🔥 VERIFICAR QUE EL USUARIO SEA FUNDACIÓN
+            if ($user->tipo !== 'fundacion') {
+                return $this->errorResponse('El usuario debe ser de tipo fundación', null, 403);
+            }
+
+            // 🔥 VERIFICAR QUE TENGA FUNDACIÓN ASOCIADA
+            $fundacion = $user->fundacion;
+
+            // Si no tiene fundación, crearla automáticamente
+            if (!$fundacion) {
+                $fundacion = Fundacion::create([
+                    'Nombre_1' => $user->nombre ?? 'Fundación de ' . $user->email,
+                    'user_id' => $user->id,
+                    'Email' => $user->email,
+                    'Direccion' => $user->direccion ?? 'Por definir',
+                    'Telefono' => $user->telefono ?? '000000000',
+                    'registro_sanitario' => 'PENDIENTE_' . $user->id,
+                    'ciudad' => $user->ciudad ?? null,
+                    'recibe_voluntarios' => false,
+                    'capacidad_maxima' => 0,
+                ]);
+                Log::info('✅ Fundación creada automáticamente para usuario: ' . $user->id);
+            }
+
             $filters = $request->only([
                 'buscar',
                 'especie',
@@ -41,8 +73,8 @@ class MascotaController extends Controller
 
             $perPage = $request->get('per_page', 15);
 
-            // 🔥 ELIMINADA LA VALIDACIÓN DE FUNDACIÓN
-            $mascotas = $this->mascotaService->getAllMascotas($filters, $perPage);
+            // Pasar el ID de la fundación al service
+            $mascotas = $this->mascotaService->getAllMascotas($fundacion->id, $filters, $perPage);
             return $this->successResponse($mascotas, 'Mascotas obtenidas exitosamente');
         } catch (\Exception $e) {
             Log::error('Error en index mascotas: ' . $e->getMessage());

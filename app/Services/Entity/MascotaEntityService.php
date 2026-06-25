@@ -126,50 +126,17 @@ class MascotaEntityService
     /**
      * ✅ OBTENER MASCOTAS - SIN VALIDACIÓN DE FUNDACIÓN
      */
-    public function getAllMascotas(array $filters = [], int $perPage = 15)
+    /**
+     * ✅ OBTENER MASCOTAS - RECIBE fundacionId DIRECTAMENTE
+     */
+    public function getAllMascotas(int $fundacionId, array $filters = [], int $perPage = 15)
     {
-        $user = Auth::user();
+        $cacheKey = self::CACHE_PREFIX . $fundacionId . '_' . md5(json_encode($filters) . $perPage);
 
-        // 🔥 Si no hay usuario autenticado, devolver error
-        if (!$user) {
-            throw new \Exception('Usuario no autenticado');
-        }
+        $this->rememberMascotasCacheKey($fundacionId, $cacheKey);
 
-        // 🔥 Si no es fundación, devolver error
-        if ($user->tipo !== 'fundacion') {
-            throw new \Exception('El usuario debe ser de tipo fundación');
-        }
-
-        // 🔥 Buscar la fundación del usuario
-        $fundacion = Fundacion::where('user_id', $user->id)->first();
-
-        // 🔥 Si no tiene fundación, crearla automáticamente
-        if (!$fundacion) {
-            $fundacion = Fundacion::create([
-                'Nombre_1' => $user->nombre ?? 'Fundación de ' . $user->email,
-                'user_id' => $user->id,
-                'Email' => $user->email,
-                'Direccion' => $user->direccion ?? 'Por definir',
-                'Telefono' => $user->telefono ?? '000000000',
-                'registro_sanitario' => 'PENDIENTE_' . $user->id,
-                'ciudad' => $user->ciudad ?? null,
-                'recibe_voluntarios' => false,
-                'capacidad_maxima' => 0,
-            ]);
-            Log::info('✅ Fundación creada automáticamente:', ['id' => $fundacion->id, 'user_id' => $user->id]);
-        }
-
-        // 🔥 Si la fundación existe pero no tiene ID válido, crear una
-        if (!$fundacion || !$fundacion->id) {
-            throw new \Exception('No se pudo obtener o crear la fundación');
-        }
-
-        $cacheKey = self::CACHE_PREFIX . $fundacion->id . '_' . md5(json_encode($filters) . $perPage);
-
-        $this->rememberMascotasCacheKey($fundacion->id, $cacheKey);
-
-        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($fundacion, $filters, $perPage) {
-            $query = Mascota::where('fundacion_id', $fundacion->id)
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($fundacionId, $filters, $perPage) {
+            $query = Mascota::where('fundacion_id', $fundacionId)
                 ->select([
                     'id',
                     'nombre_mascota',
