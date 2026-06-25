@@ -6,70 +6,12 @@ use App\Models\Mascota;
 use App\Models\Fundacion;
 use App\Traits\ImageUploadTrait;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Log;
 
 class MascotaEntityService
 {
     use ImageUploadTrait;
-
-    // ============================================
-    // 🔥 CONSTANTES DE CACHÉ
-    // ============================================
-    private const CACHE_TTL = 300; // 5 minutos
-    private const CACHE_PREFIX = 'mascotas_fundacion_';
-
-    // ============================================
-    // 🔥 FUNDACIÓN CON CACHÉ
-    // ============================================
-
-    // En getFundacionCached()
-    private function getFundacionCached()
-    {
-        $user = Auth::user();
-
-        Log::info('🔍 getFundacionCached - Usuario:', [
-            'id' => $user?->id,
-            'tipo' => $user?->tipo,
-            'email' => $user?->email,
-        ]);
-
-        if ($user->tipo !== 'fundacion') {
-            Log::warning('⚠️ Usuario no es fundación:', ['tipo' => $user?->tipo]);
-            return null;
-        }
-
-        $cacheKey = 'fundacion_user_' . $user->id;
-
-        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($user) {
-            $fundacion = Fundacion::where('user_id', $user->id)->first();
-
-            Log::info('🔍 Buscando fundación:', [
-                'user_id' => $user->id,
-                'found' => $fundacion ? 'SÍ' : 'NO',
-                'fundacion_id' => $fundacion?->id,
-            ]);
-
-            if (!$fundacion) {
-                $fundacion = Fundacion::create([
-                    'Nombre_1' => $user->nombre ?? 'Fundación de ' . $user->email,
-                    'user_id' => $user->id,
-                    'Email' => $user->email,
-                    'Direccion' => $user->direccion ?? 'Por definir',
-                    'Telefono' => $user->telefono ?? '000000000',
-                    'registro_sanitario' => 'PENDIENTE_' . $user->id,
-                    'ciudad' => $user->ciudad ?? null,
-                    'recibe_voluntarios' => false,
-                    'capacidad_maxima' => 0,
-                ]);
-                Log::info('✅ Fundación creada:', ['id' => $fundacion->id]);
-            }
-
-            return $fundacion;
-        });
-    }
 
     public function getEntidad()
     {
@@ -86,142 +28,56 @@ class MascotaEntityService
 
     public function getFundacion()
     {
-        return $this->getFundacionCached();
-    }
-
-    // ============================================
-    // 🔥 MÉTODOS DE CACHÉ
-    // ============================================
-
-    private function clearMascotasCache(int $fundacionId): void
-    {
-        $keys = Cache::get('mascotas_cache_keys_' . $fundacionId, []);
-        foreach ($keys as $key) {
-            Cache::forget($key);
-        }
-        Cache::forget('mascotas_cache_keys_' . $fundacionId);
-
-        // También limpiar caché de fundación
         $user = Auth::user();
-        if ($user) {
-            Cache::forget('fundacion_user_' . $user->id);
+
+        if ($user->tipo !== 'fundacion') {
+            return null;
         }
 
-        Log::info('🧹 Caché de mascotas limpiado para fundación ' . $fundacionId);
-    }
+        $fundacion = Fundacion::where('user_id', $user->id)->first();
 
-    private function rememberMascotasCacheKey(int $fundacionId, string $cacheKey): void
-    {
-        $keys = Cache::get('mascotas_cache_keys_' . $fundacionId, []);
-        if (!in_array($cacheKey, $keys)) {
-            $keys[] = $cacheKey;
-            Cache::put('mascotas_cache_keys_' . $fundacionId, $keys, self::CACHE_TTL);
+        if (!$fundacion) {
+            $fundacion = Fundacion::create([
+                'Nombre_1' => $user->nombre ?? 'Fundación',
+                'Direccion' => $user->direccion ?? 'Pendiente',
+                'Telefono' => $user->telefono ?? '000000000',
+                'Email' => $user->email,
+                'registro_sanitario' => 'PENDIENTE_' . $user->id,
+                'user_id' => $user->id,
+                'ciudad' => $user->ciudad ?? null,
+            ]);
         }
+
+        return $fundacion;
     }
 
-    // ============================================
-    // ✅ OBTENER MASCOTAS - OPTIMIZADO
-    // ============================================
-
-    /**
-     * ✅ OBTENER MASCOTAS - SIN VALIDACIÓN DE FUNDACIÓN
-     */
-    /**
-     * ✅ OBTENER MASCOTAS - RECIBE fundacionId DIRECTAMENTE
-     */
-    public function getAllMascotas(int $fundacionId, array $filters = [], int $perPage = 15)
+    public function getAllMascotas()
     {
-        $cacheKey = self::CACHE_PREFIX . $fundacionId . '_' . md5(json_encode($filters) . $perPage);
+        $fundacion = $this->getFundacion();
 
-        $this->rememberMascotasCacheKey($fundacionId, $cacheKey);
+        if (!$fundacion) {
+            throw new \Exception('Perfil de fundación no encontrado');
+        }
 
-        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($fundacionId, $filters, $perPage) {
-            $query = Mascota::where('fundacion_id', $fundacionId)
-                ->select([
-                    'id',
-                    'nombre_mascota',
-                    'especie',
-                    'genero',
-                    'edad_aprox',
-                    'estado',
-                    'foto_principal',
-                    'created_at',
-                    'descripcion',
-                    'lugar_rescate',
-                    'tamano',
-                    'color',
-                    'peso_aprox',
-                ])
-                ->with([
-                    'razas' => function ($q) {
-                        $q->select('id', 'nombre_raza');
-                    },
-                    'vacunas' => function ($q) {
-                        $q->select('id', 'nombre');
-                    }
-                ]);
-
-            // Filtros
-            if (!empty($filters['buscar'])) {
-                $search = $filters['buscar'];
-                $query->where(function ($q) use ($search) {
-                    $q->where('nombre_mascota', 'like', '%' . $search . '%')
-                        ->orWhere('descripcion', 'like', '%' . $search . '%')
-                        ->orWhere('especie', 'like', '%' . $search . '%')
-                        ->orWhere('lugar_rescate', 'like', '%' . $search . '%');
-                });
-            }
-
-            if (!empty($filters['especie'])) {
-                $query->where('especie', $filters['especie']);
-            }
-
-            if (!empty($filters['genero'])) {
-                $query->where('genero', $filters['genero']);
-            }
-
-            if (!empty($filters['estado'])) {
-                $query->where('estado', $filters['estado']);
-            }
-
-            if (!empty($filters['tamano'])) {
-                $query->where('tamano', $filters['tamano']);
-            }
-
-            $query->orderBy('created_at', 'desc');
-
-            return $query->paginate($perPage);
-        });
+        return Mascota::where('fundacion_id', $fundacion->id)->get();
     }
-
-    // ============================================
-    // ✅ BUSCAR UNA MASCOTA POR ID
-    // ============================================
 
     public function findMascota(int $id)
     {
-        $fundacion = $this->getFundacionCached();
+        $fundacion = $this->getFundacion();
 
         if (!$fundacion) {
             throw new \Exception('Perfil de fundación no encontrado');
         }
 
         $mascota = Mascota::where('fundacion_id', $fundacion->id)
-            ->with([
-                'razas' => function ($q) {
-                    $q->select('id', 'nombre_raza');
-                },
-                'vacunas' => function ($q) {
-                    $q->select('id', 'nombre');
-                }
-            ])
+            ->with(['razas', 'vacunas'])
             ->find($id);
 
         if (!$mascota) {
             throw new ModelNotFoundException('Mascota no encontrada');
         }
 
-        // Normalizar galeria_fotos
         if ($mascota->galeria_fotos) {
             if (is_string($mascota->galeria_fotos)) {
                 $galeria = json_decode($mascota->galeria_fotos, true);
@@ -244,37 +100,9 @@ class MascotaEntityService
         return $mascota;
     }
 
-    // ============================================
-    // ✅ ACTUALIZAR ESTADO DE MASCOTA
-    // ============================================
-
-    public function actualizarEstado(int $id, string $estado): Mascota
-    {
-        $fundacion = $this->getFundacionCached();
-
-        if (!$fundacion) {
-            throw new \Exception('Perfil de fundación no encontrado');
-        }
-
-        $mascota = Mascota::where('fundacion_id', $fundacion->id)
-            ->findOrFail($id);
-
-        $mascota->estado = $estado;
-        $mascota->save();
-
-        // 🔥 LIMPIAR CACHÉ
-        $this->clearMascotasCache($fundacion->id);
-
-        return $mascota->load(['razas', 'vacunas']);
-    }
-
-    // ============================================
-    // ✅ CREAR MASCOTA
-    // ============================================
-
     public function createMascota(array $data, $files = null)
     {
-        $fundacion = $this->getFundacionCached();
+        $fundacion = $this->getFundacion();
 
         if (!$fundacion) {
             throw new \Exception('Perfil de fundación no encontrado');
@@ -313,7 +141,6 @@ class MascotaEntityService
 
         $mascota->save();
 
-        // Galería
         if (!empty($files['galeria_fotos']) && is_array($files['galeria_fotos'])) {
             $galeriaPaths = [];
             foreach ($files['galeria_fotos'] as $foto) {
@@ -328,7 +155,6 @@ class MascotaEntityService
             }
         }
 
-        // Arrays JSON
         if (isset($data['enfermedades_cronicas']) && is_array($data['enfermedades_cronicas'])) {
             $mascota->enfermedades_cronicas = json_encode(array_values($data['enfermedades_cronicas']), JSON_UNESCAPED_UNICODE);
             $mascota->save();
@@ -344,12 +170,10 @@ class MascotaEntityService
             $mascota->save();
         }
 
-        // Razas
         if (!empty($data['razas']) && is_array($data['razas'])) {
             $mascota->razas()->sync($data['razas']);
         }
 
-        // Vacunas
         if (!empty($data['vacunas']) && is_array($data['vacunas'])) {
             $vacunasData = [];
             foreach ($data['vacunas'] as $vacunaId) {
@@ -358,180 +182,11 @@ class MascotaEntityService
             $mascota->vacunas()->sync($vacunasData);
         }
 
-        // 🔥 LIMPIAR CACHÉ
-        $this->clearMascotasCache($fundacion->id);
-
         return $mascota->load(['razas', 'vacunas']);
     }
 
     // ============================================
-    // ✅ ACTUALIZAR MASCOTA
-    // ============================================
-
-    public function updateMascota(int $id, array $data, $files = null)
-    {
-        Log::info('=== UPDATE MASCOTA ===');
-        Log::info('ID: ' . $id);
-
-        $mascota = $this->findMascota($id);
-        $fundacionId = $mascota->fundacion_id;
-
-        // Foto principal
-        if (!empty($files['foto_principal']) && $files['foto_principal']->isValid()) {
-            if ($mascota->foto_principal) {
-                $this->deleteImage($mascota->foto_principal);
-            }
-            $data['foto_principal'] = $this->uploadImage($files['foto_principal'], 'mascotas');
-        }
-
-        // Galería actual
-        $galeriaActual = [];
-        if ($mascota->galeria_fotos) {
-            if (is_string($mascota->galeria_fotos)) {
-                $galeriaActual = json_decode($mascota->galeria_fotos, true) ?: [];
-            } elseif (is_array($mascota->galeria_fotos)) {
-                $galeriaActual = $mascota->galeria_fotos;
-            }
-        }
-        $galeriaActual = array_values(array_filter($galeriaActual, function ($item) {
-            return is_string($item) && !empty($item);
-        }));
-
-        // Eliminar fotos marcadas
-        if (isset($data['fotos_eliminar']) && is_array($data['fotos_eliminar'])) {
-            foreach ($data['fotos_eliminar'] as $fotoPath) {
-                if (!$fotoPath || !is_string($fotoPath)) continue;
-
-                $fotoAEliminar = null;
-                $indexToRemove = null;
-
-                foreach ($galeriaActual as $index => $existingFoto) {
-                    $normalizedExisting = $this->normalizeImageUrl($existingFoto);
-                    $normalizedToDelete = $this->normalizeImageUrl($fotoPath);
-
-                    if ($normalizedExisting === $normalizedToDelete) {
-                        $fotoAEliminar = $existingFoto;
-                        $indexToRemove = $index;
-                        break;
-                    }
-                }
-
-                if ($fotoAEliminar) {
-                    $publicId = $this->extractPublicIdFromUrl($fotoAEliminar);
-                    if ($publicId) {
-                        $this->deleteImage($publicId);
-                    }
-                    unset($galeriaActual[$indexToRemove]);
-                }
-            }
-            $galeriaActual = array_values($galeriaActual);
-        }
-
-        // Agregar nuevas fotos
-        if (!empty($files['galeria_fotos']) && is_array($files['galeria_fotos'])) {
-            foreach ($files['galeria_fotos'] as $foto) {
-                if ($foto && $foto->isValid()) {
-                    $url = $this->uploadImage($foto, 'mascotas/galeria');
-                    $galeriaActual[] = $url;
-                }
-            }
-        }
-
-        $data['galeria_fotos'] = json_encode(array_values($galeriaActual));
-
-        // Actualizar
-        $mascota->update($data);
-
-        // Arrays JSON
-        if (isset($data['enfermedades_cronicas']) && is_array($data['enfermedades_cronicas'])) {
-            $mascota->enfermedades_cronicas = json_encode(array_values($data['enfermedades_cronicas']), JSON_UNESCAPED_UNICODE);
-            $mascota->save();
-        }
-
-        if (isset($data['medicamentos']) && is_array($data['medicamentos'])) {
-            $mascota->medicamentos = json_encode(array_values($data['medicamentos']), JSON_UNESCAPED_UNICODE);
-            $mascota->save();
-        }
-
-        if (isset($data['requisitos_adopcion']) && is_array($data['requisitos_adopcion'])) {
-            $mascota->requisitos_adopcion = json_encode(array_values($data['requisitos_adopcion']), JSON_UNESCAPED_UNICODE);
-            $mascota->save();
-        }
-
-        // Razas
-        if (isset($data['razas']) && is_array($data['razas'])) {
-            $mascota->razas()->sync($data['razas']);
-        }
-
-        // Vacunas
-        if (isset($data['vacunas']) && is_array($data['vacunas'])) {
-            $vacunasData = [];
-            foreach ($data['vacunas'] as $vacunaId) {
-                $vacunasData[$vacunaId] = ['fecha_aplicacion' => now()->format('Y-m-d')];
-            }
-            $mascota->vacunas()->sync($vacunasData);
-        }
-
-        // 🔥 LIMPIAR CACHÉ
-        $this->clearMascotasCache($fundacionId);
-
-        return $mascota->load(['razas', 'vacunas']);
-    }
-
-    // ============================================
-    // ✅ ELIMINAR MASCOTA
-    // ============================================
-
-    public function deleteMascota(int $id)
-    {
-        $mascota = $this->findMascota($id);
-        $fundacionId = $mascota->fundacion_id;
-
-        if ($mascota->foto_principal && is_string($mascota->foto_principal)) {
-            $this->deleteImage($mascota->foto_principal);
-        }
-
-        if ($mascota->galeria_fotos) {
-            $galeria = is_string($mascota->galeria_fotos)
-                ? json_decode($mascota->galeria_fotos, true)
-                : $mascota->galeria_fotos;
-
-            if (is_array($galeria)) {
-                foreach ($galeria as $foto) {
-                    if ($foto && is_string($foto)) {
-                        $this->deleteImage($foto);
-                    }
-                }
-            }
-        }
-
-        $mascota->razas()->detach();
-        $mascota->vacunas()->detach();
-        $mascota->delete();
-
-        // 🔥 LIMPIAR CACHÉ
-        $this->clearMascotasCache($fundacionId);
-    }
-
-    /**
-     * ✅ ALTERNAR DESTACADA
-     */
-    public function toggleDestacada(int $id): Mascota
-    {
-        $mascota = $this->findMascota($id);
-        $fundacionId = $mascota->fundacion_id;
-
-        $mascota->destacada = !$mascota->destacada;
-        $mascota->save();
-
-        // 🔥 LIMPIAR CACHÉ
-        $this->clearMascotasCache($fundacionId);
-
-        return $mascota;
-    }
-
-    // ============================================
-    // ✅ UTILIDADES DE IMAGEN
+    // 🔥 MÉTODOS DE UTILIDADES DE IMAGEN
     // ============================================
 
     private function normalizeImageUrl(?string $url): ?string
@@ -569,5 +224,172 @@ class MascotaEntityService
         }
 
         return null;
+    }
+
+    // ============================================
+    // 🔥 ACTUALIZAR MASCOTA - VERSIÓN ORIGINAL
+    // ============================================
+
+    public function updateMascota(int $id, array $data, $files = null)
+    {
+        Log::info('=== UPDATE MASCOTA ===');
+        Log::info('ID: ' . $id);
+
+        $mascota = $this->findMascota($id);
+
+        if (!empty($files['foto_principal']) && $files['foto_principal']->isValid()) {
+            if ($mascota->foto_principal) {
+                $this->deleteImage($mascota->foto_principal);
+            }
+            $data['foto_principal'] = $this->uploadImage($files['foto_principal'], 'mascotas');
+        }
+
+        $galeriaActual = [];
+        if ($mascota->galeria_fotos) {
+            if (is_string($mascota->galeria_fotos)) {
+                $galeriaActual = json_decode($mascota->galeria_fotos, true) ?: [];
+            } elseif (is_array($mascota->galeria_fotos)) {
+                $galeriaActual = $mascota->galeria_fotos;
+            }
+        }
+
+        $galeriaActual = array_values(array_filter($galeriaActual, function ($item) {
+            return is_string($item) && !empty($item);
+        }));
+
+        if (isset($data['fotos_eliminar']) && is_array($data['fotos_eliminar'])) {
+            foreach ($data['fotos_eliminar'] as $fotoPath) {
+                if (!$fotoPath || !is_string($fotoPath)) continue;
+
+                $fotoAEliminar = null;
+                $indexToRemove = null;
+
+                foreach ($galeriaActual as $index => $existingFoto) {
+                    $normalizedExisting = $this->normalizeImageUrl($existingFoto);
+                    $normalizedToDelete = $this->normalizeImageUrl($fotoPath);
+
+                    if ($normalizedExisting === $normalizedToDelete) {
+                        $fotoAEliminar = $existingFoto;
+                        $indexToRemove = $index;
+                        break;
+                    }
+                }
+
+                if ($fotoAEliminar) {
+                    $publicId = $this->extractPublicIdFromUrl($fotoAEliminar);
+                    if ($publicId) {
+                        $this->deleteImage($publicId);
+                    }
+                    unset($galeriaActual[$indexToRemove]);
+                }
+            }
+            $galeriaActual = array_values($galeriaActual);
+        }
+
+        if (!empty($files['galeria_fotos']) && is_array($files['galeria_fotos'])) {
+            foreach ($files['galeria_fotos'] as $foto) {
+                if ($foto && $foto->isValid()) {
+                    $url = $this->uploadImage($foto, 'mascotas/galeria');
+                    $galeriaActual[] = $url;
+                }
+            }
+        }
+
+        $data['galeria_fotos'] = json_encode(array_values($galeriaActual));
+
+        $mascota->update($data);
+
+        if (isset($data['enfermedades_cronicas']) && is_array($data['enfermedades_cronicas'])) {
+            $mascota->enfermedades_cronicas = json_encode(array_values($data['enfermedades_cronicas']), JSON_UNESCAPED_UNICODE);
+            $mascota->save();
+        }
+
+        if (isset($data['medicamentos']) && is_array($data['medicamentos'])) {
+            $mascota->medicamentos = json_encode(array_values($data['medicamentos']), JSON_UNESCAPED_UNICODE);
+            $mascota->save();
+        }
+
+        if (isset($data['requisitos_adopcion']) && is_array($data['requisitos_adopcion'])) {
+            $mascota->requisitos_adopcion = json_encode(array_values($data['requisitos_adopcion']), JSON_UNESCAPED_UNICODE);
+            $mascota->save();
+        }
+
+        if (isset($data['razas']) && is_array($data['razas'])) {
+            $mascota->razas()->sync($data['razas']);
+        }
+
+        if (isset($data['vacunas']) && is_array($data['vacunas'])) {
+            $vacunasData = [];
+            foreach ($data['vacunas'] as $vacunaId) {
+                $vacunasData[$vacunaId] = ['fecha_aplicacion' => now()->format('Y-m-d')];
+            }
+            $mascota->vacunas()->sync($vacunasData);
+        }
+
+        return $mascota->load(['razas', 'vacunas']);
+    }
+
+    // ============================================
+    // 🔥 ELIMINAR MASCOTA
+    // ============================================
+
+    public function deleteMascota(int $id)
+    {
+        $mascota = $this->findMascota($id);
+
+        if ($mascota->foto_principal && is_string($mascota->foto_principal)) {
+            $this->deleteImage($mascota->foto_principal);
+        }
+
+        if ($mascota->galeria_fotos) {
+            $galeria = is_string($mascota->galeria_fotos)
+                ? json_decode($mascota->galeria_fotos, true)
+                : $mascota->galeria_fotos;
+
+            if (is_array($galeria)) {
+                foreach ($galeria as $foto) {
+                    if ($foto && is_string($foto)) {
+                        $this->deleteImage($foto);
+                    }
+                }
+            }
+        }
+
+        $mascota->razas()->detach();
+        $mascota->vacunas()->detach();
+        $mascota->delete();
+    }
+
+    // ============================================
+    // 🔥 ALTERNAR DESTACADA
+    // ============================================
+
+    public function toggleDestacada(int $id): Mascota
+    {
+        $mascota = $this->findMascota($id);
+        $mascota->destacada = !$mascota->destacada;
+        $mascota->save();
+        return $mascota;
+    }
+
+    // ============================================
+    // 🔥 ACTUALIZAR ESTADO - NUEVO MÉTODO
+    // ============================================
+
+    public function actualizarEstado(int $id, string $estado): Mascota
+    {
+        $fundacion = $this->getFundacion();
+
+        if (!$fundacion) {
+            throw new \Exception('Perfil de fundación no encontrado');
+        }
+
+        $mascota = Mascota::where('fundacion_id', $fundacion->id)
+            ->findOrFail($id);
+
+        $mascota->estado = $estado;
+        $mascota->save();
+
+        return $mascota->load(['razas', 'vacunas']);
     }
 }
