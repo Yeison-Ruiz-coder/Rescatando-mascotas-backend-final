@@ -12,7 +12,7 @@ class EventoEntityService
     use ImageUploadTrait;
 
     /**
-     * Obtener la entidad (fundación) del usuario autenticado
+     * Obtener la entidad (fundación o veterinaria) del usuario autenticado
      */
     public function getEntidad()
     {
@@ -21,39 +21,95 @@ class EventoEntityService
         if ($user->tipo === 'fundacion') {
             return $user->fundacion;
         }
+        if ($user->tipo === 'veterinaria') {
+            return $user->veterinaria;
+        }
         return null;
     }
 
     /**
-     * Obtener todos los eventos de la fundación
+     * Obtener el ID de la entidad y su tipo para guardar en eventos
+     */
+    public function getEntidadData()
+    {
+        $entidad = $this->getEntidad();
+
+        if (!$entidad) {
+            throw new \Exception('Perfil de entidad no encontrado');
+        }
+
+        $user = Auth::user();
+        $tipo = $user->tipo;
+
+        if ($tipo === 'fundacion') {
+            return [
+                'fundacion_id' => $entidad->id,
+                'veterinaria_id' => null,
+                'tipo' => 'fundacion'
+            ];
+        }
+
+        if ($tipo === 'veterinaria') {
+            return [
+                'fundacion_id' => null,
+                'veterinaria_id' => $entidad->id,
+                'tipo' => 'veterinaria'
+            ];
+        }
+
+        throw new \Exception('Tipo de entidad no válido');
+    }
+
+    /**
+     * Obtener todos los eventos de la entidad
      */
     public function getMisEventos()
     {
         $entidad = $this->getEntidad();
 
         if (!$entidad) {
-            throw new \Exception('Perfil de fundación no encontrado');
+            throw new \Exception('Perfil de entidad no encontrado');
         }
 
-        return Evento::where('fundacion_id', $entidad->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $user = Auth::user();
+
+        $query = Evento::query();
+
+        if ($user->tipo === 'fundacion') {
+            $query->where('fundacion_id', $entidad->id);
+        } elseif ($user->tipo === 'veterinaria') {
+            $query->where('veterinaria_id', $entidad->id);
+        } else {
+            throw new \Exception('Tipo de usuario no válido para eventos');
+        }
+
+        return $query->orderBy('created_at', 'desc')->get();
     }
 
     /**
-     * Encontrar un evento específico de la fundación
+     * Encontrar un evento específico de la entidad
      */
     public function findEvento(int $id)
     {
         $entidad = $this->getEntidad();
 
         if (!$entidad) {
-            throw new \Exception('Perfil de fundación no encontrado');
+            throw new \Exception('Perfil de entidad no encontrado');
         }
 
-        $evento = Evento::where('fundacion_id', $entidad->id)
-            ->where('id', $id)
-            ->first();
+        $user = Auth::user();
+
+        $query = Evento::where('id', $id);
+
+        if ($user->tipo === 'fundacion') {
+            $query->where('fundacion_id', $entidad->id);
+        } elseif ($user->tipo === 'veterinaria') {
+            $query->where('veterinaria_id', $entidad->id);
+        } else {
+            throw new \Exception('Tipo de usuario no válido para eventos');
+        }
+
+        $evento = $query->first();
 
         if (!$evento) {
             throw new ModelNotFoundException('Evento no encontrado');
@@ -70,8 +126,10 @@ class EventoEntityService
         $entidad = $this->getEntidad();
 
         if (!$entidad) {
-            throw new \Exception('Perfil de fundación no encontrado');
+            throw new \Exception('Perfil de entidad no encontrado');
         }
+
+        $entidadData = $this->getEntidadData();
 
         // Datos básicos del evento
         $eventoData = [
@@ -79,8 +137,9 @@ class EventoEntityService
             'lugar_evento' => $data['lugar_evento'],
             'descripcion' => $data['descripcion'],
             'fecha_evento' => $data['fecha_evento'],
-            'fundacion_id' => $entidad->id,
-            'tipo' => 'fundacion',
+            'tipo' => $entidadData['tipo'],
+            'fundacion_id' => $entidadData['fundacion_id'],
+            'veterinaria_id' => $entidadData['veterinaria_id'],
             'likes' => 0,
         ];
 
@@ -125,7 +184,6 @@ class EventoEntityService
 
     /**
      * Actualizar un evento existente
-     * CORREGIDO: Ahora elimina la imagen anterior antes de subir la nueva
      */
     public function updateEvento(int $id, array $data, $imagen = null)
     {
@@ -169,13 +227,11 @@ class EventoEntityService
             $evento->tags = json_encode($data['tags'], JSON_UNESCAPED_UNICODE);
         }
 
-        // ✅ CORREGIDO: Actualizar imagen si viene una nueva (eliminando la anterior)
+        // Actualizar imagen si viene una nueva (eliminando la anterior)
         if ($imagen) {
-            // Eliminar imagen anterior si existe
             if ($evento->imagen_url) {
                 $this->deleteImage($evento->imagen_url);
             }
-            // Subir nueva imagen
             $evento->imagen_url = $this->uploadImage($imagen, 'eventos');
             $evento->imagen_public_id = null;
         }
@@ -191,7 +247,6 @@ class EventoEntityService
     {
         $evento = $this->findEvento($id);
 
-        // Eliminar imagen de Cloudinary si existe
         if ($evento->imagen_url) {
             $this->deleteImage($evento->imagen_url);
         }
@@ -200,7 +255,7 @@ class EventoEntityService
     }
 
     /**
-     * Obtener evento por ID (sin verificar fundación - para admin)
+     * Obtener evento por ID (sin verificar entidad - para admin)
      */
     public function findEventoById(int $id): Evento
     {
@@ -218,7 +273,7 @@ class EventoEntityService
      */
     public function getAllEventos()
     {
-        return Evento::with('fundacion')
+        return Evento::with(['fundacion', 'veterinaria'])
             ->orderBy('created_at', 'desc')
             ->get();
     }

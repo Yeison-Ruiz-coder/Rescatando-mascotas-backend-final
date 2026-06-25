@@ -16,33 +16,41 @@ class SuscripcionEntityService
         if ($user->tipo === 'fundacion') {
             return $user->fundacion;
         }
+        if ($user->tipo === 'veterinaria') {
+            return $user->veterinaria;
+        }
         return null;
     }
 
     /**
-     * ✅ NUEVO: Validar fechas de suscripción
+     * Obtener IDs de mascotas de la entidad
      */
-    private function validarFechas(array $data): void
-    {
-        if (isset($data['fecha_inicio']) && isset($data['fecha_fin']) &&
-            $data['fecha_fin'] && $data['fecha_inicio'] > $data['fecha_fin']) {
-            throw new \Exception('La fecha de inicio no puede ser posterior a la fecha de fin');
-        }
-
-        if (isset($data['fecha_inicio']) && $data['fecha_inicio'] < now()->startOfDay()) {
-            throw new \Exception('La fecha de inicio no puede ser anterior a hoy');
-        }
-    }
-
-    public function getMisSuscripciones()
+    private function getMascotasIds()
     {
         $entidad = $this->getEntidad();
 
         if (!$entidad) {
-            throw new \Exception('Perfil de fundación no encontrado');
+            throw new \Exception('Perfil de entidad no encontrado');
         }
 
-        $mascotasIds = Mascota::where('fundacion_id', $entidad->id)->pluck('id');
+        $user = Auth::user();
+
+        $query = Mascota::query();
+
+        if ($user->tipo === 'fundacion') {
+            $query->where('fundacion_id', $entidad->id);
+        } elseif ($user->tipo === 'veterinaria') {
+            $query->where('veterinaria_id', $entidad->id);
+        } else {
+            throw new \Exception('Tipo de usuario no válido para suscripciones');
+        }
+
+        return $query->pluck('id');
+    }
+
+    public function getMisSuscripciones()
+    {
+        $mascotasIds = $this->getMascotasIds();
 
         return Suscripcion::with(['user', 'mascota'])
             ->whereIn('mascota_id', $mascotasIds)
@@ -52,13 +60,7 @@ class SuscripcionEntityService
 
     public function findSuscripcion(int $id)
     {
-        $entidad = $this->getEntidad();
-
-        if (!$entidad) {
-            throw new \Exception('Perfil de fundación no encontrado');
-        }
-
-        $mascotasIds = Mascota::where('fundacion_id', $entidad->id)->pluck('id');
+        $mascotasIds = $this->getMascotasIds();
 
         $suscripcion = Suscripcion::with(['user', 'mascota'])
             ->whereIn('mascota_id', $mascotasIds)
@@ -73,29 +75,31 @@ class SuscripcionEntityService
     }
 
     /**
-     * ✅ CORREGIDO: Ahora valida fechas
+     * Validar fechas de suscripción
      */
+    private function validarFechas(array $data): void
+    {
+        if (isset($data['fecha_inicio']) && isset($data['fecha_fin']) &&
+            $data['fecha_fin'] && $data['fecha_inicio'] > $data['fecha_fin']) {
+            throw new \Exception('La fecha de inicio no puede ser posterior a la fecha de fin');
+        }
+
+        if (isset($data['fecha_inicio']) && $data['fecha_inicio'] < now()->startOfDay()) {
+            throw new \Exception('La fecha de inicio no puede ser anterior a hoy');
+        }
+    }
+
     public function createSuscripcion(array $data)
     {
-        $entidad = $this->getEntidad();
+        $mascotasIds = $this->getMascotasIds();
 
-        if (!$entidad) {
-            throw new \Exception('Perfil de fundación no encontrado');
+        // Verificar que la mascota pertenece a la entidad
+        if (!in_array($data['mascota_id'], $mascotasIds->toArray())) {
+            throw new \Exception('La mascota no pertenece a tu entidad');
         }
 
-        // Verificar que la mascota pertenece a la fundación
-        $mascota = Mascota::where('id', $data['mascota_id'])
-            ->where('fundacion_id', $entidad->id)
-            ->first();
-
-        if (!$mascota) {
-            throw new \Exception('La mascota no pertenece a tu fundación');
-        }
-
-        // ✅ Validar fechas
         $this->validarFechas($data);
 
-        // Si no se especifica fecha_inicio, usar hoy
         if (!isset($data['fecha_inicio'])) {
             $data['fecha_inicio'] = now()->toDateString();
         }
@@ -103,26 +107,19 @@ class SuscripcionEntityService
         return Suscripcion::create($data);
     }
 
-    /**
-     * ✅ CORREGIDO: Ahora valida fechas en update
-     */
     public function updateSuscripcion(int $id, array $data)
     {
         $suscripcion = $this->findSuscripcion($id);
 
-        // Si cambia la mascota, verificar que la nueva pertenece a la fundación
+        // Si cambia la mascota, verificar que la nueva pertenece a la entidad
         if (isset($data['mascota_id']) && $data['mascota_id'] != $suscripcion->mascota_id) {
-            $entidad = $this->getEntidad();
-            $nuevaMascota = Mascota::where('id', $data['mascota_id'])
-                ->where('fundacion_id', $entidad->id)
-                ->first();
+            $mascotasIds = $this->getMascotasIds();
 
-            if (!$nuevaMascota) {
-                throw new \Exception('La mascota no pertenece a tu fundación');
+            if (!in_array($data['mascota_id'], $mascotasIds->toArray())) {
+                throw new \Exception('La mascota no pertenece a tu entidad');
             }
         }
 
-        // ✅ Validar fechas si vienen en la actualización
         $this->validarFechas($data);
 
         $suscripcion->update($data);
@@ -137,19 +134,10 @@ class SuscripcionEntityService
 
     public function getSuscripcionesPorMascota(int $mascotaId)
     {
-        $entidad = $this->getEntidad();
+        $mascotasIds = $this->getMascotasIds();
 
-        if (!$entidad) {
-            throw new \Exception('Perfil de fundación no encontrado');
-        }
-
-        // Verificar que la mascota pertenece a la fundación
-        $mascota = Mascota::where('id', $mascotaId)
-            ->where('fundacion_id', $entidad->id)
-            ->first();
-
-        if (!$mascota) {
-            throw new \Exception('Mascota no encontrada o no pertenece a tu fundación');
+        if (!in_array($mascotaId, $mascotasIds->toArray())) {
+            throw new \Exception('Mascota no encontrada o no pertenece a tu entidad');
         }
 
         return Suscripcion::with(['user'])
@@ -160,13 +148,7 @@ class SuscripcionEntityService
 
     public function getEstadisticas()
     {
-        $entidad = $this->getEntidad();
-
-        if (!$entidad) {
-            throw new \Exception('Perfil de fundación no encontrado');
-        }
-
-        $mascotasIds = Mascota::where('fundacion_id', $entidad->id)->pluck('id');
+        $mascotasIds = $this->getMascotasIds();
 
         $totalSuscripciones = Suscripcion::whereIn('mascota_id', $mascotasIds)->count();
         $activas = Suscripcion::whereIn('mascota_id', $mascotasIds)->where('estado', 'activo')->count();
@@ -188,9 +170,6 @@ class SuscripcionEntityService
         ];
     }
 
-    /**
-     * ✅ NUEVO: Cancelar suscripción
-     */
     public function cancelarSuscripcion(int $id): Suscripcion
     {
         $suscripcion = $this->findSuscripcion($id);
@@ -203,9 +182,6 @@ class SuscripcionEntityService
         return $suscripcion;
     }
 
-    /**
-     * ✅ NUEVO: Pausar suscripción
-     */
     public function pausarSuscripcion(int $id): Suscripcion
     {
         $suscripcion = $this->findSuscripcion($id);
@@ -218,9 +194,6 @@ class SuscripcionEntityService
         return $suscripcion;
     }
 
-    /**
-     * ✅ NUEVO: Reactivar suscripción
-     */
     public function reactivarSuscripcion(int $id): Suscripcion
     {
         $suscripcion = $this->findSuscripcion($id);
