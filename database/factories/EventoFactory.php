@@ -10,21 +10,22 @@ class EventoFactory extends Factory
     protected $model = Evento::class;
 
     private $imagenesEventos = [
-        'https://images.pexels.com/photos/16620576/pexels-photo-16620576.jpeg',
-        'https://images.pexels.com/photos/9413379/pexels-photo-9413379.jpeg',
-        'https://images.pexels.com/photos/16620577/pexels-photo-16620577.jpeg',
-        'https://images.pexels.com/photos/9413378/pexels-photo-9413378.jpeg',
-        'https://images.pexels.com/photos/16620578/pexels-photo-16620578.jpeg',
-        'https://images.pexels.com/photos/9413377/pexels-photo-9413377.jpeg',
-        'https://images.pexels.com/photos/16620579/pexels-photo-16620579.jpeg',
-        'https://images.pexels.com/photos/37533934/pexels-photo-37533934.jpeg',
-        'https://images.pexels.com/photos/16620580/pexels-photo-16620580.jpeg',
-        'https://images.pexels.com/photos/33313535/pexels-photo-33313535.jpeg',
-        'https://images.pexels.com/photos/16620581/pexels-photo-16620581.jpeg',
-        'https://images.pexels.com/photos/28483933/pexels-photo-28483933.jpeg',
-        'https://images.pexels.com/photos/33313536/pexels-photo-33313536.jpeg',
-        'https://images.pexels.com/photos/16620582/pexels-photo-16620582.jpeg',
-        'https://images.pexels.com/photos/33313537/pexels-photo-33313537.jpeg',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460000/pexels-photo-37533934_qs5lxv.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460000/pexels-photo-33313537_izxpkh.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459999/pexels-photo-28483933_mk0rv5.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459999/pexels-photo-33313535_ed012c.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459998/pexels-photo-16620581_ob9b9x.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459997/pexels-photo-16620580_e9wgcw.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459996/pexels-photo-16620579_sovtrw.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459995/pexels-photo-9413379_qd5xu0.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782414979/eventos/kkhe3fxy6u5hqbdf5q70.jpg',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1781809882/eventos/ciu4arlxkqduahlxkgqr.jpg',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1781772062/eventos/vu8bxdja3ljysjhca9ux.jpg',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1781491066/eventos/zqwjbadby4c9tdlo9p0y.jpg',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1779296275/eventos/lzbiu8klltkcwhncgzn2.jpg',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1779296017/eventos/rboy7qdpjud8gzcrsjia.jpg',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1779295892/eventos/mrzf15ucnpwvwa99rysl.jpg',
+
     ];
 
     private $lugaresPopayan = [
@@ -146,7 +147,7 @@ class EventoFactory extends Factory
 
     public function pasado(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'fecha_evento' => $this->faker->dateTimeBetween('-6 months', '-1 day'),
             'fecha_fin' => $this->faker->optional(0.5)
                 ->dateTimeBetween('-6 months', '-1 hour'),
@@ -155,7 +156,7 @@ class EventoFactory extends Factory
 
     public function proximo(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'fecha_evento' => $this->faker->dateTimeBetween('+1 day', '+3 months'),
             'fecha_fin' => $this->faker->optional(0.7)
                 ->dateTimeBetween('+2 days', '+4 months'),
