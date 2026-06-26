@@ -178,6 +178,9 @@ Route::middleware(['auth:sanctum'])->prefix('entity')->name('entity.')->group(fu
     });
 
     Route::prefix('adopciones')->name('adopciones.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\V1\Entity\AdopcionController::class, 'index']);
+        Route::get('/{id}', [App\Http\Controllers\Api\V1\Entity\AdopcionController::class, 'show']);
+
         // SEGUIMIENTOS POST-ADOPCIÓN
         Route::get('/{adopcionId}/seguimientos', [App\Http\Controllers\Api\V1\Entity\SeguimientoController::class, 'index']);
         Route::post('/{adopcionId}/seguimientos', [App\Http\Controllers\Api\V1\Entity\SeguimientoController::class, 'store']);
