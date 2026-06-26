@@ -177,6 +177,17 @@ Route::middleware(['auth:sanctum'])->prefix('entity')->name('entity.')->group(fu
         Route::put('/{id}/rechazar', [App\Http\Controllers\Api\V1\Entity\SolicitudController::class, 'rechazar']);
     });
 
+    Route::prefix('adopciones')->name('adopciones.')->group(function () {
+        // SEGUIMIENTOS POST-ADOPCIÓN
+        Route::get('/{adopcionId}/seguimientos', [App\Http\Controllers\Api\V1\Entity\SeguimientoController::class, 'index']);
+        Route::post('/{adopcionId}/seguimientos', [App\Http\Controllers\Api\V1\Entity\SeguimientoController::class, 'store']);
+        Route::get('/seguimientos/pendientes', [App\Http\Controllers\Api\V1\Entity\SeguimientoController::class, 'pendientes']);
+        Route::get('/seguimientos/estadisticas', [App\Http\Controllers\Api\V1\Entity\SeguimientoController::class, 'estadisticas']);
+        Route::get('/seguimientos/{id}', [App\Http\Controllers\Api\V1\Entity\SeguimientoController::class, 'show']);
+        Route::put('/seguimientos/{id}', [App\Http\Controllers\Api\V1\Entity\SeguimientoController::class, 'update']);
+        Route::delete('/seguimientos/{id}', [App\Http\Controllers\Api\V1\Entity\SeguimientoController::class, 'destroy']);
+        Route::patch('/seguimientos/{id}/completar', [App\Http\Controllers\Api\V1\Entity\SeguimientoController::class, 'completar']);
+    });
     // Razas
     Route::apiResource('razas', App\Http\Controllers\Api\V1\Entity\RazaController::class);
     Route::get('/razas/especie/{especie}', [App\Http\Controllers\Api\V1\Entity\RazaController::class, 'porEspecie']);
