@@ -12,6 +12,21 @@ class Adopcion extends Model
 {
     use HasFactory, HasScopes;
     protected $table = 'adopciones';
+
+    // ✅ AGREGAR $fillable - Esto es lo que falta
+    protected $fillable = [
+        'solicitud_id',
+        'user_id',
+        'mascota_id',
+        'fundacion_id',
+        'administrador_id',
+        'estado',
+        'fecha_adopcion',
+        'observaciones',
+        'razon_rechazo',
+        'fecha_cierre',
+    ];
+
     protected $allowSelect = [
         'id',
         'estado',

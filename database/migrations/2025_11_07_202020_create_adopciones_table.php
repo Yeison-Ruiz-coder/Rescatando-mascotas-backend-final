@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('adopciones', function (Blueprint $table) {
             $table->id();
             $table->date('fecha_adopcion')->nullable();
+            $table->text('observaciones')->nullable();
             $table->enum('estado', ['en_proceso', 'aprobada', 'completada', 'rechazada', 'cancelada'])->default('en_proceso');
             $table->text('razon_rechazo')->nullable();
             $table->date('fecha_cierre')->nullable();
