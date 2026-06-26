@@ -22,7 +22,7 @@ class EventoController extends Controller
     }
 
     /**
-     * Listar todos los eventos (con paginación opcional)
+     * Listar todos los eventos (solo futuros)
      */
     public function index(Request $request)
     {
@@ -37,12 +37,11 @@ class EventoController extends Controller
             }
         }
 
-        // ✅ Devuelve el paginador COMPLETO (igual que Mascotas)
         return $this->successResponse($eventos, 'Eventos obtenidos exitosamente');
     }
 
     /**
-     * Ver un evento específico
+     * Ver un evento específico (solo si es futuro)
      */
     public function show(int $id)
     {
@@ -60,22 +59,25 @@ class EventoController extends Controller
     }
 
     /**
-     * Dar like a un evento
+     * Dar like a un evento (solo si es futuro)
      */
     public function like(int $id)
     {
         try {
-            $evento = $this->eventoService->findById($id);
+            $evento = Evento::query()
+                ->where('fecha_evento', '>=', now()->startOfDay())
+                ->findOrFail($id);
+
             $evento->increment('likes');
 
             return $this->successResponse(['likes' => $evento->likes], 'Like agregado');
         } catch (ModelNotFoundException $e) {
-            return $this->notFoundResponse('Evento no encontrado');
+            return $this->notFoundResponse('Evento no encontrado o ya finalizado');
         }
     }
 
     /**
-     * Obtener datos para el calendario
+     * Obtener datos para el calendario (solo futuros)
      */
     public function calendario()
     {
@@ -84,7 +86,7 @@ class EventoController extends Controller
     }
 
     /**
-     * Confirmar asistencia a un evento
+     * Confirmar asistencia a un evento (solo si es futuro)
      */
     public function confirmarAsistencia(int $id)
     {
@@ -101,7 +103,7 @@ class EventoController extends Controller
                 'Asistencia confirmada exitosamente'
             );
         } catch (ModelNotFoundException $e) {
-            return $this->notFoundResponse('Evento no encontrado');
+            return $this->notFoundResponse('Evento no encontrado o ya finalizado');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), null, 400);
         }
@@ -132,7 +134,7 @@ class EventoController extends Controller
     }
 
     /**
-     * Filtrar eventos por tipo
+     * Filtrar eventos por tipo (solo futuros)
      */
     public function porTipo(string $tipo)
     {
@@ -145,7 +147,6 @@ class EventoController extends Controller
             }
         }
 
-        // ✅ Devolver SOLO los items del paginador
         return $this->successResponse($eventos->items(), 'Eventos obtenidos exitosamente');
     }
 
@@ -163,7 +164,6 @@ class EventoController extends Controller
             }
         }
 
-        // ✅ Devolver SOLO los items del paginador
         return $this->successResponse($eventos->items(), 'Próximos eventos obtenidos exitosamente');
     }
 
@@ -183,16 +183,12 @@ class EventoController extends Controller
             return $this->errorResponse('Usuario no autenticado', null, 401);
         }
 
-        // ✅ CORREGIDO: Obtener eventos con la relación
         $eventos = $user->eventosAsistencia()
             ->orderBy('fecha_evento', 'asc')
             ->get();
 
-        // ✅ CORREGIDO: Agregar propiedades necesarias para el frontend
         foreach ($eventos as $evento) {
             $evento->usuario_confirmado = true;
-            // El total_asistentes ya viene del accessor en el modelo
-            // $evento->total_asistentes ya está disponible
         }
 
         return $this->successResponse($eventos, 'Tus eventos obtenidos exitosamente');

@@ -9,7 +9,8 @@ class EventoPublicService
     public function getAll(array $filters = [], int $perPage = 15)
     {
         $query = Evento::query()
-            ->selectFields();
+            ->selectFields()
+            ->where('fecha_evento', '>=', now()->startOfDay()); // ✅ Solo eventos desde hoy en adelante
 
         if (isset($filters['proximos']) && filter_var($filters['proximos'], FILTER_VALIDATE_BOOLEAN)) {
             $query->where('fecha_evento', '>=', now());
@@ -50,6 +51,7 @@ class EventoPublicService
         return Evento::query()
             ->selectFields()
             ->with(['fundacion:id,Nombre_1,imagen_portada,ciudad', 'asistentes:id,nombre,email'])
+            ->where('fecha_evento', '>=', now()->startOfDay()) // ✅ Solo eventos desde hoy
             ->findOrFail($id);
     }
 
@@ -57,7 +59,7 @@ class EventoPublicService
     {
         return Evento::query()
             ->select(['id', 'nombre_evento', 'fecha_evento', 'fecha_fin', 'descripcion', 'lugar_evento', 'imagen_url'])
-            ->where('fecha_evento', '>=', now())
+            ->where('fecha_evento', '>=', now()->startOfDay()) // ✅ Solo eventos desde hoy
             ->orderBy('fecha_evento', 'asc')
             ->get()
             ->map(function ($evento) {
@@ -76,7 +78,10 @@ class EventoPublicService
 
     public function confirmarAsistencia(int $eventoId, int $userId): void
     {
-        $evento = Evento::query()->select(['id'])->findOrFail($eventoId);
+        $evento = Evento::query()
+            ->select(['id'])
+            ->where('fecha_evento', '>=', now()->startOfDay()) // ✅ Validar que no esté finalizado
+            ->findOrFail($eventoId);
 
         $existe = $evento->asistentes()->where('user_id', $userId)->exists();
 
@@ -98,7 +103,7 @@ class EventoPublicService
         return Evento::query()
             ->selectFields()
             ->with('fundacion:id,Nombre_1,imagen_portada,ciudad')
-            ->where('fecha_evento', '>=', now())
+            ->where('fecha_evento', '>=', now()->startOfDay()) // ✅ Solo eventos desde hoy
             ->orderBy('fecha_evento', 'asc')
             ->limit($limit)
             ->get();
