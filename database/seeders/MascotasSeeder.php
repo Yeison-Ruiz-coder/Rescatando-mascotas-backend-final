@@ -3,47 +3,112 @@
 namespace Database\Seeders;
 
 use App\Models\Mascota;
+use App\Models\Fundacion;
 use Illuminate\Database\Seeder;
 
 class MascotasSeeder extends Seeder
 {
     public function run(): void
     {
-        // ✅ LO MEJOR: Combinar Factory + Seeder
+        // ==========================================
+        // 1. OBTENER FUNDACIONES EXISTENTES
+        // ==========================================
 
-        // 1. Crear 50 mascotas normales
-        Mascota::factory()
-            ->count(50)
-            ->create();
+        // Obtener todas las fundaciones
+        $todasFundaciones = Fundacion::all();
 
-        // 2. Crear 10 mascotas destacadas
-        Mascota::factory()
-            ->count(10)
-            ->destacada()
-            ->create();
+        // Obtener fundación específica de "Patitas Felices" (la del usuario)
+        $fundacionPatitas = Fundacion::where('Nombre_1', 'Patitas Felices')->first();
 
-        // 3. Crear 5 mascotas ya adoptadas
-        Mascota::factory()
-            ->count(5)
-            ->adoptada()
-            ->create();
+        // ==========================================
+        // 2. MASCOTAS PARA LA FUNDACIÓN "PATITAS FELICES"
+        // ==========================================
 
-        // 4. Crear 3 mascotas con video
-        Mascota::factory()
-            ->count(3)
-            ->conVideo()
-            ->create();
+        if ($fundacionPatitas) {
+            // 15 mascotas para Patitas Felices
+            Mascota::factory(15)
+                ->conFundacion($fundacionPatitas->id)
+                ->conMuchasFotos()
+                ->create();
 
-        // 5. Casos específicos (solo con Seeder)
-        Mascota::create([
-            'nombre_mascota' => 'Firulais Especial',
-            'especie' => 'Perro',
-            'tamano' => 'grande',
-            'foto_principal' => 'https://res.cloudinary.com/dixyebg5i/image/upload/v1780966318/mascotas/izh6m04j0ratewpjrd79.jpg',
-            'foto_principal_public_id' => 'sample',
-            'descripcion' => 'Caso especial que necesita atención médica',
-            'condiciones_especiales' => 'Requiere medicación diaria',
-            'salud_general' => 'En tratamiento por enfermedad crónica',
-        ]);
+            // 3 mascotas destacadas
+            Mascota::factory(3)
+                ->conFundacion($fundacionPatitas->id)
+                ->destacada()
+                ->conVideo()
+                ->create();
+
+            // 2 cachorros
+            Mascota::factory(2)
+                ->conFundacion($fundacionPatitas->id)
+                ->cachorro()
+                ->create();
+        }
+
+        // ==========================================
+        // 3. MASCOTAS PARA OTRAS FUNDACIONES
+        // ==========================================
+
+        // Cada fundación (excepto Patitas Felices) tendrá entre 3 y 8 mascotas
+        foreach ($todasFundaciones as $fundacion) {
+            // Saltar Patitas Felices porque ya le asignamos
+            if ($fundacion->Nombre_1 === 'Patitas Felices') {
+                continue;
+            }
+
+            $cantidad = rand(3, 8);
+            Mascota::factory($cantidad)
+                ->conFundacion($fundacion->id)
+                ->create();
+        }
+
+        // ==========================================
+        // 4. MASCOTAS ESPECIALES (DISTRIBUIDAS ALEATORIAMENTE)
+        // ==========================================
+
+        // Seleccionar fundaciones aleatorias para mascotas especiales
+        $fundacionesRandom = $todasFundaciones->random(min(5, $todasFundaciones->count()));
+
+        foreach ($fundacionesRandom as $fundacion) {
+            // Mascotas adoptadas
+            Mascota::factory(rand(1, 3))
+                ->conFundacion($fundacion->id)
+                ->adoptada()
+                ->create();
+
+            // Mascotas rescatadas
+            Mascota::factory(rand(1, 2))
+                ->conFundacion($fundacion->id)
+                ->rescatada()
+                ->create();
+
+            // Mascotas con necesidades especiales
+            Mascota::factory(rand(0, 1))
+                ->conFundacion($fundacion->id)
+                ->conNecesidadesEspeciales()
+                ->create();
+        }
+
+        // ==========================================
+        // 5. MASCOTAS DESTACADAS A NIVEL GENERAL
+        // ==========================================
+
+        // 5 mascotas destacadas en fundaciones aleatorias
+        for ($i = 0; $i < 5; $i++) {
+            $fundacionRandom = $todasFundaciones->random();
+            Mascota::factory()
+                ->conFundacion($fundacionRandom->id)
+                ->destacada()
+                ->conVideo()
+                ->conMuchasFotos()
+                ->create();
+        }
+
+        // ==========================================
+        // 6. TOTAL DE MASCOTAS CREADAS
+        // ==========================================
+
+        $total = Mascota::count();
+        $this->command->info("✅ Total de mascotas creadas: {$total}");
     }
 }

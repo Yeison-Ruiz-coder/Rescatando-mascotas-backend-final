@@ -18,16 +18,16 @@ class VeterinariaFactory extends Factory
 
     // URLs base de Cloudinary para logos
     private $logosCloudinary = [
-        'https://images.pexels.com/photos/7474859/pexels-photo-7474859.jpeg?_gl=1*3om3rz*_ga*NTM0NzU1NjYwLjE3NzcwNjU5MDc.*_ga_8JE65Q40S6*czE3ODE2NDQ1NDAkbzMkZzEkdDE3ODE2NDYyMjgkajM4JGwwJGgw',
-        'https://images.pexels.com/photos/6234980/pexels-photo-6234980.jpeg?_gl=1*cwu9c8*_ga*NTM0NzU1NjYwLjE3NzcwNjU5MDc.*_ga_8JE65Q40S6*czE3ODE2NDQ1NDAkbzMkZzEkdDE3ODE2NDYzMDckajUxJGwwJGgw',
-        'https://images.pexels.com/photos/6816858/pexels-photo-6816858.jpeg?_gl=1*xo24qo*_ga*NTM0NzU1NjYwLjE3NzcwNjU5MDc.*_ga_8JE65Q40S6*czE3ODE2NDQ1NDAkbzMkZzEkdDE3ODE2NDYzNTUkajMkbDAkaDA.',
-        'https://images.pexels.com/photos/23692686/pexels-photo-23692686.jpeg',
-        'https://images.pexels.com/photos/6234635/pexels-photo-6234635.jpeg',
-        'https://images.pexels.com/photos/6235116/pexels-photo-6235116.jpeg',
-        'https://images.pexels.com/photos/30577796/pexels-photo-30577796.jpeg?_gl=1*1h50rvr*_ga*NTM0NzU1NjYwLjE3NzcwNjU5MDc.*_ga_8JE65Q40S6*czE3ODE2NDQ1NDAkbzMkZzEkdDE3ODE2NDY0NjEkajgkbDAkaDA.',
-        'https://images.pexels.com/photos/5731861/pexels-photo-5731861.jpeg?_gl=1*36enbn*_ga*NTM0NzU1NjYwLjE3NzcwNjU5MDc.*_ga_8JE65Q40S6*czE3ODE2NDQ1NDAkbzMkZzEkdDE3ODE2NDY1MjEkajIyJGwwJGgw',
-        'https://images.pexels.com/photos/29862005/pexels-photo-29862005.jpeg?_gl=1*19rbfij*_ga*NTM0NzU1NjYwLjE3NzcwNjU5MDc.*_ga_8JE65Q40S6*czE3ODE2NDQ1NDAkbzMkZzEkdDE3ODE2NDY2OTUkajE4JGwwJGgw',
-        'https://images.pexels.com/photos/19490053/pexels-photo-19490053.jpeg?_gl=1*1iawguc*_ga*NTM0NzU1NjYwLjE3NzcwNjU5MDc.*_ga_8JE65Q40S6*czE3ODE2NDQ1NDAkbzMkZzEkdDE3ODE2NDY3ODMkajI0JGwwJGgw',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459468/pexels-photo-23692686_gvwcyx.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459467/pexels-photo-29862005_dyimeq.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459467/pexels-photo-30577796_dbjwod.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459466/pexels-photo-19490053_pke9pq.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459465/pexels-photo-6235116_xenwoa.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459465/pexels-photo-6816858_o6opp2.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459464/pexels-photo-6234635_f6ewby.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459465/pexels-photo-7474859_jsc2ob.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459464/pexels-photo-6234980_eiyrcc.avif',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459463/pexels-photo-5731861_xlofmm.avif'
     ];
 
     private $galeriaCloudinary = [

@@ -2,119 +2,70 @@
 
 namespace Database\Seeders;
 
+use App\Models\Fundacion;
+use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
-class FundacionSeeder extends Seeder
+class FundacionesSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('fundaciones')->insert([
-            [
-                'Nombre_1' => 'Fundación Patitas Alegres',
-                'Direccion' => 'Calle 8 # 34-56',
-                'lat' => 3.4516,
-                'lng' => -76.5320,
-                'radio_atencion' => 5000,
-                'Telefono' => '+573131234567',
-                'Email' => 'contacto@patitasalegres.org',
-                'registro_sanitario' => 'NIT 901234567-8',
-                'capacidad_maxima' => 150,
-                'necesidades_actuales' => json_encode(['alimento', 'medicinas', 'voluntarios']),
-                'horario_atencion' => 'Lunes a Viernes 9:00 AM - 6:00 PM',
-                'recibe_voluntarios' => true,
-                'user_id' => null,
-                'imagen_portada' => '/images/fundaciones/patitas-alegres.jpg',
-                'verificado' => true,
-                'ciudad' => 'Cali',
-                'fecha_fundacion' => '2015-03-15',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'Nombre_1' => 'Corazón Animal',
-                'Direccion' => 'Carrera 15 # 45-67',
-                'lat' => 4.7110,
-                'lng' => -74.0721,
-                'radio_atencion' => 8000,
-                'Telefono' => '+573209876543',
-                'Email' => 'info@corazonanimal.org',
-                'registro_sanitario' => 'NIT 902345678-9',
-                'capacidad_maxima' => 200,
-                'necesidades_actuales' => json_encode(['medicinas', 'mantas', 'juguetes']),
-                'horario_atencion' => 'Lunes a Domingo 8:00 AM - 8:00 PM',
-                'recibe_voluntarios' => true,
-                'user_id' => null,
-                'imagen_portada' => '/images/fundaciones/corazon-animal.jpg',
-                'verificado' => true,
-                'ciudad' => 'Bogotá',
-                'fecha_fundacion' => '2010-07-22',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'Nombre_1' => 'Huellas de Esperanza',
-                'Direccion' => 'Avenida 10 # 24-18',
-                'lat' => 6.2442,
-                'lng' => -75.5812,
-                'radio_atencion' => 6000,
-                'Telefono' => '+573157654321',
-                'Email' => 'hola@huellasesperanza.org',
-                'registro_sanitario' => 'NIT 903456789-0',
-                'capacidad_maxima' => 120,
-                'necesidades_actuales' => json_encode(['alimento', 'voluntarios', 'transporte']),
-                'horario_atencion' => 'Lunes a Viernes 10:00 AM - 7:00 PM',
-                'recibe_voluntarios' => true,
-                'user_id' => null,
-                'imagen_portada' => '/images/fundaciones/huellas-esperanza.jpg',
-                'verificado' => true,
-                'ciudad' => 'Medellín',
-                'fecha_fundacion' => '2018-11-05',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'Nombre_1' => 'El Refugio de los Animales',
-                'Direccion' => 'Calle 50 # 20-30',
-                'lat' => 10.9639,
-                'lng' => -74.7964,
-                'radio_atencion' => 7000,
-                'Telefono' => '+573005551234',
-                'Email' => 'refugio@animales.org',
-                'registro_sanitario' => 'NIT 904567890-1',
-                'capacidad_maxima' => 300,
-                'necesidades_actuales' => json_encode(['alimento', 'medicinas', 'construcción']),
-                'horario_atencion' => 'Lunes a Sábado 8:00 AM - 5:00 PM',
-                'recibe_voluntarios' => true,
-                'user_id' => null,
-                'imagen_portada' => '/images/fundaciones/refugio-animales.jpg',
-                'verificado' => false,
-                'ciudad' => 'Barranquilla',
-                'fecha_fundacion' => '2012-09-18',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'Nombre_1' => 'Amigos Peludos',
-                'Direccion' => 'Carrera 25 # 10-05',
-                'lat' => 7.1193,
-                'lng' => -73.1227,
-                'radio_atencion' => 4500,
-                'Telefono' => '+573112223344',
-                'Email' => 'contacto@amigospeludos.org',
-                'registro_sanitario' => 'NIT 905678901-2',
-                'capacidad_maxima' => 80,
-                'necesidades_actuales' => json_encode(['medicinas', 'voluntarios']),
-                'horario_atencion' => 'Martes a Domingo 10:00 AM - 4:00 PM',
-                'recibe_voluntarios' => true,
-                'user_id' => null,
-                'imagen_portada' => '/images/fundaciones/amigos-peludos.jpg',
-                'verificado' => true,
-                'ciudad' => 'Bucaramanga',
-                'fecha_fundacion' => '2020-01-30',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+        // ==========================================
+        // 1. FUNDACIONES VINCULADAS A USUARIOS
+        // ==========================================
+
+        // Buscar el usuario de tipo 'fundacion' (ID 3 en UserSeeder)
+        $usuarioFundacion = User::where('tipo', 'fundacion')->first();
+
+        if ($usuarioFundacion) {
+            // Verificar si ya existe una fundación para este usuario
+            $fundacionExistente = Fundacion::where('user_id', $usuarioFundacion->id)->first();
+
+            if (!$fundacionExistente) {
+                Fundacion::create([
+                    'user_id' => $usuarioFundacion->id,
+                    'Nombre_1' => $usuarioFundacion->apellidos, // "Patitas Felices"
+                    'Direccion' => $usuarioFundacion->direccion,
+                    'Telefono' => $usuarioFundacion->telefono,
+                    'Email' => $usuarioFundacion->email,
+                    'registro_sanitario' => 'REG-001-ABC',
+                    'capacidad_maxima' => 150,
+                    'recibe_voluntarios' => true,
+                    'verificado' => true,
+                    'ciudad' => $usuarioFundacion->ciudad,
+                    'lat' => $usuarioFundacion->lat,
+                    'lng' => $usuarioFundacion->lng,
+                    'radio_atencion' => 5000,
+                    'imagen_portada' => $usuarioFundacion->avatar,
+                    'imagen_portada_public_id' => $usuarioFundacion->avatar_public_id,
+                    'necesidades_actuales' => json_encode(['alimento', 'medicinas', 'voluntarios']),
+                    'horario_atencion' => 'Lunes a Viernes 9:00 AM - 6:00 PM',
+                    'fecha_fundacion' => '2015-03-15',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
+        // ==========================================
+        // 2. FUNDACIONES ADICIONALES CON FACTORY
+        // ==========================================
+
+        // Crear 20 fundaciones normales
+        Fundacion::factory()
+            ->count(20)
+            ->create();
+
+        // Crear 10 fundaciones verificadas
+        Fundacion::factory()
+            ->count(10)
+            ->verificada()
+            ->create();
+
+        // Crear 5 fundaciones que reciben voluntarios
+        Fundacion::factory()
+            ->count(5)
+            ->conVoluntarios()
+            ->create();
     }
 }

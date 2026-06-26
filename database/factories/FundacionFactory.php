@@ -12,21 +12,22 @@ class FundacionFactory extends Factory
     // 🖼️ MÁS IMÁGENES DE PORTADA (30+ opciones)
     private $imagenesPortada = [
         // Fundaciones reales (puedes reemplazar con URLs de imágenes de fundaciones de prueba o de tu propiedad)
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1781145846/descargar_1_nynmgd.jpg',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1781145847/descargar_cgcgvf.jpg',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1781145849/fundacion_mqjzvs.jpg',
-        'https://images.pexels.com/photos/20140406/pexels-photo-20140406.jpeg',
-        'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg',
-        'https://images.pexels.com/photos/4587996/pexels-photo-4587996.jpeg',
-        'https://images.pexels.com/photos/4588000/pexels-photo-4588000.jpeg',
-        'https://images.pexels.com/photos/34203938/pexels-photo-34203938.jpeg',
-        'https://images.pexels.com/photos/4588001/pexels-photo-4588001.jpeg',
-        'https://images.pexels.com/photos/4588002/pexels-photo-4588002.jpeg',
-        'https://images.pexels.com/photos/7474473/pexels-photo-7474473.jpeg',
-        'https://images.pexels.com/photos/10199358/pexels-photo-10199358.jpeg',
-        'https://images.pexels.com/photos/7548530/pexels-photo-7548530.jpeg',
-        'https://images.pexels.com/photos/4588003/pexels-photo-4588003.jpeg',
-        'https://images.pexels.com/photos/4588004/pexels-photo-4588004.jpeg',
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460777/images_nbmj0r.png",
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460776/images_zvwjpm.jpg",
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460775/images_12_jzipdk.jpg",
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460773/images_11_enht32.jpg",
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460772/images_10_q5blsf.jpg",
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460771/images_9_jnoh4u.jpg",
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460770/images_8_il9ir7.jpg",
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460769/images_7_daakgy.jpg",
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460768/images_6_jiuccf.jpg",
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460767/images_5_oxamyo.jpg",
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460766/images_4_kmxnzh.jpg",
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460765/images_3_t5oefq.jpg",
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460763/images_2_c4iy10.png",
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460762/images_2_r5zjrc.jpg",
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460761/images_1_jeedps.png",
+        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460761/images_1_tefmge.jpg"
 
     ];
 
