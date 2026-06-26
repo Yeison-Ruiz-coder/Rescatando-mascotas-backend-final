@@ -17,12 +17,10 @@ trait ImageUploadTrait
     private function getCloudinary(): Cloudinary
     {
         if ($this->cloudinary === null) {
-            // ✅ Usar config() en lugar de env()
             $cloudName = config('cloudinary.cloud.cloud_name');
             $apiKey = config('cloudinary.cloud.api_key');
             $apiSecret = config('cloudinary.cloud.api_secret');
 
-            // Validar que las variables existan
             if (empty($cloudName) || empty($apiKey) || empty($apiSecret)) {
                 Log::error('Cloudinary no configurado correctamente', [
                     'cloud_name' => $cloudName ? 'presente' : 'vacío',
@@ -45,7 +43,7 @@ trait ImageUploadTrait
     }
 
     /**
-     * Subir una imagen a Cloudinary
+     * Subir una imagen a Cloudinary con configuración optimizada
      */
     protected function uploadImage(UploadedFile $file, string $path, ?string $oldPath = null): string
     {
@@ -57,17 +55,72 @@ trait ImageUploadTrait
             $result = $this->getCloudinary()->uploadApi()->upload($file->getRealPath(), [
                 'folder' => $path,
                 'transformation' => [
-                    'quality' => 'auto',
+                    // Calidad y formato optimizados
+                    'quality' => 'auto:best',
                     'fetch_format' => 'auto',
-                    'width' => 800,
-                    'height' => 800,
-                    'crop' => 'limit'
-                ]
+
+                    // Tamaño máximo para cubrir todos los casos
+                    'width' => 1600,
+                    'height' => 1600,
+                    'crop' => 'limit',
+
+                    // Optimizaciones adicionales
+                    'dpr' => 'auto',
+                    'flags' => 'lossy',
+                    'progressive' => 'true',
+                    'effect' => 'sharpen:50',
+                ],
+
+                // Generar versiones pre-calculadas para diferentes usos
+                'eager' => [
+                    // Versión para cards (400x300)
+                    [
+                        'transformation' => [
+                            'width' => 400,
+                            'height' => 300,
+                            'crop' => 'fill',
+                            'quality' => 'auto:good',
+                            'fetch_format' => 'auto'
+                        ],
+                        'format' => 'webp'
+                    ],
+                    // Versión para thumbnails (100x100)
+                    [
+                        'transformation' => [
+                            'width' => 100,
+                            'height' => 100,
+                            'crop' => 'thumb',
+                            'gravity' => 'auto',
+                            'quality' => 'auto:eco',
+                            'fetch_format' => 'auto'
+                        ],
+                        'format' => 'webp'
+                    ],
+                    // Versión para mobile (600x600)
+                    [
+                        'transformation' => [
+                            'width' => 600,
+                            'height' => 600,
+                            'crop' => 'limit',
+                            'quality' => 'auto:good',
+                            'fetch_format' => 'auto'
+                        ],
+                        'format' => 'webp'
+                    ]
+                ],
+
+                // Configuración de archivo
+                'use_filename' => true,
+                'unique_filename' => true,
+                'overwrite' => false,
+                'invalidate' => true
             ]);
 
             Log::info('Imagen subida a Cloudinary', [
                 'folder' => $path,
-                'url' => $result['secure_url']
+                'url' => $result['secure_url'],
+                'size' => round(($result['bytes'] ?? 0) / 1024, 2) . ' KB',
+                'format' => $result['format'] ?? 'unknown'
             ]);
 
             return $result['secure_url'];
@@ -130,13 +183,61 @@ trait ImageUploadTrait
      */
     private function extractPublicIdFromUrl(string $url): ?string
     {
-        // Busca el public_id en la URL de Cloudinary
-        // Ejemplo: https://res.cloudinary.com/cloud_name/image/upload/v1234567890/folder/image.jpg
-        // Resultado: folder/image
         if (preg_match('/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-zA-Z]+)?$/', $url, $matches)) {
-            // Eliminar la extensión del archivo
             return preg_replace('/\.[^.]+$/', '', $matches[1]);
         }
         return null;
+    }
+
+    /**
+     * Obtener URL con transformaciones personalizadas
+     * Útil para el frontend o para generar URLs bajo demanda
+     */
+    protected function getTransformedUrl(string $url, array $transformations = []): string
+    {
+        if (!$url || strpos($url, 'cloudinary.com') === false) {
+            return $url;
+        }
+
+        $parts = explode('/upload/', $url);
+        $baseUrl = $parts[0] . '/upload/';
+        $path = $parts[1] ?? '';
+
+        // Transformaciones por defecto
+        $defaultTransform = [
+            'quality' => 'auto:good',
+            'fetch_format' => 'auto'
+        ];
+
+        $finalTransform = array_merge($defaultTransform, $transformations);
+
+        // Construir string de transformación
+        $transformString = '';
+        foreach ($finalTransform as $key => $value) {
+            if (!empty($transformString)) {
+                $transformString .= ',';
+            }
+            $transformString .= $key . '_' . $value;
+        }
+
+        return $baseUrl . $transformString . '/' . $path;
+    }
+
+    /**
+     * Obtener URL para diferentes tamaños predefinidos
+     */
+    protected function getImageSizeUrl(string $url, string $size = 'medium'): string
+    {
+        $sizes = [
+            'thumbnail' => ['width' => 100, 'height' => 100, 'crop' => 'thumb'],
+            'small' => ['width' => 300, 'height' => 200, 'crop' => 'fill'],
+            'medium' => ['width' => 600, 'height' => 400, 'crop' => 'fill'],
+            'large' => ['width' => 1200, 'height' => 800, 'crop' => 'limit'],
+            'featured' => ['width' => 800, 'height' => 600, 'crop' => 'fill'],
+        ];
+
+        $sizeConfig = $sizes[$size] ?? $sizes['medium'];
+
+        return $this->getTransformedUrl($url, $sizeConfig);
     }
 }
