@@ -33,7 +33,7 @@ class SolicitudEntityService
             throw new \Exception('No se encontró la entidad asociada');
         }
 
-        $query = Solicitud::with(['usuario', 'solicitable'])
+        $query = Solicitud::with(['usuario', 'solicitable'])  // ✅ Usar 'usuario'
             ->where('tipo_solicitud', 'adopcion');
 
         if ($user->tipo === 'fundacion') {
@@ -64,7 +64,7 @@ class SolicitudEntityService
             throw new \Exception('No se encontró la entidad asociada');
         }
 
-        $solicitud = Solicitud::with(['user', 'solicitable'])->findOrFail($id);
+        $solicitud = Solicitud::with(['usuario', 'solicitable'])->findOrFail($id);  // ✅ Usar 'usuario'
 
         $mascota = $solicitud->solicitable;
         if ($user->tipo === 'fundacion' && $mascota->fundacion_id !== $entidad->id) {
@@ -83,7 +83,7 @@ class SolicitudEntityService
             throw new \Exception('No se encontró la entidad asociada');
         }
 
-        $solicitud = Solicitud::with(['solicitable', 'user'])
+        $solicitud = Solicitud::with(['solicitable', 'usuario'])  // ✅ Usar 'usuario'
             ->where('estado', 'pendiente')
             ->findOrFail($id);
 
@@ -139,7 +139,7 @@ class SolicitudEntityService
             throw new \Exception('No se encontró la entidad asociada');
         }
 
-        $solicitud = Solicitud::with(['solicitable', 'user'])
+        $solicitud = Solicitud::with(['solicitable', 'usuario'])  // ✅ Usar 'usuario'
             ->where('estado', 'pendiente')
             ->findOrFail($id);
 
@@ -196,7 +196,7 @@ class SolicitudEntityService
             'completadas' => (clone $query)->where('estado', 'completada')->count(),
             'total' => (clone $query)->count(),
             'ultimas_solicitudes' => (clone $query)
-                ->with(['user', 'solicitable'])
+                ->with(['usuario', 'solicitable'])  // ✅ Usar 'usuario'
                 ->orderBy('created_at', 'desc')
                 ->limit(5)
                 ->get()
