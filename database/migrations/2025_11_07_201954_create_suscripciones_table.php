@@ -18,7 +18,7 @@ return new class extends Migration
             $table->date('fecha_inicio');
             $table->date('fecha_fin')->nullable();
             $table->text('mensaje_apoyo')->nullable();
-            $table->enum('estado', ['activo', 'pausado', 'cancelado', 'finalizado'])->default('activo');
+            $table->enum('estado', ['activo', 'pausado', 'cancelado', 'finalizado' , 'pendiente'])->default('activo');
             $table->timestamps();
 
             // Índices para búsquedas frecuentes

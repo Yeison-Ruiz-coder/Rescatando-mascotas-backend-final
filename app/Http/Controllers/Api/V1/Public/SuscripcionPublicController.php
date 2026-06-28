@@ -7,7 +7,7 @@ use App\Models\Suscripcion;
 use App\Models\Mascota;
 use App\Traits\ApiResponses;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\log;
 use Illuminate\Support\Facades\Validator;
 
 class SuscripcionPublicController extends Controller
@@ -15,13 +15,12 @@ class SuscripcionPublicController extends Controller
     use ApiResponses;
 
     /**
-     * Ver todas las mascotas disponibles para apadrinar (PÚBLICO)
+     * Ver todas las mascotas disponibles para apadrinar
      * GET /api/suscripciones/planes
      */
     public function planes()
     {
         try {
-            // Obtener mascotas que están en adopción y necesitan apadrinamiento
             $mascotas = Mascota::with(['fundacion' => function($q) {
                 $q->select('id', 'Nombre_1', 'imagen_portada', 'ciudad');
             }])
@@ -33,7 +32,6 @@ class SuscripcionPublicController extends Controller
             ->select('id', 'nombre', 'especie', 'raza', 'edad', 'descripcion', 'fundacion_id', 'imagen')
             ->get();
 
-            // Formatear respuesta
             $planes = $mascotas->map(function($mascota) {
                 return [
                     'id' => $mascota->id,
@@ -43,7 +41,7 @@ class SuscripcionPublicController extends Controller
                     'edad' => $mascota->edad,
                     'descripcion' => $mascota->descripcion,
                     'imagen' => $mascota->imagen,
-                    'monto_recomendado' => 10000, // Valor por defecto
+                    'monto_recomendado' => 10000,
                     'fundacion' => $mascota->fundacion ? [
                         'id' => $mascota->fundacion->id,
                         'nombre' => $mascota->fundacion->Nombre_1,
@@ -61,7 +59,8 @@ class SuscripcionPublicController extends Controller
     }
 
     /**
-     * Ver detalle de un plan específico (PÚBLICO)
+     * Ver detalle de un plan específico
+     * GET /api/suscripciones/planes/{id}
      */
     public function planDetalle(int $id)
     {
@@ -99,6 +98,9 @@ class SuscripcionPublicController extends Controller
     /**
      * ✅ CREAR SUSCRIPCIÓN (Usuario autenticado)
      * POST /api/suscripciones/user/crear
+     *
+     * 🔥 MODIFICACIÓN: La suscripción se crea como PENDIENTE
+     * y se activa después del pago
      */
     public function store(Request $request)
     {
@@ -128,28 +130,34 @@ class SuscripcionPublicController extends Controller
             // Verificar si ya tiene una suscripción activa para esta mascota
             $existe = Suscripcion::where('user_id', $user->id)
                 ->where('mascota_id', $request->mascota_id)
-                ->whereIn('estado', ['activo', 'pausado'])
+                ->whereIn('estado', ['activo', 'pausado', 'pendiente'])
                 ->exists();
 
             if ($existe) {
-                return $this->errorResponse('Ya tienes una suscripción activa para esta mascota', null, 400);
+                return $this->errorResponse('Ya tienes una suscripción activa o pendiente para esta mascota', null, 400);
             }
 
+            // ✅ CREAR SUSCRIPCIÓN EN ESTADO PENDIENTE
+            // El usuario debe pagar para activarla
             $suscripcion = Suscripcion::create([
                 'user_id' => $user->id,
                 'mascota_id' => $request->mascota_id,
                 'monto_mensual' => $request->monto_mensual,
                 'frecuencia' => $request->frecuencia,
                 'mensaje_apoyo' => $request->mensaje_apoyo,
-                'fecha_inicio' => now(),
-                'estado' => 'activo',
+                'fecha_inicio' => null, // Se activa después del pago
+                'estado' => 'pendiente', // ⚠️ CAMBIADO: pendiente en lugar de activo
+                'es_demo' => true, // Por defecto demo
+                'payment_method' => null,
+                'payment_reference' => null,
             ]);
 
-            return $this->successResponse(
-                $suscripcion->load(['mascota', 'user']),
-                '¡Suscripción creada exitosamente! Gracias por apadrinar 🐾',
-                201
-            );
+            // Retornar la suscripción para que el frontend inicie el pago
+            return $this->successResponse([
+                'suscripcion' => $suscripcion->load(['mascota', 'user']),
+                'mensaje' => 'Suscripción creada. Por favor, completa el pago para activarla.',
+                'next_step' => 'payment',
+            ], 'Suscripción creada - Pendiente de pago', 201);
 
         } catch (\Exception $e) {
             Log::error('Error al crear suscripción:', ['error' => $e->getMessage()]);
@@ -159,6 +167,7 @@ class SuscripcionPublicController extends Controller
 
     /**
      * Ver mis suscripciones (USUARIO AUTENTICADO)
+     * GET /api/suscripciones/user/mis-suscripciones
      */
     public function misSuscripciones(Request $request)
     {
@@ -167,6 +176,9 @@ class SuscripcionPublicController extends Controller
                 'mascota' => function($q) {
                     $q->select('id', 'nombre', 'especie', 'raza', 'edad', 'imagen', 'fundacion_id')
                       ->with('fundacion:id,Nombre_1,imagen_portada,ciudad');
+                },
+                'pagos' => function($q) {
+                    $q->orderBy('created_at', 'desc')->limit(1);
                 }
             ])
             ->where('user_id', $request->user()->id)
@@ -181,11 +193,12 @@ class SuscripcionPublicController extends Controller
 
     /**
      * Ver detalle de una suscripción (USUARIO AUTENTICADO)
+     * GET /api/suscripciones/user/{id}
      */
     public function show(Request $request, int $id)
     {
         try {
-            $suscripcion = Suscripcion::with(['mascota', 'mascota.fundacion'])
+            $suscripcion = Suscripcion::with(['mascota', 'mascota.fundacion', 'pagos'])
                 ->where('user_id', $request->user()->id)
                 ->findOrFail($id);
 
@@ -197,12 +210,13 @@ class SuscripcionPublicController extends Controller
 
     /**
      * Cancelar una suscripción (USUARIO AUTENTICADO)
+     * PATCH /api/suscripciones/user/{id}/cancelar
      */
     public function cancelar(Request $request, int $id)
     {
         try {
             $suscripcion = Suscripcion::where('user_id', $request->user()->id)
-                ->whereIn('estado', ['activo', 'pausado'])
+                ->whereIn('estado', ['activo', 'pausado', 'pendiente'])
                 ->findOrFail($id);
 
             $suscripcion->update([
@@ -218,6 +232,7 @@ class SuscripcionPublicController extends Controller
 
     /**
      * Pausar una suscripción (USUARIO AUTENTICADO)
+     * PATCH /api/suscripciones/user/{id}/pausar
      */
     public function pausar(Request $request, int $id)
     {
@@ -236,6 +251,7 @@ class SuscripcionPublicController extends Controller
 
     /**
      * Reactivar una suscripción (USUARIO AUTENTICADO)
+     * PATCH /api/suscripciones/user/{id}/reactivar
      */
     public function reactivar(Request $request, int $id)
     {

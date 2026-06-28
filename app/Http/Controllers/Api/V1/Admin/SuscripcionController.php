@@ -41,7 +41,7 @@ class SuscripcionController extends Controller
             'fecha_inicio' => 'required|date',
             'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
             'mensaje_apoyo' => 'nullable|string',
-            'estado' => 'required|in:activo,pausado,cancelado,finalizado',
+            'estado' => 'required|in:activo,pausado,cancelado,finalizado,pendiente',
         ]);
 
         try {
@@ -73,7 +73,7 @@ class SuscripcionController extends Controller
             'frecuencia' => 'sometimes|in:unica,mensual,trimestral,anual',
             'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
             'mensaje_apoyo' => 'nullable|string',
-            'estado' => 'sometimes|in:activo,pausado,cancelado,finalizado',
+            'estado' => 'sometimes|in:activo,pausado,cancelado,finalizado,pendiente',
         ]);
 
         try {

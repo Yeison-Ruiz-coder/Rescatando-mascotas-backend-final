@@ -6,7 +6,20 @@ use App\Http\Controllers\Api\V1\Entity\SuscripcionController as EntitySuscripcio
 use App\Http\Controllers\Api\V1\Admin\EventoController as AdminEventoController;
 use App\Http\Controllers\Api\V1\Admin\SuscripcionController as AdminSuscripcionController;
 use App\Http\Controllers\Api\V1\Public\EventoController as PublicEventoController;
+use App\Http\Controllers\Api\V1\Payment\PaymentController;
 use App\Http\Controllers\Api\V1\Public\SuscripcionPublicController as PublicSuscripcionController;
+
+
+
+// =========================================================================
+// RUTAS DE PAGO (DEMO O REAL SEGÚN CONFIGURACIÓN)
+// =========================================================================
+Route::middleware(['auth:sanctum'])->prefix('payment')->name('payment.')->group(function () {
+    Route::post('/iniciar', [PaymentController::class, 'iniciarPago']);
+    Route::post('/confirmar', [PaymentController::class, 'confirmarPago']);
+    Route::get('/mode', [PaymentController::class, 'getMode']);
+});
+
 
 // =========================================================================
 // API V1 - RUTAS PÚBLICAS (SIN AUTENTICACIÓN)
