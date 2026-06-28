@@ -166,6 +166,10 @@ class SuscripcionPublicController extends Controller
         }
     }
 
+    /**
+     * Obtener mis suscripciones (USUARIO AUTENTICADO)
+     * GET /api/suscripciones/user/mis-suscripciones
+     */
     public function misSuscripciones(Request $request)
     {
         try {
@@ -178,37 +182,125 @@ class SuscripcionPublicController extends Controller
                 ], 401);
             }
 
-            // ✅ Obtener suscripciones
+            Log::info('📋 Obteniendo suscripciones para usuario:', ['user_id' => $user->id]);
+
+            // ✅ Obtener todas las suscripciones del usuario
             $suscripciones = Suscripcion::where('user_id', $user->id)
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            // ✅ Cargar relación mascota con SOLO los campos que existen
+            Log::info('📊 Total suscripciones encontradas:', ['count' => $suscripciones->count()]);
+
+            // ✅ Cargar relación mascota con TODOS los campos necesarios
             foreach ($suscripciones as $suscripcion) {
                 try {
+                    // ✅ Cargar la mascota con todos los campos que necesitamos
                     $suscripcion->load(['mascota' => function ($q) {
-                        $q->select('id', 'nombre_mascota', 'especie', 'edad_aprox', 'foto_principal', 'fundacion_id');
+                        $q->select(
+                            'id',
+                            'nombre_mascota',
+                            'especie',
+                            'raza',
+                            'edad_aprox as edad',
+                            'foto_principal',
+                            'imagen_url',
+                            'descripcion',
+                            'fundacion_id',
+                            'estado as mascota_estado'
+                        );
                     }]);
+
+                    // ✅ Log para depuración
+                    Log::info('🐾 Suscripción cargada:', [
+                        'suscripcion_id' => $suscripcion->id,
+                        'mascota_id' => $suscripcion->mascota_id,
+                        'mascota_nombre' => $suscripcion->mascota->nombre_mascota ?? 'Sin nombre',
+                        'estado' => $suscripcion->estado
+                    ]);
                 } catch (\Exception $e) {
-                    // Si falla, continuar sin la relación
+                    Log::warning('⚠️ Error al cargar mascota para suscripción:', [
+                        'suscripcion_id' => $suscripcion->id,
+                        'mascota_id' => $suscripcion->mascota_id,
+                        'error' => $e->getMessage()
+                    ]);
+
+                    // ✅ Si la mascota no existe, agregar un objeto vacío
+                    if (!$suscripcion->relationLoaded('mascota') || !$suscripcion->mascota) {
+                        $suscripcion->setRelation('mascota', null);
+                    }
                 }
             }
 
+            // ✅ Verificar suscripción específica (mascota_id: 217)
+            $suscripcion217 = $suscripciones->firstWhere('mascota_id', 217);
+            if ($suscripcion217) {
+                Log::info('✅ SUSCRIPCIÓN 217 ENCONTRADA:', [
+                    'id' => $suscripcion217->id,
+                    'estado' => $suscripcion217->estado,
+                    'mascota_id' => $suscripcion217->mascota_id,
+                    'mascota_existe' => $suscripcion217->mascota ? 'Sí' : 'No'
+                ]);
+            } else {
+                Log::warning('⚠️ SUSCRIPCIÓN 217 NO ENCONTRADA para el usuario');
+
+                // Verificar si existe en la base de datos
+                $existeEnDB = Suscripcion::where('mascota_id', 217)->first();
+                if ($existeEnDB) {
+                    Log::info('📌 Suscripción 217 existe en DB pero no pertenece a este usuario:', [
+                        'user_id' => $existeEnDB->user_id,
+                        'usuario_actual' => $user->id
+                    ]);
+                } else {
+                    Log::info('📌 Suscripción 217 NO EXISTE en la base de datos');
+                }
+            }
+
+            // ✅ Transformar los datos para el frontend
+            $data = $suscripciones->map(function ($suscripcion) {
+                return [
+                    'id' => $suscripcion->id,
+                    'user_id' => $suscripcion->user_id,
+                    'mascota_id' => $suscripcion->mascota_id,
+                    'monto_mensual' => $suscripcion->monto_mensual,
+                    'frecuencia' => $suscripcion->frecuencia,
+                    'estado' => $suscripcion->estado,
+                    'mensaje_apoyo' => $suscripcion->mensaje_apoyo,
+                    'fecha_inicio' => $suscripcion->fecha_inicio,
+                    'fecha_fin' => $suscripcion->fecha_fin,
+                    'created_at' => $suscripcion->created_at,
+                    'updated_at' => $suscripcion->updated_at,
+                    // ✅ Incluir datos de la mascota (si existe)
+                    'mascota' => $suscripcion->mascota ? [
+                        'id' => $suscripcion->mascota->id,
+                        'nombre_mascota' => $suscripcion->mascota->nombre_mascota ?? 'Sin nombre',
+                        'especie' => $suscripcion->mascota->especie ?? 'No especificada',
+                        'raza' => $suscripcion->mascota->raza ?? 'No especificada',
+                        'edad' => $suscripcion->mascota->edad ?? 0,
+                        'foto_principal' => $suscripcion->mascota->foto_principal ?? null,
+                        'imagen_url' => $suscripcion->mascota->imagen_url ?? null,
+                        'descripcion' => $suscripcion->mascota->descripcion ?? '',
+                        'estado' => $suscripcion->mascota->mascota_estado ?? 'En adopcion',
+                    ] : null
+                ];
+            });
+
             return response()->json([
                 'success' => true,
-                'data' => $suscripciones,
+                'data' => $data,
                 'message' => 'Tus suscripciones obtenidas'
             ]);
         } catch (\Exception $e) {
-            Log::error('Error en misSuscripciones:', [
+            Log::error('❌ Error en misSuscripciones:', [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
-                'file' => $e->getFile()
+                'file' => $e->getFile(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al obtener suscripciones: ' . $e->getMessage()
+                'message' => 'Error al obtener suscripciones',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
