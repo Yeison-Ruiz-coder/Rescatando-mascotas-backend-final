@@ -208,6 +208,7 @@ Route::middleware(['auth:sanctum'])->prefix('entity')->name('entity.')->group(fu
     Route::apiResource('suscripciones', EntitySuscripcionController::class);
     Route::get('/suscripciones/mascota/{mascotaId}', [EntitySuscripcionController::class, 'porMascota']);
     Route::get('/suscripciones-estadisticas', [EntitySuscripcionController::class, 'estadisticas']);
+    Route::get('/usuarios', [App\Http\Controllers\Api\V1\Entity\UsuarioController::class, 'index']);
 });
 // =========================================================================
 // PERFIL ESPECÍFICO PARA FUNDACIONES
