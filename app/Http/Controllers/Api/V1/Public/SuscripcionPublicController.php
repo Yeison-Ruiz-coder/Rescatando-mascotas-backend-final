@@ -166,79 +166,49 @@ class SuscripcionPublicController extends Controller
         }
     }
 
-    /**
-     * Ver mis suscripciones (USUARIO AUTENTICADO)
-     * GET /api/suscripciones/user/mis-suscripciones
-     */
     public function misSuscripciones(Request $request)
     {
         try {
             $user = $request->user();
 
             if (!$user) {
-                return $this->errorResponse('Usuario no autenticado', null, 401);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no autenticado'
+                ], 401);
             }
 
-            // ✅ Obtener suscripciones con relaciones
-            $suscripciones = Suscripcion::with([
-                'mascota' => function ($q) {
-                    $q->select('id', 'nombre_mascota', 'especie', 'raza', 'edad_aprox', 'foto_principal', 'fundacion_id');
-                },
-                'mascota.fundacion' => function ($q) {
-                    $q->select('id', 'Nombre_1', 'imagen_portada', 'ciudad');
-                }
-            ])
-                ->where('user_id', $user->id)
+            // ✅ Obtener suscripciones
+            $suscripciones = Suscripcion::where('user_id', $user->id)
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            // ✅ Formatear datos para el frontend
-            $data = $suscripciones->map(function ($suscripcion) {
-                return [
-                    'id' => $suscripcion->id,
-                    'user_id' => $suscripcion->user_id,
-                    'mascota_id' => $suscripcion->mascota_id,
-                    'monto_mensual' => $suscripcion->monto_mensual,
-                    'frecuencia' => $suscripcion->frecuencia,
-                    'fecha_inicio' => $suscripcion->fecha_inicio,
-                    'fecha_fin' => $suscripcion->fecha_fin,
-                    'mensaje_apoyo' => $suscripcion->mensaje_apoyo,
-                    'estado' => $suscripcion->estado,
-                    'es_demo' => $suscripcion->es_demo,
-                    'payment_method' => $suscripcion->payment_method,
-                    'payment_reference' => $suscripcion->payment_reference,
-                    'created_at' => $suscripcion->created_at,
-                    'updated_at' => $suscripcion->updated_at,
-                    'mascota' => $suscripcion->mascota ? [
-                        'id' => $suscripcion->mascota->id,
-                        'nombre_mascota' => $suscripcion->mascota->nombre_mascota ?? 'Mascota',
-                        'especie' => $suscripcion->mascota->especie,
-                        'raza' => $suscripcion->mascota->raza,
-                        'edad_aprox' => $suscripcion->mascota->edad_aprox,
-                        'foto_principal' => $suscripcion->mascota->foto_principal,
-                        'fundacion' => $suscripcion->mascota->fundacion ? [
-                            'id' => $suscripcion->mascota->fundacion->id,
-                            'nombre' => $suscripcion->mascota->fundacion->Nombre_1,
-                        ] : null,
-                    ] : null,
-                ];
-            });
+            // ✅ Cargar relación mascota con SOLO los campos que existen
+            foreach ($suscripciones as $suscripcion) {
+                try {
+                    $suscripcion->load(['mascota' => function ($q) {
+                        $q->select('id', 'nombre_mascota', 'especie', 'edad_aprox', 'foto_principal', 'fundacion_id');
+                    }]);
+                } catch (\Exception $e) {
+                    // Si falla, continuar sin la relación
+                }
+            }
 
             return response()->json([
                 'success' => true,
-                'data' => $data,
+                'data' => $suscripciones,
                 'message' => 'Tus suscripciones obtenidas'
             ]);
         } catch (\Exception $e) {
             Log::error('Error en misSuscripciones:', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al obtener suscripciones',
-                'error' => $e->getMessage()
+                'message' => 'Error al obtener suscripciones: ' . $e->getMessage()
             ], 500);
         }
     }
