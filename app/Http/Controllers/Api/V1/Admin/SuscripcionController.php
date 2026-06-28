@@ -187,7 +187,7 @@ class SuscripcionController extends Controller
                 )
                 ->first();
 
-            // ✅ Top mascotas (con join)
+            // ✅ Top mascotas
             $topMascotas = DB::table('suscripciones')
                 ->join('mascotas', 'suscripciones.mascota_id', '=', 'mascotas.id')
                 ->select(
@@ -201,16 +201,16 @@ class SuscripcionController extends Controller
                 ->limit(10)
                 ->get();
 
-            // ✅ Top usuarios (con join)
+            // ✅ Top usuarios - USANDO 'nombre' (campo correcto)
             $topUsuarios = DB::table('suscripciones')
                 ->join('users', 'suscripciones.user_id', '=', 'users.id')
                 ->select(
-                    'users.name as nombre',
+                    'users.nombre', // ✅ CAMPO CORRECTO
                     DB::raw('count(*) as count'),
                     DB::raw('SUM(suscripciones.monto_mensual) as ingresos'),
                     DB::raw('AVG(suscripciones.monto_mensual) as promedio')
                 )
-                ->groupBy('users.id', 'users.name')
+                ->groupBy('users.id', 'users.nombre')
                 ->orderBy('count', 'desc')
                 ->limit(10)
                 ->get();
