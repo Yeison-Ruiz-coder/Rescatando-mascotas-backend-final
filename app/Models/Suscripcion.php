@@ -7,32 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 use App\Models\Mascota;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Builder;
-use App\Traits\HasScopes;
 
 class Suscripcion extends Model
 {
-    use HasFactory, HasScopes;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'suscripciones';
-
-    protected $allowSelect = [
-        'id',
-        'user_id',
-        'mascota_id',
-        'monto_mensual',
-        'frecuencia',
-        'fecha_inicio',
-        'fecha_fin',
-        'mensaje_apoyo',
-        'estado',
-        'created_at',
-    ];
-
-    protected $allowIncluded = [
-        'user',
-        'mascota',
-    ];
 
     protected $fillable = [
         'user_id',
@@ -51,21 +31,25 @@ class Suscripcion extends Model
         'monto_mensual' => 'decimal:2',
     ];
 
-    // 👤 relación usuario (MEJOR NOMBRE)
+    // Relaciones
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 
-    // 🐶 relación mascota
     public function mascota()
     {
-        return $this->belongsTo(Mascota::class, 'mascota_id');
+        return $this->belongsTo(Mascota::class);
     }
 
-    // 🔥 scope
-    public function scopeActivas(Builder $query)
+    // Scopes
+    public function scopeActivas($query)
     {
         return $query->where('estado', 'activo');
+    }
+
+    public function scopeByUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
     }
 }

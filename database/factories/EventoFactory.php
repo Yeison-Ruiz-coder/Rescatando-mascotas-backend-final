@@ -20,10 +20,8 @@ class EventoFactory extends Factory
         'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459995/pexels-photo-9413379_qd5xu0.avif',
         'https://res.cloudinary.com/dixyebg5i/image/upload/v1782414979/eventos/kkhe3fxy6u5hqbdf5q70.jpg',
         'https://res.cloudinary.com/dixyebg5i/image/upload/v1781809882/eventos/ciu4arlxkqduahlxkgqr.jpg',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1781772062/eventos/vu8bxdja3ljysjhca9ux.jpg',
         'https://res.cloudinary.com/dixyebg5i/image/upload/v1781491066/eventos/zqwjbadby4c9tdlo9p0y.jpg',
         'https://res.cloudinary.com/dixyebg5i/image/upload/v1779296275/eventos/lzbiu8klltkcwhncgzn2.jpg',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1779296017/eventos/rboy7qdpjud8gzcrsjia.jpg',
         'https://res.cloudinary.com/dixyebg5i/image/upload/v1779295892/eventos/mrzf15ucnpwvwa99rysl.jpg',
 
     ];
