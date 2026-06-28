@@ -185,14 +185,13 @@ class SuscripcionPublicController extends Controller
 
             Log::info('📋 Obteniendo suscripciones para usuario:', ['user_id' => $user->id]);
 
-            // ✅ Cargar las suscripciones CON la relación mascota desde el principio
+            // ✅ Usar with() para cargar la relación mascota desde el principio
             $suscripciones = Suscripcion::where('user_id', $user->id)
                 ->with(['mascota' => function ($query) {
                     $query->select(
                         'id',
                         'nombre_mascota',
                         'especie',
-                        'raza',
                         'edad_aprox',
                         'foto_principal',
                         'imagen_url',
@@ -204,17 +203,17 @@ class SuscripcionPublicController extends Controller
 
             Log::info('📊 Total suscripciones encontradas:', ['count' => $suscripciones->count()]);
 
-            // ✅ Log para verificar que la relación se cargó
+            // ✅ Log para verificar los datos
             foreach ($suscripciones as $suscripcion) {
                 Log::info('🐾 Suscripción:', [
                     'id' => $suscripcion->id,
                     'mascota_id' => $suscripcion->mascota_id,
-                    'tiene_mascota' => $suscripcion->mascota ? 'Sí' : 'No',
-                    'mascota_nombre' => $suscripcion->mascota->nombre_mascota ?? 'Sin nombre'
+                    'mascota_nombre' => $suscripcion->mascota->nombre_mascota ?? 'NULL',
+                    'tiene_relacion' => $suscripcion->relationLoaded('mascota') ? 'Sí' : 'No'
                 ]);
             }
 
-            // ✅ Devolver los datos DIRECTAMENTE sin transformar
+            // ✅ Devolver los datos con la relación incluida
             return response()->json([
                 'success' => true,
                 'data' => $suscripciones,
@@ -224,8 +223,7 @@ class SuscripcionPublicController extends Controller
             Log::error('❌ Error en misSuscripciones:', [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
-                'file' => $e->getFile(),
-                'trace' => $e->getTraceAsString()
+                'file' => $e->getFile()
             ]);
 
             return response()->json([
@@ -234,6 +232,7 @@ class SuscripcionPublicController extends Controller
             ], 500);
         }
     }
+
     /**
      * Ver detalle de una suscripción (USUARIO AUTENTICADO)
      * GET /api/suscripciones/user/{id}
