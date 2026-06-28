@@ -7,6 +7,7 @@ use App\Models\Suscripcion;
 use App\Models\Mascota;
 use App\Traits\ApiResponses;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -185,35 +186,44 @@ class SuscripcionPublicController extends Controller
 
             Log::info('📋 Obteniendo suscripciones para usuario:', ['user_id' => $user->id]);
 
-            // ✅ Usar with() para cargar la relación mascota desde el principio
-            $suscripciones = Suscripcion::where('user_id', $user->id)
-                ->with(['mascota' => function ($query) {
-                    $query->select(
-                        'id',
-                        'nombre_mascota',
-                        'especie',
-                        'edad_aprox',
-                        'foto_principal',
-                        'imagen_url',
-                        'descripcion'
-                    );
-                }])
-                ->orderBy('created_at', 'desc')
+            // ✅ Usar JOIN directo para obtener todos los datos
+            $suscripciones = DB::table('suscripciones')
+                ->leftJoin('mascotas', 'suscripciones.mascota_id', '=', 'mascotas.id')
+                ->where('suscripciones.user_id', $user->id)
+                ->select(
+                    'suscripciones.id',
+                    'suscripciones.user_id',
+                    'suscripciones.mascota_id',
+                    'suscripciones.monto_mensual',
+                    'suscripciones.frecuencia',
+                    'suscripciones.estado',
+                    'suscripciones.mensaje_apoyo',
+                    'suscripciones.fecha_inicio',
+                    'suscripciones.fecha_fin',
+                    'suscripciones.created_at',
+                    'suscripciones.updated_at',
+                    'mascotas.nombre_mascota',
+                    'mascotas.especie',
+                    'mascotas.edad_aprox',
+                    'mascotas.foto_principal',
+                    'mascotas.imagen_url',
+                    'mascotas.descripcion'
+                )
+                ->orderBy('suscripciones.created_at', 'desc')
                 ->get();
 
             Log::info('📊 Total suscripciones encontradas:', ['count' => $suscripciones->count()]);
 
-            // ✅ Log para verificar los datos
-            foreach ($suscripciones as $suscripcion) {
-                Log::info('🐾 Suscripción:', [
-                    'id' => $suscripcion->id,
-                    'mascota_id' => $suscripcion->mascota_id,
-                    'mascota_nombre' => $suscripcion->mascota->nombre_mascota ?? 'NULL',
-                    'tiene_relacion' => $suscripcion->relationLoaded('mascota') ? 'Sí' : 'No'
+            // ✅ Verificar que los datos de mascota lleguen
+            if ($suscripciones->count() > 0) {
+                $primera = $suscripciones->first();
+                Log::info('📸 Ejemplo de datos:', [
+                    'nombre_mascota' => $primera->nombre_mascota ?? 'NULL',
+                    'especie' => $primera->especie ?? 'NULL',
+                    'foto' => $primera->foto_principal ?? 'NULL'
                 ]);
             }
 
-            // ✅ Devolver los datos con la relación incluida
             return response()->json([
                 'success' => true,
                 'data' => $suscripciones,
