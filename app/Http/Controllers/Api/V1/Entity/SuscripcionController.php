@@ -3,137 +3,209 @@
 namespace App\Http\Controllers\Api\V1\Entity;
 
 use App\Http\Controllers\Controller;
-use App\Services\Entity\SuscripcionEntityService;
+use App\Models\Suscripcion;
+use App\Models\Mascota;
 use App\Traits\ApiResponses;
-use App\Traits\TransactionTrait;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Support\Facades\Validator;
 
 class SuscripcionController extends Controller
 {
-    use ApiResponses, TransactionTrait;
+    use ApiResponses;
 
-    protected SuscripcionEntityService $suscripcionService;
-
-    public function __construct(SuscripcionEntityService $suscripcionService)
+    /**
+     * Obtener las mascotas de la fundación
+     */
+    private function getMascotasIds()
     {
-        $this->suscripcionService = $suscripcionService;
+        $user = Auth::user();
+
+        if ($user->tipo === 'fundacion') {
+            $fundacion = $user->fundacion;
+            if (!$fundacion) {
+                throw new \Exception('Perfil de fundación no encontrado');
+            }
+            return Mascota::where('fundacion_id', $fundacion->id)->pluck('id');
+        }
+
+        if ($user->tipo === 'veterinaria') {
+            $veterinaria = $user->veterinaria;
+            if (!$veterinaria) {
+                throw new \Exception('Perfil de veterinaria no encontrado');
+            }
+            return Mascota::where('veterinaria_id', $veterinaria->id)->pluck('id');
+        }
+
+        throw new \Exception('Tipo de usuario no válido');
     }
 
+    /**
+     * Obtener todas las suscripciones de la entidad
+     * GET /api/entity/suscripciones
+     */
     public function index()
     {
         try {
-            $suscripciones = $this->suscripcionService->getMisSuscripciones();
+            $mascotasIds = $this->getMascotasIds();
+
+            $suscripciones = Suscripcion::with(['user', 'mascota'])
+                ->whereIn('mascota_id', $mascotasIds)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
             return $this->successResponse($suscripciones, 'Suscripciones obtenidas exitosamente');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), null, 403);
         }
     }
 
-    public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'user_id' => 'required|exists:users,id',
-            'mascota_id' => 'required|exists:mascotas,id',
-            'monto_mensual' => 'required|numeric|min:1',
-            'frecuencia' => 'required|in:unica,mensual,trimestral,anual',
-            'fecha_inicio' => 'required|date',
-            'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
-            'mensaje_apoyo' => 'nullable|string',
-            'estado' => 'required|in:activo,pausado,cancelado,finalizado'
-        ]);
-
-        if ($validator->fails()) {
-            return $this->errorResponse('Error de validación', $validator->errors(), 422);
-        }
-
-        try {
-            $suscripcion = $this->runInTransaction(
-                fn() => $this->suscripcionService->createSuscripcion($request->all()),
-                'Error al crear suscripción'
-            );
-
-            return $this->successResponse($suscripcion, 'Suscripción creada exitosamente', 201);
-        } catch (\Exception $e) {
-            return $this->errorResponse('Error al crear la suscripción', $e->getMessage(), 500);
-        }
-    }
-
+    /**
+     * Ver detalle de una suscripción
+     * GET /api/entity/suscripciones/{id}
+     */
     public function show(int $id)
     {
         try {
-            $suscripcion = $this->suscripcionService->findSuscripcion($id);
-            return $this->successResponse($suscripcion, 'Suscripción obtenida exitosamente');
+            $mascotasIds = $this->getMascotasIds();
+
+            $suscripcion = Suscripcion::with(['user', 'mascota'])
+                ->whereIn('mascota_id', $mascotasIds)
+                ->findOrFail($id);
+
+            return $this->successResponse($suscripcion, 'Suscripción obtenida');
         } catch (ModelNotFoundException $e) {
-            return $this->notFoundResponse('Suscripción no encontrada');
+            return $this->errorResponse('Suscripción no encontrada', null, 404);
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), null, 403);
         }
     }
 
+    /**
+     * Actualizar una suscripción
+     * PUT /api/entity/suscripciones/{id}
+     */
     public function update(Request $request, int $id)
     {
-        $validator = Validator::make($request->all(), [
-            'user_id' => 'sometimes|exists:users,id',
-            'mascota_id' => 'sometimes|exists:mascotas,id',
-            'monto_mensual' => 'sometimes|numeric|min:1',
-            'frecuencia' => 'sometimes|in:unica,mensual,trimestral,anual',
-            'fecha_inicio' => 'sometimes|date',
-            'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
-            'mensaje_apoyo' => 'nullable|string',
-            'estado' => 'sometimes|in:activo,pausado,cancelado,finalizado'
-        ]);
-
-        if ($validator->fails()) {
-            return $this->errorResponse('Error de validación', $validator->errors(), 422);
-        }
-
         try {
-            $suscripcion = $this->runInTransaction(
-                fn() => $this->suscripcionService->updateSuscripcion($id, $request->all()),
-                'Error al actualizar suscripción'
-            );
+            $mascotasIds = $this->getMascotasIds();
 
-            return $this->successResponse($suscripcion, 'Suscripción actualizada exitosamente');
+            $suscripcion = Suscripcion::whereIn('mascota_id', $mascotasIds)->findOrFail($id);
+
+            $validated = $request->validate([
+                'monto_mensual' => 'sometimes|numeric|min:1',
+                'frecuencia' => 'sometimes|in:unica,mensual,trimestral,anual',
+                'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
+                'mensaje_apoyo' => 'nullable|string',
+                'estado' => 'sometimes|in:activo,pausado,cancelado,finalizado',
+            ]);
+
+            $suscripcion->update($validated);
+
+            return $this->successResponse($suscripcion->load(['user', 'mascota']), 'Suscripción actualizada');
         } catch (ModelNotFoundException $e) {
-            return $this->notFoundResponse('Suscripción no encontrada');
+            return $this->errorResponse('Suscripción no encontrada', null, 404);
         } catch (\Exception $e) {
-            return $this->errorResponse('Error al actualizar la suscripción', $e->getMessage(), 500);
+            return $this->errorResponse('Error al actualizar', $e->getMessage(), 500);
         }
     }
 
-    public function destroy(int $id)
+    /**
+     * Pausar suscripción
+     * PATCH /api/entity/suscripciones/{id}/pausar
+     */
+    public function pausar(int $id)
     {
         try {
-            $this->runInTransaction(
-                fn() => $this->suscripcionService->deleteSuscripcion($id),
-                'Error al eliminar suscripción'
-            );
+            $mascotasIds = $this->getMascotasIds();
 
-            return $this->successResponse(null, 'Suscripción eliminada exitosamente');
+            $suscripcion = Suscripcion::whereIn('mascota_id', $mascotasIds)
+                ->where('estado', 'activo')
+                ->findOrFail($id);
+
+            $suscripcion->update(['estado' => 'pausado']);
+
+            return $this->successResponse($suscripcion, 'Suscripción pausada');
         } catch (ModelNotFoundException $e) {
-            return $this->notFoundResponse('Suscripción no encontrada');
+            return $this->errorResponse('Suscripción no encontrada o no está activa', null, 404);
         } catch (\Exception $e) {
-            return $this->errorResponse('Error al eliminar la suscripción', $e->getMessage(), 500);
+            return $this->errorResponse('Error al pausar', $e->getMessage(), 500);
         }
     }
 
-    public function porMascota(int $mascotaId)
+    /**
+     * Reactivar suscripción
+     * PATCH /api/entity/suscripciones/{id}/reactivar
+     */
+    public function reactivar(int $id)
     {
         try {
-            $suscripciones = $this->suscripcionService->getSuscripcionesPorMascota($mascotaId);
-            return $this->successResponse($suscripciones, 'Suscripciones obtenidas exitosamente');
+            $mascotasIds = $this->getMascotasIds();
+
+            $suscripcion = Suscripcion::whereIn('mascota_id', $mascotasIds)
+                ->where('estado', 'pausado')
+                ->findOrFail($id);
+
+            $suscripcion->update(['estado' => 'activo']);
+
+            return $this->successResponse($suscripcion, 'Suscripción reactivada');
+        } catch (ModelNotFoundException $e) {
+            return $this->errorResponse('Suscripción no encontrada o no está pausada', null, 404);
         } catch (\Exception $e) {
-            return $this->errorResponse($e->getMessage(), null, 404);
+            return $this->errorResponse('Error al reactivar', $e->getMessage(), 500);
         }
     }
 
+    /**
+     * Cancelar suscripción
+     * PATCH /api/entity/suscripciones/{id}/cancelar
+     */
+    public function cancelar(int $id)
+    {
+        try {
+            $mascotasIds = $this->getMascotasIds();
+
+            $suscripcion = Suscripcion::whereIn('mascota_id', $mascotasIds)
+                ->whereIn('estado', ['activo', 'pausado'])
+                ->findOrFail($id);
+
+            $suscripcion->update([
+                'estado' => 'cancelado',
+                'fecha_fin' => now(),
+            ]);
+
+            return $this->successResponse($suscripcion, 'Suscripción cancelada');
+        } catch (ModelNotFoundException $e) {
+            return $this->errorResponse('Suscripción no encontrada', null, 404);
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error al cancelar', $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Obtener estadísticas
+     * GET /api/entity/suscripciones/estadisticas
+     */
     public function estadisticas()
     {
         try {
-            $estadisticas = $this->suscripcionService->getEstadisticas();
-            return $this->successResponse($estadisticas, 'Estadísticas obtenidas exitosamente');
+            $mascotasIds = $this->getMascotasIds();
+
+            $total = Suscripcion::whereIn('mascota_id', $mascotasIds)->count();
+            $activas = Suscripcion::whereIn('mascota_id', $mascotasIds)->where('estado', 'activo')->count();
+            $pausadas = Suscripcion::whereIn('mascota_id', $mascotasIds)->where('estado', 'pausado')->count();
+            $canceladas = Suscripcion::whereIn('mascota_id', $mascotasIds)->where('estado', 'cancelado')->count();
+            $totalMensual = Suscripcion::whereIn('mascota_id', $mascotasIds)
+                ->where('estado', 'activo')
+                ->sum('monto_mensual');
+
+            return $this->successResponse([
+                'total' => $total,
+                'activas' => $activas,
+                'pausadas' => $pausadas,
+                'canceladas' => $canceladas,
+                'ingreso_mensual_total' => $totalMensual,
+            ], 'Estadísticas obtenidas');
         } catch (\Exception $e) {
             return $this->errorResponse('Error al obtener estadísticas', $e->getMessage(), 500);
         }
