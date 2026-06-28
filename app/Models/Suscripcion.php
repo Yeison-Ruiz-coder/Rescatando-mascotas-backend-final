@@ -6,11 +6,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 use App\Models\Mascota;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Suscripcion extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory ;
 
     protected $table = 'suscripciones';
 
