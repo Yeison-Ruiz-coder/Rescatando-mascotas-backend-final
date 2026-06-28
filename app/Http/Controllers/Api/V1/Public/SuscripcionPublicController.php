@@ -21,40 +21,45 @@ class SuscripcionPublicController extends Controller
     public function planes()
     {
         try {
-            $mascotas = Mascota::with(['fundacion' => function($q) {
+            $mascotas = Mascota::with(['fundacion' => function ($q) {
                 $q->select('id', 'Nombre_1', 'imagen_portada', 'ciudad');
             }])
-            ->where('estado', 'En adopcion')
-            ->where(function($query) {
-                $query->where('destacada', true)
-                      ->orWhere('necesita_apadrinamiento', true);
-            })
-            ->select('id', 'nombre', 'especie', 'raza', 'edad', 'descripcion', 'fundacion_id', 'imagen')
-            ->get();
+                ->where('estado', 'En adopcion')
+                ->select('id', 'nombre_mascota as nombre', 'especie', 'raza', 'edad_aprox as edad', 'descripcion', 'fundacion_id', 'foto_principal as imagen')
+                ->limit(20)
+                ->get();
 
-            $planes = $mascotas->map(function($mascota) {
+            $planes = $mascotas->map(function ($mascota) {
                 return [
                     'id' => $mascota->id,
-                    'nombre' => $mascota->nombre,
-                    'especie' => $mascota->especie,
-                    'raza' => $mascota->raza,
-                    'edad' => $mascota->edad,
-                    'descripcion' => $mascota->descripcion,
-                    'imagen' => $mascota->imagen,
+                    'nombre' => $mascota->nombre ?? 'Sin nombre',
+                    'especie' => $mascota->especie ?? 'No especificada',
+                    'raza' => $mascota->raza ?? 'No especificada',
+                    'edad' => $mascota->edad ?? 0,
+                    'descripcion' => $mascota->descripcion ?? '',
+                    'imagen' => $mascota->imagen ?? null,
                     'monto_recomendado' => 10000,
                     'fundacion' => $mascota->fundacion ? [
                         'id' => $mascota->fundacion->id,
-                        'nombre' => $mascota->fundacion->Nombre_1,
-                        'imagen' => $mascota->fundacion->imagen_portada,
-                        'ciudad' => $mascota->fundacion->ciudad,
+                        'nombre' => $mascota->fundacion->Nombre_1 ?? 'Fundación',
+                        'imagen' => $mascota->fundacion->imagen_portada ?? null,
+                        'ciudad' => $mascota->fundacion->ciudad ?? '',
                     ] : null,
                 ];
             });
 
-            return $this->successResponse($planes, 'Planes de apadrinamiento obtenidos');
+            return response()->json([
+                'success' => true,
+                'data' => $planes,
+                'message' => 'Planes de apadrinamiento obtenidos'
+            ]);
         } catch (\Exception $e) {
             Log::error('Error en planes:', ['error' => $e->getMessage()]);
-            return $this->errorResponse('Error al obtener planes', $e->getMessage(), 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener planes',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 
@@ -65,42 +70,49 @@ class SuscripcionPublicController extends Controller
     public function planDetalle(int $id)
     {
         try {
-            $mascota = Mascota::with(['fundacion' => function($q) {
+            $mascota = Mascota::with(['fundacion' => function ($q) {
                 $q->select('id', 'Nombre_1', 'imagen_portada', 'ciudad', 'descripcion');
             }])
-            ->where('estado', 'En adopcion')
-            ->findOrFail($id);
+                ->where('estado', 'En adopcion')
+                ->select('id', 'nombre_mascota as nombre', 'especie', 'raza', 'edad_aprox as edad', 'descripcion', 'fundacion_id', 'foto_principal as imagen')
+                ->findOrFail($id);
 
             $plan = [
                 'id' => $mascota->id,
-                'nombre' => $mascota->nombre,
-                'especie' => $mascota->especie,
-                'raza' => $mascota->raza,
-                'edad' => $mascota->edad,
-                'descripcion' => $mascota->descripcion,
-                'imagen' => $mascota->imagen,
+                'nombre' => $mascota->nombre ?? 'Sin nombre',
+                'especie' => $mascota->especie ?? 'No especificada',
+                'raza' => $mascota->raza ?? 'No especificada',
+                'edad' => $mascota->edad ?? 0,
+                'descripcion' => $mascota->descripcion ?? '',
+                'imagen' => $mascota->imagen ?? null,
                 'monto_recomendado' => 10000,
                 'fundacion' => $mascota->fundacion ? [
                     'id' => $mascota->fundacion->id,
-                    'nombre' => $mascota->fundacion->Nombre_1,
-                    'imagen' => $mascota->fundacion->imagen_portada,
-                    'ciudad' => $mascota->fundacion->ciudad,
-                    'descripcion' => $mascota->fundacion->descripcion,
+                    'nombre' => $mascota->fundacion->Nombre_1 ?? 'Fundación',
+                    'imagen' => $mascota->fundacion->imagen_portada ?? null,
+                    'ciudad' => $mascota->fundacion->ciudad ?? '',
+                    'descripcion' => $mascota->fundacion->descripcion ?? '',
                 ] : null,
             ];
 
-            return $this->successResponse($plan, 'Plan obtenido');
+            return response()->json([
+                'success' => true,
+                'data' => $plan,
+                'message' => 'Plan obtenido'
+            ]);
         } catch (\Exception $e) {
-            return $this->errorResponse('Plan no encontrado', null, 404);
+            Log::error('Error en planDetalle:', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Plan no encontrado',
+                'error' => $e->getMessage()
+            ], 404);
         }
     }
 
     /**
      * ✅ CREAR SUSCRIPCIÓN (Usuario autenticado)
      * POST /api/suscripciones/user/crear
-     *
-     * 🔥 MODIFICACIÓN: La suscripción se crea como PENDIENTE
-     * y se activa después del pago
      */
     public function store(Request $request)
     {
@@ -127,7 +139,7 @@ class SuscripcionPublicController extends Controller
                 return $this->errorResponse('Esta mascota no está disponible para apadrinamiento', null, 400);
             }
 
-            // Verificar si ya tiene una suscripción activa para esta mascota
+            // Verificar si ya tiene una suscripción activa
             $existe = Suscripcion::where('user_id', $user->id)
                 ->where('mascota_id', $request->mascota_id)
                 ->whereIn('estado', ['activo', 'pausado', 'pendiente'])
@@ -137,28 +149,25 @@ class SuscripcionPublicController extends Controller
                 return $this->errorResponse('Ya tienes una suscripción activa o pendiente para esta mascota', null, 400);
             }
 
-            // ✅ CREAR SUSCRIPCIÓN EN ESTADO PENDIENTE
-            // El usuario debe pagar para activarla
+            // ✅ fecha_inicio = hoy
             $suscripcion = Suscripcion::create([
                 'user_id' => $user->id,
                 'mascota_id' => $request->mascota_id,
                 'monto_mensual' => $request->monto_mensual,
                 'frecuencia' => $request->frecuencia,
                 'mensaje_apoyo' => $request->mensaje_apoyo,
-                'fecha_inicio' => null, // Se activa después del pago
-                'estado' => 'pendiente', // ⚠️ CAMBIADO: pendiente en lugar de activo
-                'es_demo' => true, // Por defecto demo
+                'fecha_inicio' => now(),
+                'estado' => 'pendiente',
+                'es_demo' => true,
                 'payment_method' => null,
                 'payment_reference' => null,
             ]);
 
-            // Retornar la suscripción para que el frontend inicie el pago
             return $this->successResponse([
                 'suscripcion' => $suscripcion->load(['mascota', 'user']),
-                'mensaje' => 'Suscripción creada. Por favor, completa el pago para activarla.',
+                'mensaje' => 'Suscripción creada. Completa el pago para activarla.',
                 'next_step' => 'payment',
             ], 'Suscripción creada - Pendiente de pago', 201);
-
         } catch (\Exception $e) {
             Log::error('Error al crear suscripción:', ['error' => $e->getMessage()]);
             return $this->errorResponse('Error al crear la suscripción', $e->getMessage(), 500);
@@ -173,20 +182,21 @@ class SuscripcionPublicController extends Controller
     {
         try {
             $suscripciones = Suscripcion::with([
-                'mascota' => function($q) {
-                    $q->select('id', 'nombre', 'especie', 'raza', 'edad', 'imagen', 'fundacion_id')
-                      ->with('fundacion:id,Nombre_1,imagen_portada,ciudad');
+                'mascota' => function ($q) {
+                    $q->select('id', 'nombre_mascota as nombre', 'especie', 'raza', 'edad_aprox as edad', 'imagen', 'fundacion_id')
+                        ->with('fundacion:id,Nombre_1,imagen_portada,ciudad');
                 },
-                'pagos' => function($q) {
+                'pagos' => function ($q) {
                     $q->orderBy('created_at', 'desc')->limit(1);
                 }
             ])
-            ->where('user_id', $request->user()->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+                ->where('user_id', $request->user()->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
 
             return $this->successResponse($suscripciones, 'Tus suscripciones obtenidas');
         } catch (\Exception $e) {
+            Log::error('Error en misSuscripciones:', ['error' => $e->getMessage()]);
             return $this->errorResponse('Error al obtener suscripciones', $e->getMessage(), 500);
         }
     }
