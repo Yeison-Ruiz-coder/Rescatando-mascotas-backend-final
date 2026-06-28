@@ -31,6 +31,50 @@ class SeguimientoEntityService
     }
 
     /**
+     * ✅ OBTENER TODOS LOS SEGUIMIENTOS DE LA ENTIDAD
+     */
+    public function getMisSeguimientos(int $perPage = 15)
+    {
+        $entidad = $this->getEntidad();
+
+        if (!$entidad) {
+            throw new \Exception('No se encontró la entidad asociada');
+        }
+
+        $adopcionesIds = Adopcion::where('fundacion_id', $entidad->id)->pluck('id');
+
+        return SeguimientoAdopcion::whereIn('adopcion_id', $adopcionesIds)
+            ->with(['adopcion.mascota', 'realizadoPor'])
+            ->select([
+                'id',
+                'adopcion_id',
+                'tipo_seguimiento',
+                'fecha_seguimiento',
+                'proximo_seguimiento',
+                'observaciones',
+                'recomendaciones',
+                'estado_mascota',
+                'resultado',
+                'foto_url',
+                'video_url',
+                'documento_url',
+                'condiciones_hogar',
+                'observaciones_hogar',
+                'convive_con_otros_animales',
+                'comportamiento_observado',
+                'realizado_por',
+                'realizado_por_nombre',
+                'requiere_nuevo_seguimiento',
+                'firma_adoptante',
+                'fecha_confirmacion',
+                'created_at',
+                'updated_at',
+            ])
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+    }
+
+    /**
      * ✅ OBTENER SEGUIMIENTOS POR ADOPCIÓN
      */
     public function getSeguimientosPorAdopcion(int $adopcionId, int $perPage = 15)
