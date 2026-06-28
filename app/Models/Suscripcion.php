@@ -23,12 +23,19 @@ class Suscripcion extends Model
         'fecha_fin',
         'mensaje_apoyo',
         'estado',
+        'es_demo',
+        'payment_method',
+        'payment_reference',
+        'stripe_subscription_id',
+        'paypal_subscription_id',
+        'mercadopago_subscription_id',
     ];
 
     protected $casts = [
         'fecha_inicio' => 'date',
         'fecha_fin' => 'date',
         'monto_mensual' => 'decimal:2',
+        'es_demo' => 'boolean',
     ];
 
     // Relaciones
@@ -42,6 +49,24 @@ class Suscripcion extends Model
         return $this->belongsTo(Mascota::class);
     }
 
+    // ✅ NUEVA RELACIÓN: Pagos
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class);
+    }
+
+    // ✅ NUEVA RELACIÓN: Facturas
+    public function facturas()
+    {
+        return $this->hasMany(Factura::class);
+    }
+
+    // ✅ NUEVA RELACIÓN: Métodos de pago (opcional)
+    public function metodoPago()
+    {
+        return $this->belongsTo(MetodoPago::class);
+    }
+
     // Scopes
     public function scopeActivas($query)
     {
@@ -51,5 +76,21 @@ class Suscripcion extends Model
     public function scopeByUser($query, $userId)
     {
         return $query->where('user_id', $userId);
+    }
+
+    // ✅ NUEVOS SCOPES
+    public function scopeDemo($query)
+    {
+        return $query->where('es_demo', true);
+    }
+
+    public function scopeReales($query)
+    {
+        return $query->where('es_demo', false);
+    }
+
+    public function scopePendientes($query)
+    {
+        return $query->where('estado', 'pendiente');
     }
 }

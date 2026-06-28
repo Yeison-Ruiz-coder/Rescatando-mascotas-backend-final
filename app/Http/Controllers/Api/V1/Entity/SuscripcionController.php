@@ -97,7 +97,7 @@ class SuscripcionController extends Controller
                 'frecuencia' => 'sometimes|in:unica,mensual,trimestral,anual',
                 'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
                 'mensaje_apoyo' => 'nullable|string',
-                'estado' => 'sometimes|in:activo,pausado,cancelado,finalizado',
+                'estado' => 'sometimes|in:activo,pausado,cancelado,finalizado,pendiente',
             ]);
 
             $suscripcion->update($validated);
@@ -166,7 +166,7 @@ class SuscripcionController extends Controller
             $mascotasIds = $this->getMascotasIds();
 
             $suscripcion = Suscripcion::whereIn('mascota_id', $mascotasIds)
-                ->whereIn('estado', ['activo', 'pausado'])
+                ->whereIn('estado', ['activo', 'pausado','pendiente'])
                 ->findOrFail($id);
 
             $suscripcion->update([

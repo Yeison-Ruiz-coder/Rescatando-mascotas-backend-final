@@ -31,4 +31,30 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Payment Configuration
+    |--------------------------------------------------------------------------
+    */
+    'payment' => [
+        'mode' => env('PAYMENT_MODE', 'demo'),
+        'driver' => env('PAYMENT_DRIVER', 'stripe'),
+
+        'stripe' => [
+            'secret' => env('STRIPE_SECRET'),
+            'public' => env('STRIPE_PUBLIC'),
+            'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        ],
+
+        'paypal' => [
+            'client_id' => env('PAYPAL_CLIENT_ID'),
+            'secret' => env('PAYPAL_SECRET'),
+            'mode' => env('PAYPAL_MODE', 'sandbox'),
+        ],
+
+        'mercadopago' => [
+            'access_token' => env('MERCADOPAGO_ACCESS_TOKEN'),
+            'public_key' => env('MERCADOPAGO_PUBLIC_KEY'),
+        ],
+    ],
 ];
