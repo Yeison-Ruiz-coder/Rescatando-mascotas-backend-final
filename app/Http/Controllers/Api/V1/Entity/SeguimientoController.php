@@ -23,6 +23,21 @@ class SeguimientoController extends Controller
     }
 
     /**
+     * ✅ LISTAR TODOS LOS SEGUIMIENTOS DE LA ENTIDAD
+     */
+    public function misSeguimientos(Request $request)
+    {
+        try {
+            $perPage = $request->get('per_page', 15);
+            $seguimientos = $this->seguimientoService->getMisSeguimientos($perPage);
+            return $this->successResponse($seguimientos, 'Seguimientos obtenidos exitosamente');
+        } catch (\Exception $e) {
+            Log::error('Error en misSeguimientos: ' . $e->getMessage());
+            return $this->errorResponse($e->getMessage(), null, 403);
+        }
+    }
+
+    /**
      * ✅ LISTAR SEGUIMIENTOS DE UNA ADOPCIÓN
      */
     public function index(Request $request, int $adopcionId)

@@ -182,6 +182,7 @@ Route::middleware(['auth:sanctum'])->prefix('entity')->name('entity.')->group(fu
         Route::get('/{id}', [App\Http\Controllers\Api\V1\Entity\AdopcionController::class, 'show']);
 
         // SEGUIMIENTOS POST-ADOPCIÓN
+        Route::get('/seguimientos/mis-seguimientos', [App\Http\Controllers\Api\V1\Entity\SeguimientoController::class, 'misSeguimientos']);
         Route::get('/{adopcionId}/seguimientos', [App\Http\Controllers\Api\V1\Entity\SeguimientoController::class, 'index']);
         Route::post('/{adopcionId}/seguimientos', [App\Http\Controllers\Api\V1\Entity\SeguimientoController::class, 'store']);
         Route::get('/seguimientos/pendientes', [App\Http\Controllers\Api\V1\Entity\SeguimientoController::class, 'pendientes']);
