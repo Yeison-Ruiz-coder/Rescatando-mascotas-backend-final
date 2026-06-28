@@ -166,7 +166,7 @@ class SuscripcionPublicController extends Controller
         }
     }
 
-    /**
+ /**
      * Obtener mis suscripciones (USUARIO AUTENTICADO)
      * GET /api/suscripciones/user/mis-suscripciones
      */
@@ -184,11 +184,10 @@ class SuscripcionPublicController extends Controller
 
             Log::info('📋 Obteniendo suscripciones para usuario:', ['user_id' => $user->id]);
 
-            // ✅ Obtener suscripciones CON los datos de la mascota
+            // ✅ Obtener todas las suscripciones del usuario CON la relación mascota
             $suscripciones = Suscripcion::where('user_id', $user->id)
-                ->with(['mascota' => function ($query) {
-                    // ✅ Seleccionar SOLO los campos que existen en tu tabla mascotas
-                    $query->select(
+                ->with(['mascota' => function ($q) {
+                    $q->select(
                         'id',
                         'nombre_mascota',
                         'especie',
@@ -197,6 +196,7 @@ class SuscripcionPublicController extends Controller
                         'foto_principal',
                         'imagen_url',
                         'descripcion',
+                        'fundacion_id',
                         'estado as mascota_estado'
                     );
                 }])
@@ -205,7 +205,7 @@ class SuscripcionPublicController extends Controller
 
             Log::info('📊 Total suscripciones encontradas:', ['count' => $suscripciones->count()]);
 
-            // ✅ Log para depuración - verificar si la mascota se cargó
+            // ✅ Log para depuración - verificar que la mascota se cargó
             foreach ($suscripciones as $suscripcion) {
                 Log::info('🐾 Suscripción:', [
                     'id' => $suscripcion->id,
@@ -215,45 +215,19 @@ class SuscripcionPublicController extends Controller
                 ]);
             }
 
-            // ✅ Transformar los datos para el frontend
-            $data = $suscripciones->map(function ($suscripcion) {
-                return [
-                    'id' => $suscripcion->id,
-                    'user_id' => $suscripcion->user_id,
-                    'mascota_id' => $suscripcion->mascota_id,
-                    'monto_mensual' => $suscripcion->monto_mensual,
-                    'frecuencia' => $suscripcion->frecuencia,
-                    'estado' => $suscripcion->estado,
-                    'mensaje_apoyo' => $suscripcion->mensaje_apoyo,
-                    'fecha_inicio' => $suscripcion->fecha_inicio,
-                    'fecha_fin' => $suscripcion->fecha_fin,
-                    'created_at' => $suscripcion->created_at,
-                    'updated_at' => $suscripcion->updated_at,
-                    // ✅ Incluir datos de la mascota
-                    'mascota' => $suscripcion->mascota ? [
-                        'id' => $suscripcion->mascota->id,
-                        'nombre_mascota' => $suscripcion->mascota->nombre_mascota ?? 'Sin nombre',
-                        'especie' => $suscripcion->mascota->especie ?? 'No especificada',
-                        'raza' => $suscripcion->mascota->raza ?? 'No especificada',
-                        'edad' => $suscripcion->mascota->edad ?? 0,
-                        'foto_principal' => $suscripcion->mascota->foto_principal ?? null,
-                        'imagen_url' => $suscripcion->mascota->imagen_url ?? null,
-                        'descripcion' => $suscripcion->mascota->descripcion ?? '',
-                        'estado' => $suscripcion->mascota->mascota_estado ?? 'En adopcion',
-                    ] : null
-                ];
-            });
-
+            // ✅ Devolver los datos SIN transformar (como funcionaba antes)
             return response()->json([
                 'success' => true,
-                'data' => $data,
+                'data' => $suscripciones,
                 'message' => 'Tus suscripciones obtenidas'
             ]);
+
         } catch (\Exception $e) {
             Log::error('❌ Error en misSuscripciones:', [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
-                'file' => $e->getFile()
+                'file' => $e->getFile(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
