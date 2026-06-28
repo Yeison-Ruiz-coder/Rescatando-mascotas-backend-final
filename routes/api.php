@@ -352,9 +352,9 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     Route::get('/eventos/calendario/data', [AdminEventoController::class, 'getCalendarData']);
     Route::get('/eventos/proximos', [AdminEventoController::class, 'proximos']);
 
-    // Suscripciones - CRUD (admin gestiona todas)
-    Route::apiResource('suscripciones', AdminSuscripcionController::class);
+    // Suscripciones - CRUD
     Route::get('/suscripciones/estadisticas', [AdminSuscripcionController::class, 'estadisticas']);
+    Route::apiResource('suscripciones', AdminSuscripcionController::class);
     Route::patch('/suscripciones/{id}/cancelar', [AdminSuscripcionController::class, 'cancelar']);
     Route::patch('/suscripciones/{id}/pausar', [AdminSuscripcionController::class, 'pausar']);
     Route::patch('/suscripciones/{id}/reactivar', [AdminSuscripcionController::class, 'reactivar']);
