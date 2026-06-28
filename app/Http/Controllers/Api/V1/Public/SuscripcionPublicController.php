@@ -7,7 +7,7 @@ use App\Models\Suscripcion;
 use App\Models\Mascota;
 use App\Traits\ApiResponses;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\log;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class SuscripcionPublicController extends Controller
