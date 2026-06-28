@@ -8,6 +8,8 @@ use App\Services\SuscripcionService;
 use App\Traits\ApiResponses;
 use App\Traits\TransactionTrait;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class SuscripcionController extends Controller
@@ -151,6 +153,129 @@ class SuscripcionController extends Controller
             return $this->notFoundResponse('Suscripción no encontrada');
         } catch (\Exception $e) {
             return $this->errorResponse('Error al reactivar la suscripción', $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Estadísticas completas para el dashboard
+     * GET /api/admin/suscripciones/estadisticas
+     */
+    public function estadisticas()
+    {
+        try {
+            // ✅ Estadísticas por estado
+            $porEstado = DB::table('suscripciones')
+                ->select('estado', DB::raw('count(*) as total'))
+                ->groupBy('estado')
+                ->pluck('total', 'estado')
+                ->toArray();
+
+            // ✅ Asegurar que todos los estados existan
+            $estados = ['activo', 'pendiente', 'cancelado', 'inactivo', 'finalizado'];
+            foreach ($estados as $estado) {
+                if (!isset($porEstado[$estado])) {
+                    $porEstado[$estado] = 0;
+                }
+            }
+
+            // ✅ Ingresos totales
+            $ingresos = DB::table('suscripciones')
+                ->select(
+                    DB::raw('SUM(monto_mensual) as total'),
+                    DB::raw('SUM(CASE WHEN estado = "activo" THEN monto_mensual ELSE 0 END) as mensual'),
+                    DB::raw('SUM(CASE WHEN estado = "activo" THEN monto_mensual * 12 ELSE 0 END) as anual')
+                )
+                ->first();
+
+            // ✅ Top mascotas (con join)
+            $topMascotas = DB::table('suscripciones')
+                ->join('mascotas', 'suscripciones.mascota_id', '=', 'mascotas.id')
+                ->select(
+                    'mascotas.nombre_mascota as nombre',
+                    DB::raw('count(*) as count'),
+                    DB::raw('SUM(suscripciones.monto_mensual) as ingresos'),
+                    DB::raw('AVG(suscripciones.monto_mensual) as promedio')
+                )
+                ->groupBy('mascotas.id', 'mascotas.nombre_mascota')
+                ->orderBy('count', 'desc')
+                ->limit(10)
+                ->get();
+
+            // ✅ Top usuarios (con join)
+            $topUsuarios = DB::table('suscripciones')
+                ->join('users', 'suscripciones.user_id', '=', 'users.id')
+                ->select(
+                    'users.name as nombre',
+                    DB::raw('count(*) as count'),
+                    DB::raw('SUM(suscripciones.monto_mensual) as ingresos'),
+                    DB::raw('AVG(suscripciones.monto_mensual) as promedio')
+                )
+                ->groupBy('users.id', 'users.name')
+                ->orderBy('count', 'desc')
+                ->limit(10)
+                ->get();
+
+            // ✅ Distribución mensual (últimos 12 meses)
+            $distribucionMensual = DB::table('suscripciones')
+                ->select(
+                    DB::raw('DATE_FORMAT(created_at, "%Y-%m") as mes'),
+                    DB::raw('SUM(monto_mensual) as valor')
+                )
+                ->where('created_at', '>=', now()->subMonths(12))
+                ->groupBy('mes')
+                ->orderBy('mes', 'asc')
+                ->get()
+                ->map(function ($item) {
+                    $meses = [
+                        '01' => 'Ene',
+                        '02' => 'Feb',
+                        '03' => 'Mar',
+                        '04' => 'Abr',
+                        '05' => 'May',
+                        '06' => 'Jun',
+                        '07' => 'Jul',
+                        '08' => 'Ago',
+                        '09' => 'Sep',
+                        '10' => 'Oct',
+                        '11' => 'Nov',
+                        '12' => 'Dic'
+                    ];
+                    $parts = explode('-', $item->mes);
+                    $item->mes = $meses[$parts[1]] . ' ' . $parts[0];
+                    return $item;
+                });
+
+            // ✅ Total de suscripciones
+            $total = Suscripcion::count();
+
+            return $this->successResponse([
+                'total' => $total,
+                'por_estado' => [
+                    'activas' => $porEstado['activo'] ?? 0,
+                    'pendientes' => $porEstado['pendiente'] ?? 0,
+                    'canceladas' => $porEstado['cancelado'] ?? 0,
+                    'inactivas' => $porEstado['inactivo'] ?? 0,
+                    'finalizadas' => $porEstado['finalizado'] ?? 0,
+                ],
+                'ingresos' => [
+                    'total' => $ingresos->total ?? 0,
+                    'mensual' => $ingresos->mensual ?? 0,
+                    'anual' => $ingresos->anual ?? 0,
+                ],
+                'top_mascotas' => $topMascotas,
+                'top_usuarios' => $topUsuarios,
+                'promedio_por_suscripcion' => $total > 0
+                    ? round(($ingresos->total ?? 0) / $total, 2)
+                    : 0,
+                'distribucion_mensual' => $distribucionMensual,
+            ], 'Estadísticas obtenidas');
+        } catch (\Exception $e) {
+            Log::error('Error en estadisticas:', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ]);
+            return $this->errorResponse('Error al obtener estadísticas: ' . $e->getMessage(), null, 500);
         }
     }
 }
