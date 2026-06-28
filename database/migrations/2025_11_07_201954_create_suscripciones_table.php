@@ -1,5 +1,5 @@
 <?php
-
+// database/migrations/2025_11_07_201954_create_suscripciones_table.php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -9,34 +9,27 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('suscripciones', function (Blueprint $table) {
-            // Campos para el sistema de pagos
-            $table->boolean('es_demo')->default(true)->after('estado');
-            $table->string('payment_method')->nullable()->after('es_demo');
-            $table->string('payment_reference')->nullable()->after('payment_method');
+        Schema::create('suscripciones', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('mascota_id')->constrained('mascotas')->onDelete('cascade');
+            $table->decimal('monto_mensual', 10, 2);
+            $table->enum('frecuencia', ['unica', 'mensual', 'trimestral', 'anual'])->default('mensual');
+            $table->date('fecha_inicio');
+            $table->date('fecha_fin')->nullable();
+            $table->text('mensaje_apoyo')->nullable();
+            $table->enum('estado', ['activo', 'pausado', 'cancelado', 'finalizado'])->default('activo');
+            $table->timestamps();
 
-            // Para cuando integres Stripe/PayPal real
-            $table->string('stripe_subscription_id')->nullable()->after('payment_reference');
-            $table->string('paypal_subscription_id')->nullable()->after('stripe_subscription_id');
-            $table->string('mercadopago_subscription_id')->nullable()->after('paypal_subscription_id');
-
-            // Índices para búsquedas
-            $table->index('es_demo');
-            $table->index('payment_reference');
+            // Índices para búsquedas frecuentes
+            $table->index('estado');
+            $table->index('fecha_inicio');
+            $table->index(['user_id', 'estado']);
         });
     }
 
     public function down(): void
     {
-        Schema::table('suscripciones', function (Blueprint $table) {
-            $table->dropColumn([
-                'es_demo',
-                'payment_method',
-                'payment_reference',
-                'stripe_subscription_id',
-                'paypal_subscription_id',
-                'mercadopago_subscription_id',
-            ]);
-        });
+        Schema::dropIfExists('suscripciones');
     }
 };
