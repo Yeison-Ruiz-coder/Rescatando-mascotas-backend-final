@@ -385,4 +385,45 @@ class SuscripcionPublicController extends Controller
             return $this->errorResponse('Error al reactivar la suscripción', $e->getMessage(), 500);
         }
     }
+
+    /**
+     * Simular pago en modo demo
+     * POST /api/suscripciones/user/{id}/simular-pago
+     */
+    public function simularPago(Request $request, int $id)
+    {
+        try {
+            $user = $request->user();
+
+            if (!$user) {
+                return $this->errorResponse('Debes iniciar sesión', null, 401);
+            }
+
+            $suscripcion = Suscripcion::where('user_id', $user->id)
+                ->where('id', $id)
+                ->where('estado', 'pendiente')
+                ->first();
+
+            if (!$suscripcion) {
+                return $this->errorResponse('Suscripción no encontrada o no está pendiente', null, 404);
+            }
+
+            // ✅ Cambiar estado a activo
+            $suscripcion->update([
+                'estado' => 'activo',
+                'payment_method' => 'demo',
+                'payment_reference' => 'DEMO_' . time(),
+                'es_demo' => true,
+                'fecha_inicio' => now(),
+            ]);
+
+            return $this->successResponse([
+                'suscripcion' => $suscripcion->load('mascota'),
+                'mensaje' => '¡Pago simulado exitosamente! Suscripción activada.'
+            ], 'Suscripción activada en modo demo');
+        } catch (\Exception $e) {
+            Log::error('Error al simular pago:', ['error' => $e->getMessage()]);
+            return $this->errorResponse('Error al simular el pago', $e->getMessage(), 500);
+        }
+    }
 }

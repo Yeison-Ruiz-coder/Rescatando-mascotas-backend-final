@@ -114,6 +114,7 @@ Route::middleware(['cache.public:10'])->group(function () {
             Route::patch('/{id}/cancelar', [PublicSuscripcionController::class, 'cancelar']);
             Route::patch('/{id}/pausar', [PublicSuscripcionController::class, 'pausar']);
             Route::patch('/{id}/reactivar', [PublicSuscripcionController::class, 'reactivar']);
+            Route::post('/{id}/simular-pago', [PublicSuscripcionController::class, 'simularPago']);
         });
     });
 });
