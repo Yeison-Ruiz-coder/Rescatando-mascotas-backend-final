@@ -21,30 +21,22 @@ class SuscripcionPublicController extends Controller
     public function planes()
     {
         try {
-            $mascotas = Mascota::with(['fundacion' => function ($q) {
-                $q->select('id', 'Nombre_1', 'imagen_portada', 'ciudad');
-            }])
-                ->where('estado', 'En adopcion')
-                ->select('id', 'nombre_mascota as nombre', 'especie', 'raza', 'edad_aprox as edad', 'descripcion', 'fundacion_id', 'foto_principal as imagen')
+            // ✅ Obtener todas las mascotas en adopción SIN filtros complejos
+            $mascotas = Mascota::where('estado', 'En adopcion')
                 ->limit(20)
                 ->get();
 
             $planes = $mascotas->map(function ($mascota) {
                 return [
                     'id' => $mascota->id,
-                    'nombre' => $mascota->nombre ?? 'Sin nombre',
+                    'nombre' => $mascota->nombre_mascota ?? 'Sin nombre',
                     'especie' => $mascota->especie ?? 'No especificada',
                     'raza' => $mascota->raza ?? 'No especificada',
-                    'edad' => $mascota->edad ?? 0,
+                    'edad' => $mascota->edad_aprox ?? 0,
                     'descripcion' => $mascota->descripcion ?? '',
-                    'imagen' => $mascota->imagen ?? null,
+                    'imagen' => $mascota->foto_principal ?? null,
                     'monto_recomendado' => 10000,
-                    'fundacion' => $mascota->fundacion ? [
-                        'id' => $mascota->fundacion->id,
-                        'nombre' => $mascota->fundacion->Nombre_1 ?? 'Fundación',
-                        'imagen' => $mascota->fundacion->imagen_portada ?? null,
-                        'ciudad' => $mascota->fundacion->ciudad ?? '',
-                    ] : null,
+                    'fundacion' => null, // Simplificado
                 ];
             });
 
