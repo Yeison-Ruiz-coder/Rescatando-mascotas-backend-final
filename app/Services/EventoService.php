@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Evento;
 use Illuminate\Support\Collection;
 use App\Traits\ImageUploadTrait;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class EventoService
@@ -77,7 +78,6 @@ class EventoService
             if (is_array($data['tags'])) {
                 $data['tags'] = json_encode($data['tags'], JSON_UNESCAPED_UNICODE);
             } elseif (is_string($data['tags']) && !$this->isJson($data['tags'])) {
-                // Si es string pero no es JSON, convertirlo a array y luego a JSON
                 $data['tags'] = json_encode([$data['tags']], JSON_UNESCAPED_UNICODE);
             }
         }
@@ -132,31 +132,85 @@ class EventoService
 
     public function getCalendarData(): array
     {
-        return Evento::all()->map(function ($evento) {
-            return [
-                'id' => $evento->id,
-                'title' => $evento->nombre_evento,
-                'start' => $evento->fecha_evento->format('Y-m-d H:i:s'),
-                'end' => $evento->fecha_fin ? $evento->fecha_fin->format('Y-m-d H:i:s') : null,
-                'description' => $evento->descripcion,
-                'location' => $evento->lugar_evento,
-                'color' => $this->getEventColor($evento),
-            ];
-        })->toArray();
+        $eventos = Evento::all();
+        $result = [];
+
+        foreach ($eventos as $evento) {
+            try {
+                $fechaEvento = $evento->fecha_evento;
+
+                // Si fecha_evento es null, saltar
+                if (!$fechaEvento) {
+                    continue;
+                }
+
+                // Si es string, convertir a Carbon
+                if (is_string($fechaEvento)) {
+                    $fechaEvento = \Carbon\Carbon::parse($fechaEvento);
+                }
+
+                // Procesar fecha fin
+                $fechaFin = null;
+                if ($evento->fecha_fin) {
+                    if (is_string($evento->fecha_fin)) {
+                        $fechaFin = \Carbon\Carbon::parse($evento->fecha_fin)->format('Y-m-d H:i:s');
+                    } elseif ($evento->fecha_fin instanceof \Carbon\Carbon) {
+                        $fechaFin = $evento->fecha_fin->format('Y-m-d H:i:s');
+                    } else {
+                        $fechaFin = (string) $evento->fecha_fin;
+                    }
+                }
+
+                $result[] = [
+                    'id' => $evento->id,
+                    'title' => $evento->nombre_evento ?? 'Sin título',
+                    'start' => $fechaEvento->format('Y-m-d H:i:s'),
+                    'end' => $fechaFin,
+                    'description' => $evento->descripcion ?? '',
+                    'location' => $evento->lugar_evento ?? '',
+                    'color' => $this->getEventColor($evento),
+                ];
+            } catch (\Exception $e) {
+                // Si falla un evento, continuar con el siguiente
+                Log::warning('Error procesando evento para calendario', [
+                    'evento_id' => $evento->id ?? 'desconocido',
+                    'error' => $e->getMessage()
+                ]);
+                continue;
+            }
+        }
+
+        return $result;
     }
 
     private function getEventColor(Evento $evento): string
     {
-        if ($evento->fecha_evento->isPast()) {
-            return '#6c757d'; // gray
+        try {
+            $fecha = $evento->fecha_evento;
+
+            // Si es string, convertir a Carbon
+            if (is_string($fecha)) {
+                $fecha = \Carbon\Carbon::parse($fecha);
+            }
+
+            // Si no es un objeto Carbon válido, retornar color por defecto
+            if (!$fecha instanceof \Carbon\Carbon) {
+                return '#007bff';
+            }
+
+            if ($fecha->isPast()) {
+                return '#6c757d'; // gray
+            }
+            if ($fecha->isToday()) {
+                return '#28a745'; // green
+            }
+            if ($fecha->diffInDays(now()) <= 7) {
+                return '#fd7e14'; // orange
+            }
+            return '#007bff'; // blue
+        } catch (\Exception $e) {
+            return '#007bff'; // color por defecto
         }
-        if ($evento->fecha_evento->isToday()) {
-            return '#28a745'; // green
-        }
-        if ($evento->fecha_evento->diffInDays(now()) <= 7) {
-            return '#fd7e14'; // orange
-        }
-        return '#007bff'; // blue
     }
 
     public function getProximos(int $limit = 10): Collection
