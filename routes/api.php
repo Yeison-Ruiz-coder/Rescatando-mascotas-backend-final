@@ -277,7 +277,6 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     // Mascotas
     Route::apiResource('mascotas', App\Http\Controllers\Api\V1\Admin\MascotaController::class);
     Route::patch('/mascotas/{id}/destacada', [App\Http\Controllers\Api\V1\Admin\MascotaController::class, 'toggleDestacada']);
-    Route::patch('/mascotas/{id}/estado', [App\Http\Controllers\Api\V1\Admin\MascotaController::class, 'actualizarEstado']);
 
     // Seguimientos
     Route::prefix('seguimientos')->name('seguimientos.')->group(function () {
@@ -288,9 +287,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
         Route::delete('/{id}', [App\Http\Controllers\Api\V1\Admin\SeguimientoController::class, 'destroy']);
         Route::get('/estadisticas/{adopcionId}', [App\Http\Controllers\Api\V1\Admin\SeguimientoController::class, 'estadisticas']);
     });
-    Route::prefix('adopciones/seguimientos')->name('adopciones.seguimientos.')->group(function () {
-        Route::get('/{id}', [App\Http\Controllers\Api\V1\Admin\SeguimientoController::class, 'show']); // ✅ Esta funciona
-    });
+
     // Usuarios
     Route::apiResource('usuarios', App\Http\Controllers\Api\V1\Admin\UsuarioController::class);
     Route::patch('/usuarios/{usuario}/estado', [App\Http\Controllers\Api\V1\Admin\UsuarioController::class, 'cambiarEstado']);
