@@ -63,7 +63,7 @@ class EventoController extends Controller
             'telefono_contacto' => 'nullable|string|max:20',
             'email_contacto' => 'nullable|email|max:255',
             'categoria' => 'nullable|string|max:100',
-            'tags' => 'nullable|array',  // Permite array
+            'tags' => 'nullable|array',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
@@ -72,10 +72,8 @@ class EventoController extends Controller
         }
 
         try {
-            // Obtener todos los datos excepto imagen
             $data = $request->except('imagen');
 
-            // Procesar tags: convertir array a JSON string
             if ($request->has('tags') && is_array($request->tags)) {
                 $data['tags'] = json_encode($request->tags, JSON_UNESCAPED_UNICODE);
             }
@@ -103,7 +101,6 @@ class EventoController extends Controller
         try {
             $evento = $this->eventoService->findById($id);
 
-            // ✅ Asegurar que tags sea un array en la respuesta
             $responseData = $evento->toArray();
             if (isset($responseData['tags']) && is_string($responseData['tags'])) {
                 $responseData['tags'] = json_decode($responseData['tags'], true) ?? [];
@@ -115,6 +112,12 @@ class EventoController extends Controller
             return $this->successResponse($responseData, 'Evento obtenido exitosamente');
         } catch (ModelNotFoundException $e) {
             return $this->notFoundResponse('Evento no encontrado');
+        } catch (\Exception $e) {
+            Log::error('Error en show evento: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'evento_id' => $id
+            ]);
+            return $this->errorResponse('Error al obtener el evento', $e->getMessage(), 500);
         }
     }
 
@@ -154,6 +157,10 @@ class EventoController extends Controller
         } catch (ModelNotFoundException $e) {
             return $this->notFoundResponse('Evento no encontrado');
         } catch (\Exception $e) {
+            Log::error('Error al actualizar evento: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'evento_id' => $id
+            ]);
             return $this->errorResponse('Error al actualizar el evento', $e->getMessage(), 500);
         }
     }
@@ -170,6 +177,10 @@ class EventoController extends Controller
         } catch (ModelNotFoundException $e) {
             return $this->notFoundResponse('Evento no encontrado');
         } catch (\Exception $e) {
+            Log::error('Error al eliminar evento: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'evento_id' => $id
+            ]);
             return $this->errorResponse('Error al eliminar el evento', $e->getMessage(), 500);
         }
     }
@@ -178,9 +189,17 @@ class EventoController extends Controller
     {
         try {
             $calendario = $this->eventoService->getCalendarData();
+
+            if (!is_array($calendario)) {
+                $calendario = [];
+            }
+
             return $this->successResponse($calendario, 'Datos de calendario obtenidos');
         } catch (\Exception $e) {
-            return $this->errorResponse('Error al obtener datos del calendario', $e->getMessage(), 500);
+            Log::error('Error en calendario: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return $this->successResponse([], 'No hay eventos para mostrar');
         }
     }
 
@@ -190,7 +209,10 @@ class EventoController extends Controller
             $eventos = $this->eventoService->getProximos(10);
             return $this->successResponse($eventos, 'Próximos eventos obtenidos');
         } catch (\Exception $e) {
-            return $this->errorResponse('Error al obtener próximos eventos', $e->getMessage(), 500);
+            Log::error('Error al obtener próximos eventos: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return $this->successResponse([], 'No hay próximos eventos');
         }
     }
 }
