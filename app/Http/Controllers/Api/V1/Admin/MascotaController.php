@@ -121,4 +121,25 @@ class MascotaController extends Controller
             return $this->errorResponse('Error al cambiar estado destacada', $e->getMessage(), 500);
         }
     }
+
+
+    /**
+     * Actualizar estado de una mascota (Admin)
+     */
+    public function actualizarEstado(Request $request, int $id)
+    {
+        $request->validate([
+            'estado' => 'required|string|in:En adopcion,Adoptado,Rescatada,En acogida'
+        ]);
+
+        try {
+            $mascota = Mascota::findOrFail($id);
+            $mascota->estado = $request->estado;
+            $mascota->save();
+
+            return $this->successResponse($mascota, 'Estado actualizado exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFoundResponse('Mascota no encontrada');
+        }
+    }
 }
