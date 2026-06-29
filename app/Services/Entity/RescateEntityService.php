@@ -166,21 +166,21 @@ class RescateEntityService
 
         // 🔥 SOLO LOS CAMPOS NECESARIOS
         $query = Rescate::select([
-                'id',
-                'fecha_rescate',
-                'lugar_rescate',
-                'descripcion_rescate',
-                'estado',
-                'tipo_emergencia',
-                'prioridad',
-                'lat',
-                'lng',
-                'nombre_reportante',
-                'email_reportante',
-                'telefono_reportante',
-                'usuario_reporto_id',
-                'created_at',
-            ])
+            'id',
+            'fecha_rescate',
+            'lugar_rescate',
+            'descripcion_rescate',
+            'estado',
+            'tipo_emergencia',
+            'prioridad',
+            'lat',
+            'lng',
+            'nombre_reportante',
+            'email_reportante',
+            'telefono_reportante',
+            'usuario_reporto_id',
+            'created_at',
+        ])
             ->where('estado', 'pendiente')
             ->where('tipo_emergencia', '!=', 'otro')
             ->where(function ($query) use ($userTipo) {
@@ -206,8 +206,8 @@ class RescateEntityService
                     sin(radians(lat))
                 )) AS distance
             ", [$lat, $lng, $lat])
-            ->having('distance', '<', $radio)
-            ->orderBy('distance');
+                ->having('distance', '<', $radio)
+                ->orderBy('distance');
         }
 
         return $query->orderBy('prioridad', 'desc')
@@ -222,24 +222,29 @@ class RescateEntityService
     public function findById(int $id): Rescate
     {
         return Rescate::select([
-                'id',
-                'fecha_rescate',
-                'lugar_rescate',
-                'descripcion_rescate',
-                'estado',
-                'tipo_emergencia',
-                'prioridad',
-                'lat',
-                'lng',
-                'nombre_reportante',
-                'email_reportante',
-                'telefono_reportante',
-                'mascota_id',
-                'usuario_reporto_id',
-                'entidad_responsable_type',
-                'entidad_responsable_id',
-                'created_at',
-            ])
+            'id',
+            'fecha_rescate',
+            'lugar_rescate',
+            'descripcion_rescate',
+            'estado',
+            'tipo_emergencia',
+            'prioridad',
+            'lat',
+            'lng',
+            'nombre_reportante',
+            'email_reportante',
+            'telefono_reportante',
+            'mascota_id',
+            'usuario_reporto_id',
+            'entidad_responsable_type',
+            'entidad_responsable_id',
+            'created_at',
+            'foto_principal',
+            'foto_principal_public_id',
+            'galeria_fotos',
+            'galeria_fotos_public_ids',
+            'fotos_metadata',
+        ])
             ->with([
                 'usuarioReporto:id,nombre,email',
                 'mascota:id,nombre_mascota,foto_principal,estado,especie,genero',

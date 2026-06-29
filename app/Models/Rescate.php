@@ -37,10 +37,17 @@ class Rescate extends Model
         'created_at',
     ];
 
+    // App/Models/Rescate.php
+
     protected $fillable = [
         'fecha_rescate',
         'lugar_rescate',
         'descripcion_rescate',
+        'foto_principal',
+        'foto_principal_public_id',
+        'galeria_fotos',
+        'galeria_fotos_public_ids',
+        'fotos_metadata',
         'estado',
         'tipo_emergencia',
         'prioridad',
@@ -52,9 +59,12 @@ class Rescate extends Model
         'mascota_id',
         'reporte_id',
         'usuario_reporto_id',
-        'entidad_responsable_id',
         'entidad_responsable_type',
+        'entidad_responsable_id',
         'gestionado_por',
+        'disponible_para_fundaciones',
+        'disponible_para_veterinarias',
+        'disponible_para_admin',
     ];
 
     protected $casts = [
