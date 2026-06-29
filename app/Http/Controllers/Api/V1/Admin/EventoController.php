@@ -30,8 +30,21 @@ class EventoController extends Controller
         $eventos = $this->eventoService->getAll($filters, $perPage);
         $estadisticas = $this->eventoService->getEstadisticas();
 
+        // ✅ Asegurar que tags sea array en cada evento
+        $eventosData = $eventos->toArray();
+        if (isset($eventosData['data'])) {
+            foreach ($eventosData['data'] as &$evento) {
+                if (isset($evento['tags']) && is_string($evento['tags'])) {
+                    $evento['tags'] = json_decode($evento['tags'], true) ?? [];
+                }
+                if (!isset($evento['tags']) || !is_array($evento['tags'])) {
+                    $evento['tags'] = [];
+                }
+            }
+        }
+
         return $this->successResponse([
-            'data' => $eventos,
+            'data' => $eventosData,
             'estadisticas' => $estadisticas
         ], 'Eventos obtenidos exitosamente');
     }
@@ -84,11 +97,22 @@ class EventoController extends Controller
             return $this->errorResponse('Error al crear el evento', $e->getMessage(), 500);
         }
     }
+
     public function show(int $id)
     {
         try {
             $evento = $this->eventoService->findById($id);
-            return $this->successResponse($evento, 'Evento obtenido exitosamente');
+
+            // ✅ Asegurar que tags sea un array en la respuesta
+            $responseData = $evento->toArray();
+            if (isset($responseData['tags']) && is_string($responseData['tags'])) {
+                $responseData['tags'] = json_decode($responseData['tags'], true) ?? [];
+            }
+            if (!isset($responseData['tags']) || !is_array($responseData['tags'])) {
+                $responseData['tags'] = [];
+            }
+
+            return $this->successResponse($responseData, 'Evento obtenido exitosamente');
         } catch (ModelNotFoundException $e) {
             return $this->notFoundResponse('Evento no encontrado');
         }

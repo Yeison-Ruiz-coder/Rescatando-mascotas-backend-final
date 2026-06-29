@@ -40,11 +40,10 @@ class Evento extends Model
         'descripcion',
         'fecha_evento',
         'imagen_url',
-        'imagen_public_id', // ✅ AGREGAR ESTE
+        'imagen_public_id',
         'fundacion_id',
         'tipo',
         'likes',
-        // Si tienes más campos como fecha_fin, capacidad, etc.
         'fecha_fin',
         'capacidad_maxima',
         'costo',
