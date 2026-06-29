@@ -52,7 +52,17 @@ class EventoService
 
     public function findById(int $id): Evento
     {
-        return Evento::with(['fundacion', 'asistentes'])->findOrFail($id);
+        $evento = Evento::with(['fundacion', 'asistentes'])->findOrFail($id);
+
+        // ✅ Asegurar que tags sea un array
+        if ($evento->tags && is_string($evento->tags)) {
+            $evento->tags = json_decode($evento->tags, true) ?? [];
+        }
+        if (!is_array($evento->tags)) {
+            $evento->tags = [];
+        }
+
+        return $evento;
     }
 
     public function create(array $data, mixed $imagen = null): Evento
