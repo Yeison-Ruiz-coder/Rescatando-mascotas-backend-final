@@ -34,9 +34,43 @@ class RescateService
         return $query->paginate($perPage);
     }
 
+    // App/Services/RescateService.php
+
     public function findById(int $id): Rescate
     {
-        return Rescate::with(['usuarioReporto', 'entidadResponsable', 'mascota', 'reporte', 'gestionadoPor'])
+        // ✅ AGREGAR TODOS LOS CAMPOS DE FOTOS
+        return Rescate::with([
+            'usuarioReporto',
+            'entidadResponsable',
+            'mascota',
+            'reporte',
+            'gestionadoPor'
+        ])
+            ->select([
+                'id',
+                'fecha_rescate',
+                'lugar_rescate',
+                'descripcion_rescate',
+                'estado',
+                'tipo_emergencia',
+                'prioridad',
+                'lat',
+                'lng',
+                'nombre_reportante',
+                'email_reportante',
+                'telefono_reportante',
+                'mascota_id',
+                'usuario_reporto_id',
+                'entidad_responsable_type',
+                'entidad_responsable_id',
+                'created_at',
+                'updated_at',
+                'foto_principal',
+                'foto_principal_public_id',
+                'galeria_fotos',
+                'galeria_fotos_public_ids',
+                'fotos_metadata',
+            ])
             ->findOrFail($id);
     }
 
