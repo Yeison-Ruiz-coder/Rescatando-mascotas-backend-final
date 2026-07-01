@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\Mascota;
 use App\Models\Fundacion;
 use App\Models\User;
+use Faker\Factory as FakerFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class MascotaFactory extends Factory
@@ -15,14 +16,10 @@ class MascotaFactory extends Factory
     private $imagenesCloudinary = [
         // Fotos principales
         'principal' => [
-            // ===== PERROS =====
             'perro' => [
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1778139768/mascotas/fcnrvrzellqqdj0xecdv.jpg',
-                'https://res.cloudinary.com/demo/image/upload/dog.jpg',
-                'https://res.cloudinary.com/demo/image/upload/puppy.jpg',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462481/e82a50e9587cf0292e16d8fd3752e048_-_copia_xyoezz.jpg',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462479/beneficios_de_tener_una_mascota-1_vnelpa.jpg',
-                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462477/Aveve_Inspiratie_Dier_Hond_Votte-start_Starten-met-een-puppy_Eerste-nacht-met-puppy_Puppy-ligt-op-de-grond-met-oogjes-open-w_aptul7.jpg',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462405/images_4_dlswmb.jpg',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462403/images_3_vtnxza.jpg',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462401/images_2_gpguag.jpg',
@@ -38,8 +35,6 @@ class MascotaFactory extends Factory
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1779143939/mascotas/d4cjxmx6varszz0xw9qy.jpg',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1778442009/mascotas/n2cy2qozjwhqdjtpjnel.jpg'
             ],
-
-            // ===== GATOS =====
             'gato' => [
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1779298823/mascotas/a7xp51aaiu8pvjtybjsj.jpg',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462752/images_12_hkjek9.jpg',
@@ -56,53 +51,30 @@ class MascotaFactory extends Factory
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462534/gatti-siamesi-immagini-e-foto-1_wcnv1m.webp',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782161863/mascotas/zvykvgr7ianq7qbwzllk.jpg'
             ],
-
-            // ===== CONEJOS =====
             'conejo' => [
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1779298999/mascotas/ydopizlj9e4y8siev2yk.jpg',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462512/images_qmuduk.jpg',
-                'https://res.cloudinary.com/demo/image/upload/rabbit.jpg',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462510/images_13_wu7tep.jpg',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462508/images_2_g76ows.jpg',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462507/images_1_i79lg4.jpg',
-                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782375283/mascotas/civnnmrzfl9uezhiaeje.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782375283/mascotas/civnnmrzfl9uezhiaeje.jpg'
             ],
-
-            // ===== AVES =====
             'ave' => [
-                'https://res.cloudinary.com/demo/image/upload/bird.jpg',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782463294/hapalopsittaca-fuertesi1_gl5pqj.webp',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782463291/images_orf2pr.jpg',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782463289/images_1_jyu5ua.jpg',
-                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782463288/cockatiel-4794968_1920_g8lbn3.webp',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782463288/cockatiel-4794968_1920_g8lbn3.webp'
             ],
-        ],
-        // Fotos de galería adicionales
-        'galeria' => [
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1778139768/mascotas/fcnrvrzellqqdj0xecdv.jpg',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1779298823/mascotas/a7xp51aaiu8pvjtybjsj.jpg',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1779298999/mascotas/ydopizlj9e4y8siev2yk.jpg',
-            'https://res.cloudinary.com/demo/image/upload/bird.jpg',
-            'https://res.cloudinary.com/demo/image/upload/dog.jpg',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462739/images_5_urnxg2.jpg',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462738/images_4_jrelg9.jpg',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462736/images_3_xnyw7a.jpg',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462536/OIP_flvjr2.webp',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462534/gatti-siamesi-immagini-e-foto-1_wcnv1m.webp',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782161863/mascotas/zvykvgr7ianq7qbwzllk.jpg'
         ],
         // Fotos de cachorros/bebés
         'cachorros' => [
-            'https://res.cloudinary.com/demo/image/upload/puppy.jpg',
-            'https://res.cloudinary.com/demo/image/upload/kitten.jpg',
             'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462750/images_11_bdkono.jpg',
             'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462749/images_10_irr7yi.jpg',
-            'https://res.cloudinary.com/demo/image/upload/dog.jpg',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462481/e82a50e9587cf0292e16d8fd3752e048_-_copia_xyoezz.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462481/e82a50e9587cf0292e16d8fd3752e048_-_copia_xyoezz.jpg'
         ],
         // Fotos de acción/jugando
         'accion' => [
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1780966318/mascotas/izh6m04j0ratewpjrd79.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1780966318/mascotas/izh6m04j0ratewpjrd79.jpg'
         ]
     ];
 
@@ -110,14 +82,17 @@ class MascotaFactory extends Factory
         'perro' => 'mascotas/perro_ejemplo',
         'gato' => 'mascotas/gato_ejemplo',
         'conejo' => 'mascotas/conejo_ejemplo',
-        'ave' => 'mascotas/ave_ejemplo',
-        'hamster' => 'mascotas/hamster_ejemplo',
-        'tortuga' => 'mascotas/tortuga_ejemplo',
+        'ave' => 'mascotas/ave_ejemplo'
     ];
+
+    protected function withFaker()
+    {
+        return FakerFactory::create('es_CO');
+    }
 
     public function definition(): array
     {
-        $especies = ['Perro', 'Gato', 'Conejo', 'Ave', 'Hamster', 'Tortuga'];
+        $especies = ['Perro', 'Gato', 'Conejo', 'Ave'];
         $especie = $this->faker->randomElement($especies);
         $imagenKey = strtolower($especie);
 
@@ -139,7 +114,6 @@ class MascotaFactory extends Factory
 
         $edad = $this->faker->randomFloat(2, 0.3, 15);
         $esCachorro = $edad < 1;
-        $galeriaFotos = $this->generarGaleriaFotos($especie, $esCachorro);
 
         return [
             // ===== INFORMACIÓN BÁSICA =====
@@ -173,7 +147,6 @@ class MascotaFactory extends Factory
             // ===== FOTOS Y MULTIMEDIA =====
             'foto_principal' => $this->faker->randomElement($this->imagenesCloudinary['principal'][$imagenKey] ?? $this->imagenesCloudinary['principal']['perro']),
             'foto_principal_public_id' => $this->publicIdsCloudinary[$imagenKey] ?? $this->publicIdsCloudinary['perro'],
-            'galeria_fotos' => json_encode($galeriaFotos),
             'video_url' => $this->faker->optional(0.3)->url(),
             'video_public_id' => $this->faker->optional(0.3)->slug(),
 
@@ -210,10 +183,8 @@ class MascotaFactory extends Factory
         $nombresPorEspecie = [
             'Perro' => ['Max', 'Luna', 'Rocky', 'Bella', 'Toby', 'Nala', 'Bruno', 'Kiara', 'Simba', 'Maya'],
             'Gato' => ['Michi', 'Luna', 'Simba', 'Nala', 'Tigre', 'Pelusa', 'Canela', 'Milo', 'Cleo', 'Olivia'],
-            'Conejo' => ['Bunny', 'Copo', 'Nieve', 'Peluchin', 'Dumbo', 'Lola', 'Tito', 'Mimosa', 'Algodón'],
+            'Conejo' => ['Copito', 'Copo', 'Nieve', 'Peluchín', 'Mimoso', 'Lola', 'Tito', 'Mimosa', 'Algodón'],
             'Ave' => ['Piolín', 'Kiwi', 'Loro', 'Coco', 'Paco', 'Rita', 'Lola', 'Pícaro', 'Alas'],
-            'Hamster' => ['Bola', 'Pipí', 'Tito', 'Coco', 'Peluche', 'Burbuja', 'Nuez'],
-            'Tortuga' => ['Manchas', 'Lenta', 'Tortu', 'Caparazón', 'Aguamarina', 'Mora']
         ];
 
         return $this->faker->randomElement($nombresPorEspecie[$especie] ?? ['Mascota']);
@@ -226,8 +197,6 @@ class MascotaFactory extends Factory
             'Gato' => [2.5, 8],
             'Conejo' => [0.8, 2.5],
             'Ave' => [0.05, 1.5],
-            'Hamster' => [0.02, 0.2],
-            'Tortuga' => [0.5, 15]
         ];
 
         list($min, $max) = $rangos[$especie] ?? [1, 10];
@@ -241,8 +210,6 @@ class MascotaFactory extends Factory
             'Gato' => ['pequeño', 'mediano'],
             'Conejo' => ['pequeño', 'mediano'],
             'Ave' => ['pequeño'],
-            'Hamster' => ['pequeño'],
-            'Tortuga' => ['pequeño', 'mediano']
         ];
 
         return $this->faker->randomElement($tamanios[$especie] ?? ['mediano']);
@@ -275,53 +242,6 @@ class MascotaFactory extends Factory
         ];
 
         return $this->faker->randomElement($colores);
-    }
-
-    private function generarGaleriaFotos($especie, $esCachorro): array
-    {
-        $galeria = [];
-        $numFotos = $this->faker->numberBetween(5, 12);
-
-        // Seleccionar foto principal
-        $fotoPrincipal = $this->faker->randomElement(
-            $this->imagenesCloudinary['principal'][strtolower($especie)] ??
-                $this->imagenesCloudinary['principal']['perro']
-        );
-
-        // Agregar foto principal a la galería
-        $galeria[] = $fotoPrincipal;
-
-        // Agregar fotos de galería general
-        for ($i = 0; $i < $numFotos - 1; $i++) {
-            $tipoFoto = $this->faker->randomElement([
-                'galeria',
-                'galeria',
-                'galeria',
-                $esCachorro ? 'cachorros' : 'galeria',
-                'accion'
-            ]);
-
-            $foto = $this->faker->randomElement(
-                $this->imagenesCloudinary[$tipoFoto] ?? $this->imagenesCloudinary['galeria']
-            );
-
-            // Agregar variaciones de la misma foto con diferentes transformaciones
-            if ($i % 2 == 0) {
-                $galeria[] = $foto . '?e_sepia';
-            } elseif ($i % 3 == 0) {
-                $galeria[] = $foto . '?e_grayscale';
-            } elseif ($i % 4 == 0) {
-                $galeria[] = $foto . '?b_auto,bo_4px_solid_white';
-            } else {
-                $galeria[] = $foto;
-            }
-        }
-
-        // Asegurar que no haya fotos duplicadas exactas
-        $galeria = array_unique($galeria);
-
-        // Mantener solo las primeras 15 fotos como máximo
-        return array_slice($galeria, 0, 15);
     }
 
     private function generarLugarRescate(): string
@@ -369,8 +289,8 @@ class MascotaFactory extends Factory
         $habilidades = $this->faker->randomElement([
             'aprende comandos básicos',
             'sabe sentarse y dar la pata',
-            'camina con correa',
-            'convive con otros animales',
+            'camina con correa fácilmente',
+            'convive bien con otros animales',
             'es muy limpio',
             'le gusta jugar con pelotas',
             'disfruta los paseos',
@@ -378,14 +298,27 @@ class MascotaFactory extends Factory
         ]);
 
         $edadTexto = $edad < 1 ? 'cachorro' : ($edad < 3 ? 'joven' : 'adulto');
+        $hospedajeIdeal = $this->faker->randomElement([
+            'familias',
+            'personas solteras',
+            'parejas',
+            'personas mayores'
+        ]);
 
-        return "{$this->faker->paragraph()}\n\n" .
-            "{$especie} {$edadTexto} de aproximadamente {$edad} años, muy {$personalidad}. " .
-            "Su personalidad es única: {$this->faker->sentence()}.\n\n" .
+        $historias = [
+            'Llegó tras ser rescatado de la calle y ahora busca un hogar con tranquilidad.',
+            'Fue encontrado en buen estado y está listo para adaptarse a una nueva familia.',
+            'Ha demostrado ser muy cariñoso y le encanta recibir atención.',
+            'Se lleva bien con otros animales y disfruta de los abrazos.',
+            'Tiene una gran energía y será el compañero perfecto para paseos diarios.'
+        ];
+
+        return "{$especie} {$edadTexto} de aproximadamente {$edad} años, muy {$personalidad}. " .
+            "{$this->faker->randomElement($historias)} " .
             "Características especiales: {$habilidades}. " .
             "Busca un hogar donde pueda recibir todo el amor y cuidado que merece. " .
-            "Es un compañero ideal para {$this->faker->randomElement(['familias', 'personas solteras', 'parejas', 'personas mayores'])}.\n\n" .
-            "Historia: {$this->faker->optional(0.7)->paragraph()}";
+            "Es un compañero ideal para {$hospedajeIdeal}. " .
+            $this->faker->optional(0.7)->randomElement($historias);
     }
 
     private function generarCondicionesEspeciales(): ?string
@@ -569,8 +502,8 @@ class MascotaFactory extends Factory
     public function conVideo(): static
     {
         return $this->state(fn(array $attributes) => [
-            'video_url' => 'https://res.cloudinary.com/demo/video/upload/sample.mp4',
-            'video_public_id' => 'demo/video_mascota_' . $this->faker->word(),
+            'video_url' => $this->faker->optional(0.3)->url(),
+            'video_public_id' => 'mascotas/video_' . $this->faker->uuid(),
         ]);
     }
 
@@ -614,15 +547,8 @@ class MascotaFactory extends Factory
         return $this->state(function (array $attributes) {
             $especie = $attributes['especie'] ?? 'Perro';
             $imagenKey = strtolower($especie);
-            $galeriaExtensa = [];
-
-            for ($i = 0; $i < 20; $i++) {
-                $foto = $this->faker->randomElement($this->imagenesCloudinary['galeria']);
-                $galeriaExtensa[] = $foto . ($i % 3 == 0 ? '?e_sepia' : '');
-            }
 
             return [
-                'galeria_fotos' => json_encode(array_unique($galeriaExtensa)),
                 'foto_principal' => $this->faker->randomElement(
                     $this->imagenesCloudinary['principal'][$imagenKey] ??
                         $this->imagenesCloudinary['principal']['perro']

@@ -62,9 +62,6 @@ class Rescate extends Model
         'entidad_responsable_type',
         'entidad_responsable_id',
         'gestionado_por',
-        'disponible_para_fundaciones',
-        'disponible_para_veterinarias',
-        'disponible_para_admin',
     ];
 
     protected $casts = [

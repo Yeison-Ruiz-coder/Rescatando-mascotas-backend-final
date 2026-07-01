@@ -21,6 +21,7 @@ class Evento extends Model
         'fecha_evento',
         'imagen_url',
         'fundacion_id',
+        'veterinaria_id',
         'tipo',
         'likes',
         'fecha_fin',
@@ -42,6 +43,7 @@ class Evento extends Model
         'imagen_url',
         'imagen_public_id',
         'fundacion_id',
+        'veterinaria_id',
         'tipo',
         'likes',
         'fecha_fin',
@@ -65,6 +67,12 @@ class Evento extends Model
     public function fundacion()
     {
         return $this->belongsTo(Fundacion::class, 'fundacion_id');
+    }
+
+    // Relación con veterinaria
+    public function veterinaria()
+    {
+        return $this->belongsTo(Veterinaria::class, 'veterinaria_id');
     }
 
     // Relación con asistentes (usuarios que confirmaron asistencia)

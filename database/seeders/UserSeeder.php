@@ -10,7 +10,7 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('users')->insert([
+        $users = [
             // 1. PERFIL ADMINISTRADOR
             [
                 'nombre' => 'Admin',
@@ -223,6 +223,206 @@ class UserSeeder extends Seeder
                 'created_by' => 1,
                 'updated_by' => 1
             ]
-        ]);
+        ];
+
+        $userProfiles = [
+            ['nombre' => 'Juan', 'apellidos' => 'Martínez López', 'email' => 'juan.martinez@ejemplo.com', 'telefono' => '3001112223'],
+            ['nombre' => 'Catalina', 'apellidos' => 'Ramírez Castro', 'email' => 'catalina.ramirez@ejemplo.com', 'telefono' => '3001112224'],
+            ['nombre' => 'Andrés', 'apellidos' => 'Gómez Rojas', 'email' => 'andres.gomez@ejemplo.com', 'telefono' => '3001112225'],
+            ['nombre' => 'Laura', 'apellidos' => 'Torres Vega', 'email' => 'laura.torres@ejemplo.com', 'telefono' => '3001112226'],
+            ['nombre' => 'David', 'apellidos' => 'Rojas Molina', 'email' => 'david.rojas@ejemplo.com', 'telefono' => '3001112227'],
+            ['nombre' => 'Sofía', 'apellidos' => 'Vargas Mendoza', 'email' => 'sofia.vargas@ejemplo.com', 'telefono' => '3001112228'],
+            ['nombre' => 'Nicolás', 'apellidos' => 'Méndez Cruz', 'email' => 'nicolas.mendez@ejemplo.com', 'telefono' => '3001112229'],
+            ['nombre' => 'Gabriela', 'apellidos' => 'Castro Peña', 'email' => 'gabriela.castro@ejemplo.com', 'telefono' => '3001112230'],
+            ['nombre' => 'Felipe', 'apellidos' => 'Díaz Muñoz', 'email' => 'felipe.diaz@ejemplo.com', 'telefono' => '3001112231'],
+            ['nombre' => 'Camila', 'apellidos' => 'Gutiérrez Pardo', 'email' => 'camila.gutierrez@ejemplo.com', 'telefono' => '3001112232']
+        ];
+
+        foreach ($userProfiles as $profile) {
+            $users[] = [
+                'nombre' => $profile['nombre'],
+                'apellidos' => $profile['apellidos'],
+                'biografia' => 'Usuario interesado en adopción responsable y cuidado de mascotas.',
+                'redes_sociales' => json_encode([
+                    'facebook' => 'https://facebook.com/' . strtolower(str_replace(' ', '', $profile['nombre'])) . '.',
+                    'instagram' => 'https://instagram.com/' . strtolower(str_replace(' ', '', $profile['nombre'])) . '_pets'
+                ]),
+                'email' => $profile['email'],
+                'password' => Hash::make('Usuario123'),
+                'tipo' => 'user',
+                'estado' => 'activo',
+                'veces_reportado' => 0,
+                'total_mascotas_adoptadas' => rand(0, 5),
+                'total_donaciones' => rand(0, 200000),
+                'puntos' => rand(100, 900),
+                'rango' => 'Adoptador',
+                'fecha_nacimiento' => '1990-01-01',
+                'direccion' => 'Calle ' . rand(1, 150) . ' # ' . rand(1, 100) . '-' . rand(1, 99),
+                'pais' => 'Colombia',
+                'ciudad' => 'Bogotá',
+                'codigo_postal' => '110111',
+                'lat' => 4.6 + (rand(0, 100) / 1000),
+                'lng' => -74.0 - (rand(0, 100) / 1000),
+                'telefono' => $profile['telefono'],
+                'avatar' => 'https://res.cloudinary.com/dixyebg5i/image/upload/v1779680860/avatars/usuario_' . strtolower($profile['nombre']) . '.jpg',
+                'avatar_public_id' => 'avatars/usuario_' . strtolower($profile['nombre']),
+                'tipo_documento' => 'Cédula de Ciudadanía',
+                'numero_documento' => '1' . rand(10000000, 99999999),
+                'documento_verificado' => true,
+                'email_verified_at' => now(),
+                'email_verification_token' => null,
+                'telefono_verificado' => true,
+                'preferencias_notificaciones' => json_encode([
+                    'email' => true,
+                    'sms' => true,
+                    'push' => true,
+                    'recordatorios' => true,
+                    'ofertas' => false
+                ]),
+                'idioma' => 'es',
+                'tema' => 'light',
+                'ultimo_acceso' => now()->subDays(rand(1, 30)),
+                'ultima_ip' => '190.000.' . rand(1, 255) . '.' . rand(1, 255),
+                'created_at' => now(),
+                'updated_at' => now(),
+                'deleted_at' => null,
+                'created_by' => 1,
+                'updated_by' => 1
+            ];
+        }
+
+        $fundacionProfiles = [
+            ['nombre' => 'Fundación', 'apellidos' => 'Huellitas de Vida', 'email' => 'fundacion1@ejemplo.com', 'telefono' => '3101112223'],
+            ['nombre' => 'Fundación', 'apellidos' => 'Amigos Peludos', 'email' => 'fundacion2@ejemplo.com', 'telefono' => '3101112224'],
+            ['nombre' => 'Fundación', 'apellidos' => 'Corazón Animal', 'email' => 'fundacion3@ejemplo.com', 'telefono' => '3101112225'],
+            ['nombre' => 'Fundación', 'apellidos' => 'Rescate Patitas', 'email' => 'fundacion4@ejemplo.com', 'telefono' => '3101112226'],
+            ['nombre' => 'Fundación', 'apellidos' => 'Esperanza Animal', 'email' => 'fundacion5@ejemplo.com', 'telefono' => '3101112227'],
+            ['nombre' => 'Fundación', 'apellidos' => 'Sonrisas Felinas', 'email' => 'fundacion6@ejemplo.com', 'telefono' => '3101112228'],
+            ['nombre' => 'Fundación', 'apellidos' => 'Manos Solidarias', 'email' => 'fundacion7@ejemplo.com', 'telefono' => '3101112229'],
+            ['nombre' => 'Fundación', 'apellidos' => 'Bienestar Canino', 'email' => 'fundacion8@ejemplo.com', 'telefono' => '3101112230'],
+            ['nombre' => 'Fundación', 'apellidos' => 'Vida y Amor Animal', 'email' => 'fundacion9@ejemplo.com', 'telefono' => '3101112231'],
+            ['nombre' => 'Fundación', 'apellidos' => 'Refugio Seguro', 'email' => 'fundacion10@ejemplo.com', 'telefono' => '3101112232']
+        ];
+
+        foreach ($fundacionProfiles as $profile) {
+            $users[] = [
+                'nombre' => $profile['nombre'],
+                'apellidos' => $profile['apellidos'],
+                'biografia' => 'Organización dedicada al rescate y cuidado de animales vulnerables.',
+                'redes_sociales' => json_encode([
+                    'facebook' => 'https://facebook.com/' . strtolower(str_replace(' ', '', $profile['apellidos'])),
+                    'instagram' => 'https://instagram.com/' . strtolower(str_replace(' ', '', $profile['apellidos']))
+                ]),
+                'email' => $profile['email'],
+                'password' => Hash::make('Fundacion123'),
+                'tipo' => 'fundacion',
+                'estado' => 'activo',
+                'veces_reportado' => 0,
+                'total_mascotas_adoptadas' => rand(20, 250),
+                'total_donaciones' => rand(500000, 2000000),
+                'puntos' => rand(1000, 3000),
+                'rango' => 'Fundación Verificada',
+                'fecha_nacimiento' => null,
+                'direccion' => 'Carrera ' . rand(10, 90) . ' # ' . rand(10, 90) . '-' . rand(1, 50),
+                'pais' => 'Colombia',
+                'ciudad' => 'Cali',
+                'codigo_postal' => '760001',
+                'lat' => 3.45 + (rand(0, 50) / 1000),
+                'lng' => -76.53 + (rand(0, 50) / 1000),
+                'telefono' => $profile['telefono'],
+                'avatar' => 'https://res.cloudinary.com/dixyebg5i/image/upload/v1780602725/avatars/fundacion_' . strtolower(str_replace(' ', '_', $profile['apellidos'])) . '.jpg',
+                'avatar_public_id' => 'avatars/fundacion_' . strtolower(str_replace(' ', '_', $profile['apellidos'])),
+                'tipo_documento' => 'NIT',
+                'numero_documento' => '900' . rand(100000, 999999) . '-1',
+                'documento_verificado' => true,
+                'email_verified_at' => now(),
+                'email_verification_token' => null,
+                'telefono_verificado' => true,
+                'preferencias_notificaciones' => json_encode([
+                    'email' => true,
+                    'sms' => true,
+                    'push' => false,
+                    'recordatorios' => true,
+                    'ofertas' => false
+                ]),
+                'idioma' => 'es',
+                'tema' => 'light',
+                'ultimo_acceso' => now()->subDays(rand(1, 30)),
+                'ultima_ip' => '186.1.' . rand(1, 255) . '.' . rand(1, 255),
+                'created_at' => now(),
+                'updated_at' => now(),
+                'deleted_at' => null,
+                'created_by' => 1,
+                'updated_by' => 1
+            ];
+        }
+
+        $veterinariaProfiles = [
+            ['nombre' => 'Clínica', 'apellidos' => 'Vet Sana', 'email' => 'veterinaria1@ejemplo.com', 'telefono' => '3111112223'],
+            ['nombre' => 'Clínica', 'apellidos' => 'Animalia', 'email' => 'veterinaria2@ejemplo.com', 'telefono' => '3111112224'],
+            ['nombre' => 'Veterinaria', 'apellidos' => 'Vida Salud', 'email' => 'veterinaria3@ejemplo.com', 'telefono' => '3111112225'],
+            ['nombre' => 'Clínica', 'apellidos' => 'Mascotas Felices', 'email' => 'veterinaria4@ejemplo.com', 'telefono' => '3111112226'],
+            ['nombre' => 'Veterinaria', 'apellidos' => 'Buena Salud', 'email' => 'veterinaria5@ejemplo.com', 'telefono' => '3111112227'],
+            ['nombre' => 'Clínica', 'apellidos' => 'Peludos', 'email' => 'veterinaria6@ejemplo.com', 'telefono' => '3111112228'],
+            ['nombre' => 'Veterinaria', 'apellidos' => 'San Felipe', 'email' => 'veterinaria7@ejemplo.com', 'telefono' => '3111112229'],
+            ['nombre' => 'Clínica', 'apellidos' => 'Patas Seguras', 'email' => 'veterinaria8@ejemplo.com', 'telefono' => '3111112230'],
+            ['nombre' => 'Veterinaria', 'apellidos' => 'Las Palmas', 'email' => 'veterinaria9@ejemplo.com', 'telefono' => '3111112231'],
+            ['nombre' => 'Clínica', 'apellidos' => 'Cerro Verde', 'email' => 'veterinaria10@ejemplo.com', 'telefono' => '3111112232']
+        ];
+
+        foreach ($veterinariaProfiles as $profile) {
+            $users[] = [
+                'nombre' => $profile['nombre'],
+                'apellidos' => $profile['apellidos'],
+                'biografia' => 'Clínica veterinaria especializada en atención integral para mascotas.',
+                'redes_sociales' => json_encode([
+                    'facebook' => 'https://facebook.com/' . strtolower(str_replace(' ', '', $profile['apellidos'])),
+                    'instagram' => 'https://instagram.com/' . strtolower(str_replace(' ', '', $profile['apellidos']))
+                ]),
+                'email' => $profile['email'],
+                'password' => Hash::make('Veterinaria123'),
+                'tipo' => 'veterinaria',
+                'estado' => 'activo',
+                'veces_reportado' => 0,
+                'total_mascotas_adoptadas' => rand(0, 20),
+                'total_donaciones' => rand(100000, 700000),
+                'puntos' => rand(1200, 2800),
+                'rango' => 'Clínica Verificada',
+                'fecha_nacimiento' => null,
+                'direccion' => 'Carrera ' . rand(20, 99) . ' # ' . rand(10, 90) . '-' . rand(1, 50),
+                'pais' => 'Colombia',
+                'ciudad' => 'Bogotá',
+                'codigo_postal' => '110221',
+                'lat' => 4.63 + (rand(0, 50) / 1000),
+                'lng' => -74.06 + (rand(0, 50) / 1000),
+                'telefono' => $profile['telefono'],
+                'avatar' => 'https://res.cloudinary.com/dixyebg5i/image/upload/v1780343918/avatars/veterinaria_' . strtolower(str_replace(' ', '_', $profile['apellidos'])) . '.jpg',
+                'avatar_public_id' => 'avatars/veterinaria_' . strtolower(str_replace(' ', '_', $profile['apellidos'])),
+                'tipo_documento' => 'NIT',
+                'numero_documento' => '901' . rand(100000, 999999) . '-1',
+                'documento_verificado' => true,
+                'email_verified_at' => now(),
+                'email_verification_token' => null,
+                'telefono_verificado' => true,
+                'preferencias_notificaciones' => json_encode([
+                    'email' => true,
+                    'sms' => false,
+                    'push' => true,
+                    'recordatorios' => true,
+                    'ofertas' => false
+                ]),
+                'idioma' => 'es',
+                'tema' => 'light',
+                'ultimo_acceso' => now()->subDays(rand(1, 30)),
+                'ultima_ip' => '190.85.' . rand(1, 255) . '.' . rand(1, 255),
+                'created_at' => now(),
+                'updated_at' => now(),
+                'deleted_at' => null,
+                'created_by' => 1,
+                'updated_by' => 1
+            ];
+        }
+
+        DB::table('users')->insert($users);
     }
 }

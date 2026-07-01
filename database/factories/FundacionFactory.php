@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Fundacion;
+use Faker\Factory as FakerFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class FundacionFactory extends Factory
@@ -78,7 +79,7 @@ class FundacionFactory extends Factory
         'Voluntarios para paseos',
         'Voluntarios para adopciones',
         'Voluntarios veterinarios',
-        'Foster homes (hogares temporales)',
+        'Hogares temporales',
         'Transporte para rescates',
         'Donaciones económicas',
         'Equipo de oficina',
@@ -87,6 +88,11 @@ class FundacionFactory extends Factory
         'Cámaras de seguridad',
         'Vehículo para rescates'
     ];
+
+    protected function withFaker()
+    {
+        return FakerFactory::create('es_CO');
+    }
 
     public function definition(): array
     {
@@ -169,9 +175,10 @@ class FundacionFactory extends Factory
 
     private function generarEmailFundacion(string $nombre): string
     {
-        $slug = strtolower(str_replace(' ', '', $nombre));
+        $slug = mb_strtolower($nombre, 'UTF-8');
+        $slug = preg_replace('/[^a-z0-9]/u', '', $slug);
         $dominios = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'fundaciones.co'];
-        return $slug . '@' . $this->faker->randomElement($dominios);
+        return $slug . $this->faker->unique()->numberBetween(1, 9999) . '@' . $this->faker->randomElement($dominios);
     }
 
     private function generarRegistroSanitario(): string
