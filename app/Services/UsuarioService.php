@@ -14,24 +14,68 @@ class UsuarioService
     public function getAll(array $filters = [], int $perPage = 15)
     {
         $query = User::query();
+        $reiniciarFiltros = isset($filters['reiniciar_filtros']) && filter_var($filters['reiniciar_filtros'], FILTER_VALIDATE_BOOLEAN);
 
-        if (!empty($filters['tipo'])) {
+        if (!$reiniciarFiltros && !empty($filters['tipo'])) {
             $query->where('tipo', $filters['tipo']);
         }
 
-        if (!empty($filters['estado'])) {
+        if (!$reiniciarFiltros && !empty($filters['estado'])) {
             $query->where('estado', $filters['estado']);
         }
 
         if (!empty($filters['buscar'])) {
-            $query->where(function($q) use ($filters) {
-                $q->where('nombre', 'like', "%{$filters['buscar']}%")
-                    ->orWhere('apellidos', 'like', "%{$filters['buscar']}%")
-                    ->orWhere('email', 'like', "%{$filters['buscar']}%");
+            $buscar = trim($filters['buscar']);
+
+            $query->where(function($q) use ($buscar) {
+                $q->where('nombre', 'like', "%{$buscar}%")
+                    ->orWhere('apellidos', 'like', "%{$buscar}%")
+                    ->orWhere('email', 'like', "%{$buscar}%");
             });
+            $query->orderByRaw('nombre = ? DESC', [$buscar]);
         }
 
         return $query->latest()->paginate($perPage);
+    }
+
+    public function getSugerencias(string $searchTerm, int $limit = 10): array
+    {
+        $searchTerm = trim($searchTerm);
+
+        if (strlen($searchTerm) < 2) {
+            return [];
+        }
+
+        $results = collect();
+
+        $nombres = User::query()
+            ->where('nombre', 'like', "%{$searchTerm}%")
+            ->whereNotNull('nombre')
+            ->limit($limit)
+            ->pluck('nombre')
+            ->filter()
+            ->values();
+        $results = $results->merge($nombres);
+
+        $apellidos = User::query()
+            ->where('apellidos', 'like', "%{$searchTerm}%")
+            ->whereNotNull('apellidos')
+            ->limit($limit)
+            ->pluck('apellidos')
+            ->filter()
+            ->values();
+        $results = $results->merge($apellidos);
+
+        $emails = User::query()
+            ->where('email', 'like', "%{$searchTerm}%")
+            ->whereNotNull('email')
+            ->limit($limit)
+            ->pluck('email')
+            ->filter()
+            ->values();
+        $results = $results->merge($emails);
+
+        return $results->unique()->values()->take($limit)->toArray();
     }
 
     public function findById(int $id): User

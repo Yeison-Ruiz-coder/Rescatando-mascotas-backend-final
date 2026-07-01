@@ -13,28 +13,71 @@ class AdopcionPublicService
             ->with('fundacion:id,Nombre_1,imagen_portada,ciudad')
             ->where('estado', 'En adopcion');
 
-        // Filtros adicionales
-        if (!empty($filters['especie'])) {
+        $reiniciarFiltros = isset($filters['reiniciar_filtros']) && filter_var($filters['reiniciar_filtros'], FILTER_VALIDATE_BOOLEAN);
+
+        if (!empty($filters['buscar'])) {
+            $buscar = trim($filters['buscar']);
+            $query->where(function($q) use ($buscar) {
+                $q->where('nombre_mascota', 'like', "%{$buscar}%")
+                  ->orWhere('descripcion', 'like', "%{$buscar}%")
+                  ->orWhere('especie', 'like', "%{$buscar}%")
+                  ->orWhere('lugar_rescate', 'like', "%{$buscar}%");
+            });
+            $query->orderByRaw('nombre_mascota = ? DESC', [$buscar]);
+        }
+
+        if (!$reiniciarFiltros && !empty($filters['especie'])) {
             $query->where('especie', $filters['especie']);
         }
 
-        if (!empty($filters['genero'])) {
+        if (!$reiniciarFiltros && !empty($filters['genero'])) {
             $query->where('genero', $filters['genero']);
         }
 
-        if (!empty($filters['tamano'])) {
+        if (!$reiniciarFiltros && !empty($filters['tamano'])) {
             $query->where('tamano', $filters['tamano']);
         }
 
-        if (!empty($filters['apto_con_ninos'])) {
+        if (!$reiniciarFiltros && !empty($filters['apto_con_ninos'])) {
             $query->where('apto_con_ninos', true);
         }
 
-        if (!empty($filters['apto_con_otros_animales'])) {
+        if (!$reiniciarFiltros && !empty($filters['apto_con_otros_animales'])) {
             $query->where('apto_con_otros_animales', true);
         }
 
         return $query->latest()->paginate($perPage);
+    }
+
+    public function getSugerencias(string $searchTerm, int $limit = 10): array
+    {
+        $searchTerm = trim($searchTerm);
+
+        if (strlen($searchTerm) < 2) {
+            return [];
+        }
+
+        $results = collect();
+
+        $nombres = Mascota::query()
+            ->where('nombre_mascota', 'like', "%{$searchTerm}%")
+            ->whereNotNull('nombre_mascota')
+            ->limit($limit)
+            ->pluck('nombre_mascota')
+            ->filter()
+            ->values();
+        $results = $results->merge($nombres);
+
+        $especies = Mascota::query()
+            ->where('especie', 'like', "%{$searchTerm}%")
+            ->whereNotNull('especie')
+            ->limit($limit)
+            ->pluck('especie')
+            ->filter()
+            ->values();
+        $results = $results->merge($especies);
+
+        return $results->unique()->values()->take($limit)->toArray();
     }
 
     public function findMascotaDisponible(int $id): Mascota

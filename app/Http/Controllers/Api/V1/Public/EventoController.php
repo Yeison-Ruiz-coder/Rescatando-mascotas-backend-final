@@ -40,6 +40,20 @@ class EventoController extends Controller
         return $this->successResponse($eventos, 'Eventos obtenidos exitosamente');
     }
 
+    public function sugerencias(Request $request)
+    {
+        $searchTerm = $request->input('q', '');
+        $limit = $request->input('limit', 10);
+
+        if (strlen(trim($searchTerm)) < 2) {
+            return $this->successResponse([], 'No hay suficientes caracteres para buscar');
+        }
+
+        $sugerencias = $this->eventoService->getSugerencias($searchTerm, $limit);
+
+        return $this->successResponse($sugerencias, 'Sugerencias de eventos obtenidas exitosamente');
+    }
+
     /**
      * Ver un evento específico (solo si es futuro)
      */

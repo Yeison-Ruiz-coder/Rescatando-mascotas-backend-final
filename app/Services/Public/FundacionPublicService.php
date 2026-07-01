@@ -12,22 +12,27 @@ class FundacionPublicService
             ->selectFields()
             ->withCount('mascotas');
 
-        if (!empty($filters['recibe_voluntarios'])) {
+        $reiniciarFiltros = isset($filters['reiniciar_filtros']) && filter_var($filters['reiniciar_filtros'], FILTER_VALIDATE_BOOLEAN);
+
+        if (!$reiniciarFiltros && !empty($filters['recibe_voluntarios'])) {
             $query->where('recibe_voluntarios', true);
         }
 
-        if (!empty($filters['verificado'])) {
+        if (!$reiniciarFiltros && !empty($filters['verificado'])) {
             $query->where('verificado', true);
         }
 
         if (!empty($filters['buscar'])) {
-            $query->where(function ($q) use ($filters) {
-                $q->where('Nombre_1', 'like', '%' . $filters['buscar'] . '%')
-                    ->orWhere('ciudad', 'like', '%' . $filters['buscar'] . '%');
+            $buscar = trim($filters['buscar']);
+
+            $query->where(function ($q) use ($buscar) {
+                $q->where('Nombre_1', 'like', '%' . $buscar . '%')
+                    ->orWhere('ciudad', 'like', '%' . $buscar . '%');
             });
+            $query->orderByRaw('Nombre_1 = ? DESC', [$buscar]);
         }
 
-        if (!empty($filters['ciudad'])) {
+        if (!$reiniciarFiltros && !empty($filters['ciudad'])) {
             $query->where('ciudad', $filters['ciudad']);
         }
 
@@ -74,6 +79,37 @@ class FundacionPublicService
             ->having('distance', '<=', $radio)
             ->orderBy('distance')
             ->get();
+    }
+
+    public function getSugerencias(string $searchTerm, int $limit = 10): array
+    {
+        $searchTerm = trim($searchTerm);
+
+        if (strlen($searchTerm) < 2) {
+            return [];
+        }
+
+        $results = collect();
+
+        $nombres = Fundacion::query()
+            ->where('Nombre_1', 'like', "%{$searchTerm}%")
+            ->whereNotNull('Nombre_1')
+            ->limit($limit)
+            ->pluck('Nombre_1')
+            ->filter()
+            ->values();
+        $results = $results->merge($nombres);
+
+        $ciudades = Fundacion::query()
+            ->where('ciudad', 'like', "%{$searchTerm}%")
+            ->whereNotNull('ciudad')
+            ->limit($limit)
+            ->pluck('ciudad')
+            ->filter()
+            ->values();
+        $results = $results->merge($ciudades);
+
+        return $results->unique()->values()->take($limit)->toArray();
     }
 
     public function getEstadisticas(): array

@@ -26,31 +26,38 @@ class MascotaPublicService
                 ])
                 ->whereIn('estado', $this->getEstadosDisponibles());
 
-            if (!empty($filters['especie'])) {
+            $reiniciarFiltros = isset($filters['reiniciar_filtros']) && filter_var($filters['reiniciar_filtros'], FILTER_VALIDATE_BOOLEAN);
+
+            if (!$reiniciarFiltros && !empty($filters['especie'])) {
                 $query->where('especie', $filters['especie']);
             }
 
-            if (!empty($filters['fundacion_id'])) {
+            if (!$reiniciarFiltros && !empty($filters['fundacion_id'])) {
                 $query->where('fundacion_id', $filters['fundacion_id']);
             }
 
-            if (!empty($filters['genero'])) {
+            if (!$reiniciarFiltros && !empty($filters['genero'])) {
                 $query->where('genero', $filters['genero']);
             }
 
-            if (!empty($filters['tamano'])) {
+            if (!$reiniciarFiltros && !empty($filters['tamano'])) {
                 $query->where('tamano', $filters['tamano']);
             }
 
-            if (!empty($filters['destacada'])) {
+            if (!$reiniciarFiltros && !empty($filters['destacada'])) {
                 $query->where('destacada', true);
             }
 
             if (!empty($filters['buscar'])) {
-                $query->where(function ($q) use ($filters) {
-                    $q->where('nombre_mascota', 'like', '%' . $filters['buscar'] . '%')
-                        ->orWhere('descripcion', 'like', '%' . $filters['buscar'] . '%');
+                $buscar = trim($filters['buscar']);
+
+                $query->where(function ($q) use ($buscar) {
+                    $q->where('nombre_mascota', 'like', '%' . $buscar . '%')
+                        ->orWhere('descripcion', 'like', '%' . $buscar . '%');
                 });
+
+                // Priorizar coincidencia exacta en el nombre de la mascota
+                $query->orderByRaw('nombre_mascota = ? DESC', [$buscar]);
             }
 
             if (isset($filters['apto_con_ninos'])) {
