@@ -29,6 +29,15 @@ class DatabaseSeeder extends Seeder
 
             // 7. MASCOTAS (repartidas entre todas las fundaciones)
             MascotasSeeder::class,
+
+            // 8. RESCATES (diferentes ubicaciones en Popayán)
+            RescatesSeeder::class,
+
+            // 9. SUSCRIPCIONES A MASCOTAS DE PATITAS FELICES
+            SuscripcionesSeeder::class,
+
+            // 10. SOLICITUDES DE ADOPCIÓN
+            SolicitudesSeeder::class,
         ]);
     }
 }

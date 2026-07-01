@@ -1,0 +1,90 @@
+﻿
+  Dropping all tables ........................................... 3,149ms DONE
+
+   INFO  Preparing database.  
+
+  Creating migration table ........................................ 348ms DONE
+
+   INFO  Running migrations.  
+
+  2014_09_06_000001_create_users_table .......................... 3,232ms DONE
+  2014_10_12_100000_create_password_reset_tokens_table ............ 341ms DONE
+  2019_08_19_000000_create_failed_jobs_table ...................... 712ms DONE
+  2019_12_14_000001_create_personal_access_tokens_table ......... 1,014ms DONE
+  2025_11_06_232427_create_razas_table ............................ 685ms DONE
+  2025_11_06_232737_create_tipos_vacunas_table .................... 676ms DONE
+  2025_11_07_201244_create_veterinarias_table ................... 1,797ms DONE
+  2025_11_07_201509_create_fundaciones_table .................... 1,746ms DONE
+  2025_11_07_201614_create_mascotas_table ....................... 1,875ms DONE
+  2025_11_07_201740_create_reportes_table ....................... 2,871ms DONE
+  2025_11_07_201809_create_eventos_table .......................... 721ms DONE
+  2025_11_07_201838_create_comentarios_table ...................... 719ms DONE
+  2025_11_07_201902_create_solicitudes_table .................... 2,459ms DONE
+  2025_11_07_201954_create_suscripciones_table .................. 2,111ms DONE
+  2025_11_07_202020_create_adopciones_table ..................... 2,262ms DONE
+  2025_11_07_202127_create_notificaciones_table ................. 1,091ms DONE
+  2025_11_07_202154_create_donaciones_table ..................... 1,091ms DONE
+  2025_11_07_202250_create_rescates_table ....................... 4,567ms DONE
+  2025_11_08_000001_add_payment_fields_to_suscripciones_table ... 1,387ms DONE
+  2025_11_08_000002_create_pagos_table .......................... 2,406ms DONE
+  2025_11_08_000003_create_facturas_table ....................... 2,066ms DONE
+  2025_11_08_000004_create_metodos_pago_table ................... 1,781ms DONE
+  2025_11_15_233954_create_mascota_vacuna_table ................. 1,063ms DONE
+  2025_11_16_233436_create_entrevistas_table .................... 1,084ms DONE
+  2025_11_16_234038_create_mascota_raza_table ................... 1,063ms DONE
+  2025_11_18_225516_create_seguimientos_adopcion_table .......... 3,182ms DONE
+  2025_11_18_225517_create_historial_medico_table ............... 2,890ms DONE
+  2026_04_16_195657_create_evento_asistentes_table .............. 1,462ms DONE
+  2026_05_05_000005_create_valoraciones_table ................... 2,876ms DONE
+  2026_05_05_000006_create_conversaciones_table ................. 5,013ms DONE
+  2026_05_05_000009_create_configuraciones_table ................ 1,727ms DONE
+  2026_05_05_000010_create_actividades_table .................... 2,058ms DONE
+  2026_06_03_000001_add_performance_indexes_to_mascotas_table ... 1,756ms DONE
+  2026_07_01_000000_add_veterinaria_to_eventos_table ............ 1,115ms DONE
+
+
+   INFO  Seeding database.  
+
+  Database\Seeders\UserSeeder ........................................ RUNNING  
+  Database\Seeders\UserSeeder .................................. 6,828 ms DONE  
+
+  Database\Seeders\RazaSeeder ........................................ RUNNING  
+Razas insertadas/actualizadas correctamente
+  Database\Seeders\RazaSeeder ................................. 14,414 ms DONE  
+
+  Database\Seeders\TipoVacunaSeeder .................................. RUNNING  
+  Database\Seeders\TipoVacunaSeeder ............................ 8,215 ms DONE  
+
+  Database\Seeders\FundacionesSeeder ................................. RUNNING  
+  Database\Seeders\FundacionesSeeder .......................... 11,886 ms DONE  
+
+  Database\Seeders\VeterinariasSeeder ................................ RUNNING  
+  Database\Seeders\VeterinariasSeeder ......................... 15,461 ms DONE  
+
+  Database\Seeders\EventosSeeder ..................................... RUNNING  
+Ô£à Total de eventos creados: 86
+  Database\Seeders\EventosSeeder .............................. 29,317 ms DONE  
+
+  Database\Seeders\MascotasSeeder .................................... RUNNING  
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[42S02]: Base table or view not found: 1146 Table 'railway.users' doesn't exist (Connection: mysql, SQL: select * from `users` where `tipo` = admin and `users`.`deleted_at` is null limit 1)
+
+  at vendor\laravel\framework\src\Illuminate\Database\Connection.php:829
+    825Ôûò                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    826Ôûò                 );
+    827Ôûò             }
+    828Ôûò 
+  Ô×£ 829Ôûò             throw new QueryException(
+    830Ôûò                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    831Ôûò             );
+    832Ôûò         }
+    833Ôûò     }
+
+  1   [internal]:0
+      Illuminate\Database\Eloquent\Factories\Factory::Illuminate\Database\Eloquent\Factories\{closure}()
+
+  2   vendor\laravel\framework\src\Illuminate\Database\Connection.php:428
+      PDOException::("SQLSTATE[42S02]: Base table or view not found: 1146 Table 'railway.users' doesn't exist")
+

@@ -104,9 +104,9 @@ class EventosSeeder extends Seeder
         // 4. EVENTOS ADICIONALES CON FACTORY
         // ==========================================
 
-        Evento::factory()->count(15)->proximo()->create();
-        Evento::factory()->count(10)->pasado()->create();
-        Evento::factory()->count(5)->create();
+        Evento::factory()->count(6)->proximo()->create();
+        Evento::factory()->count(4)->pasado()->create();
+        Evento::factory()->count(2)->create();
 
         // ==========================================
         // 5. TOTAL DE EVENTOS CREADOS
@@ -172,8 +172,14 @@ class EventosSeeder extends Seeder
             'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459999/pexels-photo-28483933_mk0rv5.avif',
             'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459999/pexels-photo-33313535_ed012c.avif',
             'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459998/pexels-photo-16620581_ob9b9x.avif',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460000/pexels-photo-16620580_e9wgcw.avif',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460000/pexels-photo-16620579_sovtrw.avif',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459995/pexels-photo-9413379_qd5xu0.avif',
             'https://res.cloudinary.com/dixyebg5i/image/upload/v1779295680/eventos/pqqnd795kd69jpnhpnfl.jpg',
             'https://res.cloudinary.com/dixyebg5i/image/upload/v1782414979/eventos/kkhe3fxy6u5hqbdf5q70.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1781809882/eventos/ciu4arlxkqduahlxkgqr.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1781491066/eventos/zqwjbadby4c9tdlo9p0y.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1779295892/eventos/mrzf15ucnpwvwa99rysl.jpg',
         ];
         return $imagenes[array_rand($imagenes)];
     }

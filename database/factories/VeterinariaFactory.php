@@ -31,12 +31,11 @@ class VeterinariaFactory extends Factory
     ];
 
     private $galeriaCloudinary = [
-        'https://res.cloudinary.com/demo/image/upload/sample.jpg',
-        'https://res.cloudinary.com/demo/image/upload/dog.jpg',
-        'https://res.cloudinary.com/demo/image/upload/cat.jpg',
-        'https://res.cloudinary.com/demo/image/upload/sample_people.jpg',
-        'https://res.cloudinary.com/demo/image/upload/cld-sample-4.jpg',
-        'https://res.cloudinary.com/demo/image/upload/cld-sample-5.jpg',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460777/images_nbmj0r.png',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460776/images_zvwjpm.jpg',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460775/images_12_jzipdk.jpg',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460773/images_11_enht32.jpg',
+        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460772/images_10_q5blsf.jpg',
     ];
 
     // 🆕 Array con 20 descripciones en español
@@ -59,7 +58,7 @@ class VeterinariaFactory extends Factory
 
         "Centro de salud animal con instalaciones de primer nivel. Disponemos de consultorios totalmente equipados, sala de hospitalización con monitoreo constante y equipo de cirugía laparoscópica. Brindamos atención personalizada y seguimiento médico continuo.",
 
-        "Veterinaria especializada en animales exóticos y de compañía. Atendemos perros, gatos, conejos, hurones, aves y reptiles. Nuestro equipo cuenta con amplia experiencia en especies no convencionales y estamos capacitados para ofrecer diagnósticos y tratamientos especializados.",
+        "Clínica veterinaria especializada en el cuidado de mascotas de compañía. Atendemos perros, gatos, conejos y aves. Nuestro equipo cuenta con amplia experiencia en medicina preventiva y tratamientos especializados para tus compañeros de vida.",
 
         "Clínica veterinaria con espíritu de servicio y amor por los animales. Ofrecemos paquetes de salud preventiva, planes de vacunación personalizados y descuentos en servicios para clientes frecuentes. Tu mascota recibirá atención de calidad a precios accesibles.",
 
@@ -96,7 +95,7 @@ class VeterinariaFactory extends Factory
 
         // Nombres de veterinarias en español
         $prefijos = ['Clínica', 'Hospital', 'Centro', 'Consultorio', 'Unidad', 'Instituto', 'Servicio'];
-        $nombres = ['Veterinario', 'Animal', 'Mascota', 'Canino', 'Felino', 'Vet', 'Pet', 'Animales'];
+        $nombres = ['Veterinario', 'Animal', 'Mascota', 'Canino', 'Felino', 'Bienestar', 'Salud', 'Cuidado'];
         $sufijos = ['del Parque', 'del Centro', 'del Norte', 'del Sur', 'del Bosque', 'de la Montaña', 'de los Andes'];
 
         $nombreCompleto = $this->faker->randomElement($prefijos) . ' ' .

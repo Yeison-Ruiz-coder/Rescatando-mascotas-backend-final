@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Evento;
+use Faker\Factory as FakerFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class EventoFactory extends Factory
@@ -21,7 +22,6 @@ class EventoFactory extends Factory
         'https://res.cloudinary.com/dixyebg5i/image/upload/v1782414979/eventos/kkhe3fxy6u5hqbdf5q70.jpg',
         'https://res.cloudinary.com/dixyebg5i/image/upload/v1781809882/eventos/ciu4arlxkqduahlxkgqr.jpg',
         'https://res.cloudinary.com/dixyebg5i/image/upload/v1781491066/eventos/zqwjbadby4c9tdlo9p0y.jpg',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1779296275/eventos/lzbiu8klltkcwhncgzn2.jpg',
         'https://res.cloudinary.com/dixyebg5i/image/upload/v1779295892/eventos/mrzf15ucnpwvwa99rysl.jpg',
 
     ];
@@ -72,6 +72,11 @@ class EventoFactory extends Factory
         'Recaudación',
         'Concierto Solidario',
     ];
+
+    protected function withFaker()
+    {
+        return FakerFactory::create('es_CO');
+    }
 
     public function definition(): array
     {

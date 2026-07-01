@@ -64,14 +64,6 @@ class VeterinariasSeeder extends Seeder
             // 🔥 Cloudinary - Usando una de TUS imágenes
             'logo' => 'https://res.cloudinary.com/dixyebg5i/image/upload/v1781146028/descargar_1_bf2lcg.jpg',
             'logo_public_id' => 'veterinarias/logo_central_24_7',
-
-            // 🔥 Galería con imágenes demo (o tus propias imágenes)
-            'galeria_fotos' => json_encode([
-                'https://res.cloudinary.com/demo/image/upload/sample.jpg',
-                'https://res.cloudinary.com/demo/image/upload/dog.jpg',
-                'https://res.cloudinary.com/demo/image/upload/cat.jpg',
-            ]),
-
             'redes_sociales' => json_encode([
                 'facebook' => 'https://facebook.com/veterinariacentral',
                 'instagram' => 'https://instagram.com/vetcentral',
@@ -119,12 +111,6 @@ class VeterinariasSeeder extends Seeder
             // 🔥 Usando tu segunda imagen
             'logo' => 'https://res.cloudinary.com/dixyebg5i/image/upload/v1781146031/descargar_2_bs8hyk.jpg',
             'logo_public_id' => 'veterinarias/logo_felinus',
-
-            'galeria_fotos' => json_encode([
-                'https://res.cloudinary.com/demo/image/upload/cat.jpg',
-                'https://res.cloudinary.com/demo/image/upload/sample.jpg',
-            ]),
-
             'redes_sociales' => json_encode([
                 'facebook' => 'https://facebook.com/felinus',
                 'instagram' => 'https://instagram.com/felinus'
