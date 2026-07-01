@@ -21,12 +21,26 @@ class FundacionController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['recibe_voluntarios', 'verificado', 'buscar', 'ciudad']);
+        $filters = $request->only(['recibe_voluntarios', 'verificado', 'buscar', 'ciudad', 'reiniciar_filtros']);
         $perPage = $request->get('per_page', 15);
 
         $fundaciones = $this->fundacionService->getAll($filters, $perPage);
 
         return $this->successResponse($fundaciones, 'Fundaciones obtenidas exitosamente');
+    }
+
+    public function sugerencias(Request $request)
+    {
+        $query = $request->get('q', '');
+        $limit = $request->get('limit', 10);
+
+        if (strlen(trim($query)) < 2) {
+            return $this->successResponse([], 'No hay suficientes caracteres para buscar');
+        }
+
+        $sugerencias = $this->fundacionService->getSugerencias($query, $limit);
+
+        return $this->successResponse($sugerencias, 'Sugerencias de fundaciones obtenidas exitosamente');
     }
 
     public function show(int $id)

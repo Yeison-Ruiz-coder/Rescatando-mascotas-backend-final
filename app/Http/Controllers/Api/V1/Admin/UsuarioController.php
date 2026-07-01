@@ -24,12 +24,26 @@ class UsuarioController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['tipo', 'estado', 'buscar']);
+        $filters = $request->only(['tipo', 'estado', 'buscar', 'reiniciar_filtros']);
         $perPage = $request->get('per_page', 15);
 
         $usuarios = $this->usuarioService->getAll($filters, $perPage);
 
         return $this->successResponse($usuarios, 'Usuarios obtenidos exitosamente');
+    }
+
+    public function sugerencias(Request $request)
+    {
+        $searchTerm = $request->get('q', '');
+        $limit = $request->get('limit', 10);
+
+        if (strlen(trim($searchTerm)) < 2) {
+            return $this->successResponse([], 'No hay suficientes caracteres para buscar');
+        }
+
+        $sugerencias = $this->usuarioService->getSugerencias($searchTerm, $limit);
+
+        return $this->successResponse($sugerencias, 'Sugerencias de usuarios obtenidas exitosamente');
     }
 
     public function store(UsuarioRequest $request)

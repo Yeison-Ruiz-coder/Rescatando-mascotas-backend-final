@@ -69,15 +69,17 @@ Route::middleware(['cache.public:10'])->group(function () {
         Route::get('/reciben-voluntarios', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'recibenVoluntarios']);
         Route::get('/ciudad/{ciudad}', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'porCiudad']);
         Route::get('/search', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'search']);
+        Route::get('/sugerencias', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'sugerencias']);
         Route::get('/cercanas', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'cercanas']);
         Route::get('/{id}', [App\Http\Controllers\Api\V1\Public\FundacionController::class, 'show']);
     });
 
     // Veterinarias - Público
     Route::get('/veterinarias', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'index']);
-    Route::get('/veterinarias/{id}', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'show']);
+    Route::get('/veterinarias/sugerencias', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'sugerencias']);
     Route::get('/veterinarias/urgencias/mapa', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'mapa']);
     Route::get('/veterinarias/cercanas', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'cercanas']);
+    Route::get('/veterinarias/{id}', [App\Http\Controllers\Api\V1\Public\VeterinariaController::class, 'show']);
 
     // =========================================================================
     // RUTAS PÚBLICAS - EVENTOS
@@ -86,6 +88,7 @@ Route::middleware(['cache.public:10'])->group(function () {
         Route::get('/', [PublicEventoController::class, 'index']);
         Route::get('/proximos', [PublicEventoController::class, 'proximos']);
         Route::get('/tipo/{tipo}', [PublicEventoController::class, 'porTipo']);
+        Route::get('/sugerencias', [PublicEventoController::class, 'sugerencias']);
         Route::get('/{id}', [PublicEventoController::class, 'show']);
         Route::get('/calendario/data', [PublicEventoController::class, 'calendario']);
         Route::post('/{id}/like', [PublicEventoController::class, 'like']);
@@ -289,6 +292,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     });
 
     // Usuarios
+    Route::get('/usuarios/sugerencias', [App\Http\Controllers\Api\V1\Admin\UsuarioController::class, 'sugerencias']);
     Route::apiResource('usuarios', App\Http\Controllers\Api\V1\Admin\UsuarioController::class);
     Route::patch('/usuarios/{usuario}/estado', [App\Http\Controllers\Api\V1\Admin\UsuarioController::class, 'cambiarEstado']);
     Route::post('/usuarios/{usuario}/verificar-email', [App\Http\Controllers\Api\V1\Admin\UsuarioController::class, 'verificarEmail']);

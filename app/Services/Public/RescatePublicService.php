@@ -14,14 +14,68 @@ class RescatePublicService
 {
     use ImageUploadTrait;
 
-    public function getAll(int $perPage = 15)
+    public function getAll(array $filters = [], int $perPage = 15)
     {
-        return Rescate::query()
+        $query = Rescate::query()
             ->selectFields()
             ->with(['usuarioReporto:id,nombre,email', 'entidadResponsable'])
-            ->where('estado', 'pendiente')
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+            ->where('estado', 'pendiente');
+
+        $reiniciarFiltros = isset($filters['reiniciar_filtros']) && filter_var($filters['reiniciar_filtros'], FILTER_VALIDATE_BOOLEAN);
+
+        if (!empty($filters['buscar'])) {
+            $buscar = trim($filters['buscar']);
+
+            $query->where(function ($q) use ($buscar) {
+                $q->where('lugar_rescate', 'like', "%{$buscar}%")
+                  ->orWhere('descripcion_rescate', 'like', "%{$buscar}%")
+                  ->orWhere('nombre_reportante', 'like', "%{$buscar}%")
+                  ->orWhere('email_reportante', 'like', "%{$buscar}%")
+                  ->orWhere('telefono_reportante', 'like', "%{$buscar}%");
+            });
+            $query->orderByRaw('nombre_reportante = ? DESC', [$buscar]);
+        }
+
+        if (!empty($filters['tipo_emergencia']) && !$reiniciarFiltros) {
+            $query->where('tipo_emergencia', $filters['tipo_emergencia']);
+        }
+
+        if (!empty($filters['prioridad']) && !$reiniciarFiltros) {
+            $query->where('prioridad', $filters['prioridad']);
+        }
+
+        return $query->orderBy('created_at', 'desc')->paginate($perPage);
+    }
+
+    public function getSugerencias(string $searchTerm, int $limit = 10): array
+    {
+        $searchTerm = trim($searchTerm);
+
+        if (strlen($searchTerm) < 2) {
+            return [];
+        }
+
+        $results = collect();
+
+        $lugares = Rescate::query()
+            ->where('lugar_rescate', 'like', "%{$searchTerm}%")
+            ->whereNotNull('lugar_rescate')
+            ->limit($limit)
+            ->pluck('lugar_rescate')
+            ->filter()
+            ->values();
+        $results = $results->merge($lugares);
+
+        $reportantes = Rescate::query()
+            ->where('nombre_reportante', 'like', "%{$searchTerm}%")
+            ->whereNotNull('nombre_reportante')
+            ->limit($limit)
+            ->pluck('nombre_reportante')
+            ->filter()
+            ->values();
+        $results = $results->merge($reportantes);
+
+        return $results->unique()->values()->take($limit)->toArray();
     }
 
     public function findById(int $id): Rescate

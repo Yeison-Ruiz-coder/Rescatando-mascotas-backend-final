@@ -11,22 +11,24 @@ class VeterinariaPublicService
         $query = Veterinaria::query()
             ->selectFields();
 
-        if (!empty($filters['urgencias'])) {
+        $reiniciarFiltros = isset($filters['reiniciar_filtros']) && filter_var($filters['reiniciar_filtros'], FILTER_VALIDATE_BOOLEAN);
+
+        if (!$reiniciarFiltros && !empty($filters['urgencias'])) {
             $query->where('urgencias_24h', true);
         }
 
-        if (!empty($filters['verificado'])) {
+        if (!$reiniciarFiltros && !empty($filters['verificado'])) {
             $query->where('verificado', true);
         }
 
-        if (!empty($filters['ubicacion'])) {
+        if (!$reiniciarFiltros && !empty($filters['ubicacion'])) {
             $query->where(function($q) use ($filters) {
                 $q->where('Direccion', 'like', '%' . $filters['ubicacion'] . '%')
                   ->orWhere('ciudad', 'like', '%' . $filters['ubicacion'] . '%');
             });
         }
 
-        if (!empty($filters['servicio'])) {
+        if (!$reiniciarFiltros && !empty($filters['servicio'])) {
             $servicio = $filters['servicio'];
             $query->where(function($q) use ($servicio) {
                 $q->where('servicios', 'like', '%"' . $servicio . '"%')
@@ -44,6 +46,7 @@ class VeterinariaPublicService
                   ->orWhere('descripcion', 'like', '%' . $buscar . '%')
                   ->orWhere('servicios', 'like', '%' . $buscar . '%');
             });
+            $query->orderByRaw('Nombre_vet = ? DESC', [$buscar]);
         }
 
         return $query->orderBy('Nombre_vet')->paginate($perPage);
@@ -77,6 +80,46 @@ class VeterinariaPublicService
             'galeria_fotos' => $veterinaria->galeria_fotos,
             'verificado' => $veterinaria->verificado,
         ];
+    }
+
+    public function getSugerencias(string $searchTerm, int $limit = 10): array
+    {
+        $searchTerm = trim($searchTerm);
+
+        if (strlen($searchTerm) < 2) {
+            return [];
+        }
+
+        $results = collect();
+
+        $nombres = Veterinaria::query()
+            ->where('Nombre_vet', 'like', "%{$searchTerm}%")
+            ->whereNotNull('Nombre_vet')
+            ->limit($limit)
+            ->pluck('Nombre_vet')
+            ->filter()
+            ->values();
+        $results = $results->merge($nombres);
+
+        $direcciones = Veterinaria::query()
+            ->where('Direccion', 'like', "%{$searchTerm}%")
+            ->whereNotNull('Direccion')
+            ->limit($limit)
+            ->pluck('Direccion')
+            ->filter()
+            ->values();
+        $results = $results->merge($direcciones);
+
+        $ciudades = Veterinaria::query()
+            ->where('ciudad', 'like', "%{$searchTerm}%")
+            ->whereNotNull('ciudad')
+            ->limit($limit)
+            ->pluck('ciudad')
+            ->filter()
+            ->values();
+        $results = $results->merge($ciudades);
+
+        return $results->unique()->values()->take($limit)->toArray();
     }
 
     public function getMapa()

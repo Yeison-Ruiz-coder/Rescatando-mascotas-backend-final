@@ -12,23 +12,25 @@ class EventoPublicService
             ->selectFields()
             ->where('fecha_evento', '>=', now()->startOfDay()); // ✅ Solo eventos desde hoy en adelante
 
-        if (isset($filters['proximos']) && filter_var($filters['proximos'], FILTER_VALIDATE_BOOLEAN)) {
+        $reiniciarFiltros = isset($filters['reiniciar_filtros']) && filter_var($filters['reiniciar_filtros'], FILTER_VALIDATE_BOOLEAN);
+
+        if (!$reiniciarFiltros && isset($filters['proximos']) && filter_var($filters['proximos'], FILTER_VALIDATE_BOOLEAN)) {
             $query->where('fecha_evento', '>=', now());
         }
 
-        if (!empty($filters['mes'])) {
+        if (!$reiniciarFiltros && !empty($filters['mes'])) {
             $query->whereMonth('fecha_evento', $filters['mes']);
         }
 
-        if (!empty($filters['anio'])) {
+        if (!$reiniciarFiltros && !empty($filters['anio'])) {
             $query->whereYear('fecha_evento', $filters['anio']);
         }
 
-        if (!empty($filters['tipo'])) {
+        if (!$reiniciarFiltros && !empty($filters['tipo'])) {
             $query->where('tipo', $filters['tipo']);
         }
 
-        if (!empty($filters['fundacion_id'])) {
+        if (!$reiniciarFiltros && !empty($filters['fundacion_id'])) {
             $query->where('fundacion_id', $filters['fundacion_id']);
         }
 
@@ -41,9 +43,73 @@ class EventoPublicService
                   ->orWhere('lugar_evento', 'like', '%' . $buscar . '%')
                   ->orWhere('tipo', 'like', '%' . $buscar . '%');
             });
+
+            // Priorizar coincidencia exacta en el nombre del evento
+            $query->orderByRaw('nombre_evento = ? DESC', [$buscar]);
         }
 
         return $query->orderBy('fecha_evento', 'asc')->paginate($perPage);
+    }
+
+    public function getSugerencias(string $searchTerm, int $limit = 10): array
+    {
+        $searchTerm = trim($searchTerm);
+
+        if (strlen($searchTerm) < 2) {
+            return [];
+        }
+
+        $results = collect();
+
+        $nombreEventos = Evento::query()
+            ->where('fecha_evento', '>=', now()->startOfDay())
+            ->where('nombre_evento', 'LIKE', "%{$searchTerm}%")
+            ->whereNotNull('nombre_evento')
+            ->limit($limit)
+            ->pluck('nombre_evento')
+            ->filter()
+            ->values()
+            ->toArray();
+        $results = $results->merge($nombreEventos);
+
+        $lugares = Evento::query()
+            ->where('fecha_evento', '>=', now()->startOfDay())
+            ->where('lugar_evento', 'LIKE', "%{$searchTerm}%")
+            ->whereNotNull('lugar_evento')
+            ->limit($limit)
+            ->pluck('lugar_evento')
+            ->filter()
+            ->values()
+            ->toArray();
+        $results = $results->merge($lugares);
+
+        $tipos = Evento::query()
+            ->where('fecha_evento', '>=', now()->startOfDay())
+            ->where('tipo', 'LIKE', "%{$searchTerm}%")
+            ->whereNotNull('tipo')
+            ->limit($limit)
+            ->pluck('tipo')
+            ->filter()
+            ->values()
+            ->toArray();
+        $results = $results->merge($tipos);
+
+        $categorias = Evento::query()
+            ->where('fecha_evento', '>=', now()->startOfDay())
+            ->where('categoria', 'LIKE', "%{$searchTerm}%")
+            ->whereNotNull('categoria')
+            ->limit($limit)
+            ->pluck('categoria')
+            ->filter()
+            ->values()
+            ->toArray();
+        $results = $results->merge($categorias);
+
+        return $results
+            ->unique()
+            ->values()
+            ->take($limit)
+            ->toArray();
     }
 
     public function findById(int $id): Evento
