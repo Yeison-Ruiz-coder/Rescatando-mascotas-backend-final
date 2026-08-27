@@ -3,22 +3,36 @@
 return [
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
-    'allowed_methods' => ['*'],
+    'allowed_methods' => [
+        'GET',
+        'POST',
+        'PUT',
+        'PATCH',
+        'DELETE',
+        'OPTIONS',
+    ],
 
     'allowed_origins' => [
-        'http://localhost:5173',  // Puerto de Vite
-        'http://localhost:3000',   // Por si acaso
+        'https://localhost',
+        'capacitor://localhost',
+        'http://localhost:5173',
+        'http://localhost:3000',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:3000',
     ],
 
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['*'],
+    'allowed_headers' => [
+        'Accept',
+        'Authorization',
+        'Content-Type',
+        'X-Requested-With',
+    ],
 
     'exposed_headers' => [],
 
     'max_age' => 0,
 
-    'supports_credentials' => true, // Esto debe estar en true
+    'supports_credentials' => false,
 ];
