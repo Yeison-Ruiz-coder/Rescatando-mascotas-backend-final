@@ -12,6 +12,106 @@ class MascotaFactory extends Factory
 {
     protected $model = Mascota::class;
 
+    private static array $imagenesUsadas = [];
+    private static array $imagenesUsadasPorCategoria = [];
+
+    public static function resetImagenesUsadas(): void
+    {
+        self::$imagenesUsadas = [];
+        self::$imagenesUsadasPorCategoria = [];
+    }
+
+    public static function imagenesUsadas(): array
+    {
+        return self::$imagenesUsadas;
+    }
+
+    public static function imagenesDisponibles(): array
+    {
+        $imagenes = [];
+
+        foreach (['perro', 'gato', 'conejo', 'ave'] as $categoria) {
+            $imagenes = array_merge($imagenes, self::imagenesDisponiblesPorCategoria($categoria));
+        }
+
+        return array_values(array_unique($imagenes));
+    }
+
+    public static function imagenesDisponiblesPorCategoria(string $categoria): array
+    {
+        $categoriaKey = strtolower($categoria);
+
+        $stock = [
+            'perro' => [
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1778139768/mascotas/fcnrvrzellqqdj0xecdv.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462481/e82a50e9587cf0292e16d8fd3752e048_-_copia_xyoezz.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462479/beneficios_de_tener_una_mascota-1_vnelpa.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462405/images_4_dlswmb.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462403/images_3_vtnxza.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462401/images_2_gpguag.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462400/images_1_kcf91v.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462399/657694610_222735447_1706x1280_kqophi.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782208985/mascotas/xq2ebzevgu0nygkqk9ff.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782207528/mascotas/dlweft4a9v5q2t4scoen.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782206342/mascotas/fr4yu8ffo81zxqklnlnc.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782203952/mascotas/vce5r3wzcip8zhekdeio.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782156877/mascotas/x4ozee3asmd19qcfskjx.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1781490997/mascotas/higwgw7jdonppt1uwdhl.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1780601117/mascotas/ttdajdacngbu5nunxb09.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1779143939/mascotas/d4cjxmx6varszz0xw9qy.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1778442009/mascotas/n2cy2qozjwhqdjtpjnel.jpg',
+            ],
+            'gato' => [
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1779298823/mascotas/a7xp51aaiu8pvjtybjsj.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462752/images_12_hkjek9.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462750/images_11_bdkono.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462749/images_10_irr7yi.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462747/images_9_xhpupm.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462745/images_8_exevdy.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462743/images_7_ug9gnv.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462741/images_6_l1lxaw.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462739/images_5_urnxg2.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462738/images_4_jrelg9.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462736/images_3_xnyw7a.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462536/OIP_flvjr2.webp',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462534/gatti-siamesi-immagini-e-foto-1_wcnv1m.webp',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782161863/mascotas/zvykvgr7ianq7qbwzllk.jpg',
+            ],
+            'conejo' => [
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1779298999/mascotas/ydopizlj9e4y8siev2yk.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462512/images_qmuduk.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462510/images_13_wu7tep.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462508/images_2_g76ows.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462507/images_1_i79lg4.jpg',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782375283/mascotas/civnnmrzfl9uezhiaeje.jpg',
+            ],
+            'ave' => [
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782463294/hapalopsittaca-fuertesi1_gl5pqj.webp',
+                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782463288/cockatiel-4794968_1920_g8lbn3.webp',
+            ],
+        ];
+
+        return $stock[$categoriaKey] ?? $stock['perro'];
+    }
+
+    public static function obtenerImagenUnica(?string $categoria = 'perro'): string
+    {
+        $categoriaKey = strtolower($categoria ?: 'perro');
+        $usadas = self::$imagenesUsadasPorCategoria[$categoriaKey] ?? [];
+        $disponibles = array_values(array_diff(self::imagenesDisponiblesPorCategoria($categoriaKey), $usadas));
+
+        if (empty($disponibles)) {
+            self::$imagenesUsadasPorCategoria[$categoriaKey] = [];
+            $disponibles = self::imagenesDisponiblesPorCategoria($categoriaKey);
+        }
+
+        $imagen = $disponibles[array_rand($disponibles)];
+        self::$imagenesUsadasPorCategoria[$categoriaKey][] = $imagen;
+        self::$imagenesUsadas[] = $imagen;
+
+        return $imagen;
+    }
+
     // URLs base de Cloudinary para diferentes tipos de fotos
     private $imagenesCloudinary = [
         // Fotos principales
@@ -61,8 +161,6 @@ class MascotaFactory extends Factory
             ],
             'ave' => [
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782463294/hapalopsittaca-fuertesi1_gl5pqj.webp',
-                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782463291/images_orf2pr.jpg',
-                'https://res.cloudinary.com/dixyebg5i/image/upload/v1782463289/images_1_jyu5ua.jpg',
                 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782463288/cockatiel-4794968_1920_g8lbn3.webp'
             ],
         ],
@@ -145,7 +243,7 @@ class MascotaFactory extends Factory
             'medicamentos' => $this->generarMedicamentos(),
 
             // ===== FOTOS Y MULTIMEDIA =====
-            'foto_principal' => $this->faker->randomElement($this->imagenesCloudinary['principal'][$imagenKey] ?? $this->imagenesCloudinary['principal']['perro']),
+            'foto_principal' => self::obtenerImagenUnica($imagenKey),
             'foto_principal_public_id' => $this->publicIdsCloudinary[$imagenKey] ?? $this->publicIdsCloudinary['perro'],
             'video_url' => $this->faker->optional(0.3)->url(),
             'video_public_id' => $this->faker->optional(0.3)->slug(),
@@ -549,10 +647,7 @@ class MascotaFactory extends Factory
             $imagenKey = strtolower($especie);
 
             return [
-                'foto_principal' => $this->faker->randomElement(
-                    $this->imagenesCloudinary['principal'][$imagenKey] ??
-                        $this->imagenesCloudinary['principal']['perro']
-                ),
+                'foto_principal' => self::obtenerImagenUnica($imagenKey),
             ];
         });
     }

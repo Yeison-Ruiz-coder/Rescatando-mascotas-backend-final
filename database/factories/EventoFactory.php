@@ -10,21 +10,62 @@ class EventoFactory extends Factory
 {
     protected $model = Evento::class;
 
-    private $imagenesEventos = [
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460000/pexels-photo-37533934_qs5lxv.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460000/pexels-photo-33313537_izxpkh.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459999/pexels-photo-28483933_mk0rv5.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459999/pexels-photo-33313535_ed012c.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459998/pexels-photo-16620581_ob9b9x.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459997/pexels-photo-16620580_e9wgcw.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459996/pexels-photo-16620579_sovtrw.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459995/pexels-photo-9413379_qd5xu0.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782414979/eventos/kkhe3fxy6u5hqbdf5q70.jpg',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1781809882/eventos/ciu4arlxkqduahlxkgqr.jpg',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1781491066/eventos/zqwjbadby4c9tdlo9p0y.jpg',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1779295892/eventos/mrzf15ucnpwvwa99rysl.jpg',
+    private static array $imagenesUsadas = [];
 
-    ];
+    public static function imagenesDisponibles(): array
+    {
+        return [
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459999/pexels-photo-28483933_mk0rv5.avif',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459997/pexels-photo-16620580_e9wgcw.avif',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1781809882/eventos/ciu4arlxkqduahlxkgqr.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1781491066/eventos/zqwjbadby4c9tdlo9p0y.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1779295892/eventos/mrzf15ucnpwvwa99rysl.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782627595/eventos/phpIBIKHw_ogl7by.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1787971511/pexels-jorge-torres-1790459776-28483938_hlsu9m.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1787971519/pexels-nandamends-16609287_ic8htk.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1787971519/pexels-sleeba-thomas-156395977-31008338_ihual1.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1787971520/pexels-rednguyen-17488598_qdabln.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1787971704/pexels-fatih-guney-337108406-16516866_yvzqao.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1787971704/pexels-conejodepapel-14647515_soncoq.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1787971704/pexels-giovanna-kamimura-399616174-33939737_ye5cjl.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1787971704/pexels-jess-arras-1241792238-36118553_l9nty9.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1787971705/pexels-tivasee-17374727-6430455_c9eamj.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1787971705/pexels-el-joven-zag-719710251-27017417_emhg1k.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1787971705/pexels-daniwithaniphotovideo-31744794_xiiuyj.jpg',
+        ];
+    }
+
+    public static function resetImagenesUsadas(): void
+    {
+        self::$imagenesUsadas = [];
+    }
+
+    public static function imagenesUsadas(): array
+    {
+        return self::$imagenesUsadas;
+    }
+
+    public static function registrarImagenUsada(string $imagen): void
+    {
+        if (!in_array($imagen, self::$imagenesUsadas, true)) {
+            self::$imagenesUsadas[] = $imagen;
+        }
+    }
+
+    public static function obtenerImagenUnica(): string
+    {
+        $disponibles = array_values(array_diff(self::imagenesDisponibles(), self::$imagenesUsadas));
+
+        if (empty($disponibles)) {
+            self::$imagenesUsadas = [];
+            $disponibles = self::imagenesDisponibles();
+        }
+
+        $imagen = $disponibles[array_rand($disponibles)];
+        self::$imagenesUsadas[] = $imagen;
+
+        return $imagen;
+    }
 
     private $lugaresPopayan = [
         'Parque Caldas',
@@ -106,7 +147,7 @@ class EventoFactory extends Factory
             'fecha_evento' => $fechaEvento,
             'fecha_fin' => $fechaFin,
 
-            'imagen_url' => $this->faker->randomElement($this->imagenesEventos),
+            'imagen_url' => self::obtenerImagenUnica(),
             'imagen_public_id' => 'eventos/imagen_' . $this->faker->uuid(),
 
             'tipo' => $this->faker->randomElement([

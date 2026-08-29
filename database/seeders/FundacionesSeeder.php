@@ -3,26 +3,38 @@
 namespace Database\Seeders;
 
 use App\Models\Fundacion;
+use Database\Factories\FundacionFactory;
 use Illuminate\Database\Seeder;
 
 class FundacionesSeeder extends Seeder
 {
     public function run(): void
     {
+        FundacionFactory::resetImagenesUsadas();
+        $imagenManual = 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460777/images_nbmj0r.png';
+        FundacionFactory::registrarImagenUsada($imagenManual);
+
+        $totalImagenes = count(FundacionFactory::imagenesDisponibles());
+        $imagenesRestantes = max(0, $totalImagenes - count(FundacionFactory::imagenesUsadas()));
+
         // Crear 20 fundaciones normales
         Fundacion::factory()
-            ->count(20)
+            ->count(min(20, $imagenesRestantes))
             ->create();
+
+        $imagenesRestantes = max(0, $totalImagenes - count(FundacionFactory::imagenesUsadas()));
 
         // Crear 10 fundaciones verificadas
         Fundacion::factory()
-            ->count(10)
+            ->count(min(10, $imagenesRestantes))
             ->verificada()
             ->create();
 
+        $imagenesRestantes = max(0, $totalImagenes - count(FundacionFactory::imagenesUsadas()));
+
         // Crear 5 fundaciones que reciben voluntarios
         Fundacion::factory()
-            ->count(5)
+            ->count(min(5, $imagenesRestantes))
             ->conVoluntarios()
             ->create();
 
@@ -37,7 +49,7 @@ class FundacionesSeeder extends Seeder
             'recibe_voluntarios' => true,
             'verificado' => true,
             'ciudad' => 'Medellín',
-            'imagen_portada' => 'https://res.cloudinary.com/dixyebg5i/image/upload/v1780343918/avatars/l0d1sk6uty6svqbztdya.jpg',
+            'imagen_portada' => $imagenManual,
         ]);
     }
 }

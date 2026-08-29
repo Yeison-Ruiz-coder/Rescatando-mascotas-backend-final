@@ -25,14 +25,14 @@ class RescatesSeeder extends Seeder
 
         $fotoUrls = [
             'https://res.cloudinary.com/dixyebg5i/image/upload/v1778139768/mascotas/fcnrvrzellqqdj0xecdv.jpg',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1779298823/mascotas/a7xp51aaiu8pvjtybjsj.jpg',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1779298999/mascotas/ydopizlj9e4y8siev2yk.jpg',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462739/images_5_urnxg2.jpg',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462738/images_4_jrelg9.jpg',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462736/images_3_xnyw7a.jpg',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462536/OIP_flvjr2.webp',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462534/gatti-siamesi-immagini-e-foto-1_wcnv1m.webp',
-            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782161863/mascotas/zvykvgr7ianq7qbwzllk.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462481/e82a50e9587cf0292e16d8fd3752e048_-_copia_xyoezz.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462479/beneficios_de_tener_una_mascota-1_vnelpa.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462405/images_4_dlswmb.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462403/images_3_vtnxza.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462401/images_2_gpguag.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462400/images_1_kcf91v.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782462399/657694610_222735447_1706x1280_kqophi.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782208985/mascotas/xq2ebzevgu0nygkqk9ff.jpg',
         ];
 
         $ubicaciones = [

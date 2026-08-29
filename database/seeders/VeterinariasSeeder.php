@@ -3,30 +3,44 @@
 namespace Database\Seeders;
 
 use App\Models\Veterinaria;
+use Database\Factories\VeterinariaFactory;
 use Illuminate\Database\Seeder;
 
 class VeterinariasSeeder extends Seeder
 {
     public function run(): void
     {
+        VeterinariaFactory::resetImagenesUsadas();
+        $imagen1 = 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459468/pexels-photo-23692686_gvwcyx.avif';
+        $imagen2 = 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459467/pexels-photo-29862005_dyimeq.avif';
+        VeterinariaFactory::registrarImagenUsada($imagen1);
+        VeterinariaFactory::registrarImagenUsada($imagen2);
+
+        $totalImagenes = count(VeterinariaFactory::imagenesDisponibles());
+        $imagenesRestantes = max(0, $totalImagenes - count(VeterinariaFactory::imagenesUsadas()));
+
         // ==========================================
         // 1. VETERINARIAS CON FACTORY (MASIVAS)
         // ==========================================
 
         // Crear 30 veterinarias normales
         Veterinaria::factory()
-            ->count(30)
+            ->count(min(30, $imagenesRestantes))
             ->create();
+
+        $imagenesRestantes = max(0, $totalImagenes - count(VeterinariaFactory::imagenesUsadas()));
 
         // Crear 10 veterinarias verificadas
         Veterinaria::factory()
-            ->count(10)
+            ->count(min(10, $imagenesRestantes))
             ->verificada()
             ->create();
 
+        $imagenesRestantes = max(0, $totalImagenes - count(VeterinariaFactory::imagenesUsadas()));
+
         // Crear 5 veterinarias con urgencias 24h
         Veterinaria::factory()
-            ->count(5)
+            ->count(min(5, $imagenesRestantes))
             ->conUrgencias()
             ->create();
 
@@ -61,8 +75,8 @@ class VeterinariasSeeder extends Seeder
             'valoracion_promedio' => 4.9,
             'total_valoraciones' => 328,
 
-            // 🔥 Cloudinary - Usando una de TUS imágenes
-            'logo' => 'https://res.cloudinary.com/dixyebg5i/image/upload/v1781146028/descargar_1_bf2lcg.jpg',
+            // 🔥 Cloudinary - Usando una de las imágenes válidas del factory
+            'logo' => $imagen1,
             'logo_public_id' => 'veterinarias/logo_central_24_7',
             'redes_sociales' => json_encode([
                 'facebook' => 'https://facebook.com/veterinariacentral',
@@ -108,8 +122,8 @@ class VeterinariasSeeder extends Seeder
             'valoracion_promedio' => 4.8,
             'total_valoraciones' => 156,
 
-            // 🔥 Usando tu segunda imagen
-            'logo' => 'https://res.cloudinary.com/dixyebg5i/image/upload/v1781146031/descargar_2_bs8hyk.jpg',
+            // 🔥 Usando la segunda imagen válida del factory
+            'logo' => $imagen2,
             'logo_public_id' => 'veterinarias/logo_felinus',
             'redes_sociales' => json_encode([
                 'facebook' => 'https://facebook.com/felinus',

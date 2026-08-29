@@ -4,12 +4,20 @@ namespace Database\Seeders;
 
 use App\Models\Fundacion;
 use App\Models\User;
+use Database\Factories\FundacionFactory;
 use Illuminate\Database\Seeder;
 
-class FundacionesSeeder extends Seeder
+class FundacionSeeder extends Seeder
 {
     public function run(): void
     {
+        FundacionFactory::resetImagenesUsadas();
+        $imagenManual = 'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460777/images_nbmj0r.png';
+        FundacionFactory::registrarImagenUsada($imagenManual);
+
+        $totalImagenes = count(FundacionFactory::imagenesDisponibles());
+        $imagenesRestantes = max(0, $totalImagenes - count(FundacionFactory::imagenesUsadas()));
+
         // ==========================================
         // 1. FUNDACIONES VINCULADAS A USUARIOS
         // ==========================================
@@ -24,7 +32,7 @@ class FundacionesSeeder extends Seeder
             if (!$fundacionExistente) {
                 Fundacion::create([
                     'user_id' => $usuarioFundacion->id,
-                    'Nombre_1' => $usuarioFundacion->apellidos, // "Patitas Felices"
+                    'Nombre_1' => $usuarioFundacion->apellidos,
                     'Direccion' => $usuarioFundacion->direccion,
                     'Telefono' => $usuarioFundacion->telefono,
                     'Email' => $usuarioFundacion->email,
@@ -36,7 +44,7 @@ class FundacionesSeeder extends Seeder
                     'lat' => $usuarioFundacion->lat,
                     'lng' => $usuarioFundacion->lng,
                     'radio_atencion' => 5000,
-                    'imagen_portada' => $usuarioFundacion->avatar,
+                    'imagen_portada' => $imagenManual,
                     'imagen_portada_public_id' => $usuarioFundacion->avatar_public_id,
                     'necesidades_actuales' => json_encode(['alimento', 'medicinas', 'voluntarios']),
                     'horario_atencion' => 'Lunes a Viernes 9:00 AM - 6:00 PM',
@@ -53,18 +61,22 @@ class FundacionesSeeder extends Seeder
 
         // Crear 20 fundaciones normales
         Fundacion::factory()
-            ->count(20)
+            ->count(min(20, $imagenesRestantes))
             ->create();
+
+        $imagenesRestantes = max(0, $totalImagenes - count(FundacionFactory::imagenesUsadas()));
 
         // Crear 10 fundaciones verificadas
         Fundacion::factory()
-            ->count(10)
+            ->count(min(10, $imagenesRestantes))
             ->verificada()
             ->create();
 
+        $imagenesRestantes = max(0, $totalImagenes - count(FundacionFactory::imagenesUsadas()));
+
         // Crear 5 fundaciones que reciben voluntarios
         Fundacion::factory()
-            ->count(5)
+            ->count(min(5, $imagenesRestantes))
             ->conVoluntarios()
             ->create();
     }

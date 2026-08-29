@@ -10,25 +10,66 @@ class VeterinariaFactory extends Factory
 {
     protected $model = Veterinaria::class;
 
+    private static array $imagenesUsadas = [];
+
     // Configurar Faker en español colombiano
     protected function withFaker()
     {
         return FakerFactory::create('es_CO');
     }
 
-    // URLs base de Cloudinary para logos
-    private $logosCloudinary = [
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459468/pexels-photo-23692686_gvwcyx.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459467/pexels-photo-29862005_dyimeq.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459467/pexels-photo-30577796_dbjwod.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459466/pexels-photo-19490053_pke9pq.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459465/pexels-photo-6235116_xenwoa.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459465/pexels-photo-6816858_o6opp2.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459464/pexels-photo-6234635_f6ewby.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459465/pexels-photo-7474859_jsc2ob.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459464/pexels-photo-6234980_eiyrcc.avif',
-        'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459463/pexels-photo-5731861_xlofmm.avif'
-    ];
+    public static function imagenesDisponibles(): array
+    {
+        return [
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459468/pexels-photo-23692686_gvwcyx.avif',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459467/pexels-photo-29862005_dyimeq.avif',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459467/pexels-photo-30577796_dbjwod.avif',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459466/pexels-photo-19490053_pke9pq.avif',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459465/pexels-photo-6235116_xenwoa.avif',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459465/pexels-photo-6816858_o6opp2.avif',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459464/pexels-photo-6234635_f6ewby.avif',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459465/pexels-photo-7474859_jsc2ob.avif',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459464/pexels-photo-6234980_eiyrcc.avif',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782459463/pexels-photo-5731861_xlofmm.avif',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460777/images_nbmj0r.png',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460776/images_zvwjpm.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460775/images_12_jzipdk.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460773/images_11_enht32.jpg',
+            'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460772/images_10_q5blsf.jpg',
+        ];
+    }
+
+    public static function resetImagenesUsadas(): void
+    {
+        self::$imagenesUsadas = [];
+    }
+
+    public static function imagenesUsadas(): array
+    {
+        return self::$imagenesUsadas;
+    }
+
+    public static function registrarImagenUsada(string $imagen): void
+    {
+        if (!in_array($imagen, self::$imagenesUsadas, true)) {
+            self::$imagenesUsadas[] = $imagen;
+        }
+    }
+
+    public static function obtenerImagenUnica(): string
+    {
+        $disponibles = array_values(array_diff(self::imagenesDisponibles(), self::$imagenesUsadas));
+
+        if (empty($disponibles)) {
+            self::$imagenesUsadas = [];
+            $disponibles = self::imagenesDisponibles();
+        }
+
+        $imagen = $disponibles[array_rand($disponibles)];
+        self::$imagenesUsadas[] = $imagen;
+
+        return $imagen;
+    }
 
     private $galeriaCloudinary = [
         'https://res.cloudinary.com/dixyebg5i/image/upload/v1782460777/images_nbmj0r.png',
@@ -85,10 +126,18 @@ class VeterinariaFactory extends Factory
     {
         // Servicios en español
         $servicios = [
-            'Consulta general', 'Vacunación', 'Cirugía', 'Hospitalización',
-            'Laboratorio clínico', 'Radiología', 'Odontología veterinaria',
-            'Peluquería y estética', 'Urgencias 24 horas', 'Ecografías',
-            'Endoscopias', 'Fisioterapia'
+            'Consulta general',
+            'Vacunación',
+            'Cirugía',
+            'Hospitalización',
+            'Laboratorio clínico',
+            'Radiología',
+            'Odontología veterinaria',
+            'Peluquería y estética',
+            'Urgencias 24 horas',
+            'Ecografías',
+            'Endoscopias',
+            'Fisioterapia'
         ];
 
         $serviciosSeleccionados = $this->faker->randomElements($servicios, $this->faker->numberBetween(3, 6));
@@ -99,15 +148,39 @@ class VeterinariaFactory extends Factory
         $sufijos = ['del Parque', 'del Centro', 'del Norte', 'del Sur', 'del Bosque', 'de la Montaña', 'de los Andes'];
 
         $nombreCompleto = $this->faker->randomElement($prefijos) . ' ' .
-                         $this->faker->randomElement($nombres) . ' ' .
-                         $this->faker->randomElement($sufijos);
+            $this->faker->randomElement($nombres) . ' ' .
+            $this->faker->randomElement($sufijos);
 
         // Ciudades colombianas
-        $ciudades = ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena', 'Bucaramanga',
-                    'Pereira', 'Manizales', 'Pasto', 'Cúcuta', 'Ibagué', 'Villavicencio', 'Santa Marta'];
+        $ciudades = [
+            'Bogotá',
+            'Medellín',
+            'Cali',
+            'Barranquilla',
+            'Cartagena',
+            'Bucaramanga',
+            'Pereira',
+            'Manizales',
+            'Pasto',
+            'Cúcuta',
+            'Ibagué',
+            'Villavicencio',
+            'Santa Marta'
+        ];
 
-        $departamentos = ['Cundinamarca', 'Antioquia', 'Valle del Cauca', 'Atlántico', 'Bolívar',
-                         'Santander', 'Risaralda', 'Caldas', 'Nariño', 'Norte de Santander', 'Tolima'];
+        $departamentos = [
+            'Cundinamarca',
+            'Antioquia',
+            'Valle del Cauca',
+            'Atlántico',
+            'Bolívar',
+            'Santander',
+            'Risaralda',
+            'Caldas',
+            'Nariño',
+            'Norte de Santander',
+            'Tolima'
+        ];
 
         // Horarios en español
         $horarios = [
@@ -143,7 +216,7 @@ class VeterinariaFactory extends Factory
             'acepta_seguros' => $this->faker->boolean(50),
             'valoracion_promedio' => $this->faker->randomFloat(2, 3, 5),
             'total_valoraciones' => $this->faker->numberBetween(1, 500),
-            'logo' => $this->faker->randomElement($this->logosCloudinary),
+            'logo' => self::obtenerImagenUnica(),
             'logo_public_id' => 'veterinarias/logo_' . $this->faker->uuid(),
             'galeria_fotos' => json_encode($this->faker->randomElements($this->galeriaCloudinary, 3)),
             'redes_sociales' => json_encode([
@@ -166,7 +239,7 @@ class VeterinariaFactory extends Factory
     // Estados personalizados
     public function verificada(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'verificado' => true,
             'valoracion_promedio' => $this->faker->randomFloat(2, 4, 5),
         ]);
@@ -174,7 +247,7 @@ class VeterinariaFactory extends Factory
 
     public function conUrgencias(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'urgencias_24h' => true,
             'horario_atencion' => '24/7 - Todos los días',
         ]);

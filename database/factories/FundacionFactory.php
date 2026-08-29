@@ -10,27 +10,61 @@ class FundacionFactory extends Factory
 {
     protected $model = Fundacion::class;
 
-    // 🖼️ MÁS IMÁGENES DE PORTADA (30+ opciones)
-    private $imagenesPortada = [
-        // Fundaciones reales (puedes reemplazar con URLs de imágenes de fundaciones de prueba o de tu propiedad)
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460777/images_nbmj0r.png",
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460776/images_zvwjpm.jpg",
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460775/images_12_jzipdk.jpg",
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460773/images_11_enht32.jpg",
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460772/images_10_q5blsf.jpg",
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460771/images_9_jnoh4u.jpg",
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460770/images_8_il9ir7.jpg",
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460769/images_7_daakgy.jpg",
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460768/images_6_jiuccf.jpg",
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460767/images_5_oxamyo.jpg",
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460766/images_4_kmxnzh.jpg",
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460765/images_3_t5oefq.jpg",
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460763/images_2_c4iy10.png",
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460762/images_2_r5zjrc.jpg",
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460761/images_1_jeedps.png",
-        "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460761/images_1_tefmge.jpg"
+    private static array $imagenesUsadas = [];
 
-    ];
+    public static function imagenesDisponibles(): array
+    {
+        return [
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460777/images_nbmj0r.png",
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460776/images_zvwjpm.jpg",
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460775/images_12_jzipdk.jpg",
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460773/images_11_enht32.jpg",
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460772/images_10_q5blsf.jpg",
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460771/images_9_jnoh4u.jpg",
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460770/images_8_il9ir7.jpg",
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460769/images_7_daakgy.jpg",
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460768/images_6_jiuccf.jpg",
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460767/images_5_oxamyo.jpg",
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460766/images_4_kmxnzh.jpg",
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460765/images_3_t5oefq.jpg",
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460763/images_2_c4iy10.png",
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460762/images_2_r5zjrc.jpg",
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460761/images_1_jeedps.png",
+            "https://res.cloudinary.com/dixyebg5i/image/upload/v1782460761/images_1_tefmge.jpg"
+        ];
+    }
+
+    public static function resetImagenesUsadas(): void
+    {
+        self::$imagenesUsadas = [];
+    }
+
+    public static function imagenesUsadas(): array
+    {
+        return self::$imagenesUsadas;
+    }
+
+    public static function registrarImagenUsada(string $imagen): void
+    {
+        if (!in_array($imagen, self::$imagenesUsadas, true)) {
+            self::$imagenesUsadas[] = $imagen;
+        }
+    }
+
+    public static function obtenerImagenUnica(): string
+    {
+        $disponibles = array_values(array_diff(self::imagenesDisponibles(), self::$imagenesUsadas));
+
+        if (empty($disponibles)) {
+            self::$imagenesUsadas = [];
+            $disponibles = self::imagenesDisponibles();
+        }
+
+        $imagen = $disponibles[array_rand($disponibles)];
+        self::$imagenesUsadas[] = $imagen;
+
+        return $imagen;
+    }
 
     // 🏙️ CIUDADES DE COLOMBIA
     private $ciudades = [
@@ -125,7 +159,7 @@ class FundacionFactory extends Factory
             'ciudad' => $ciudad,
 
             // IMÁGENES
-            'imagen_portada' => $this->faker->randomElement($this->imagenesPortada),
+            'imagen_portada' => self::obtenerImagenUnica(),
             'imagen_portada_public_id' => 'fundaciones/portada_' . $this->faker->uuid(),
 
             // INFORMACIÓN ADICIONAL

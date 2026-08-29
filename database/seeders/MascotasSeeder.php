@@ -4,12 +4,16 @@ namespace Database\Seeders;
 
 use App\Models\Mascota;
 use App\Models\Fundacion;
+use Database\Factories\MascotaFactory;
 use Illuminate\Database\Seeder;
 
 class MascotasSeeder extends Seeder
 {
     public function run(): void
     {
+        MascotaFactory::resetImagenesUsadas();
+        $stockTotal = count(MascotaFactory::imagenesDisponibles());
+
         // ==========================================
         // 1. OBTENER FUNDACIONES EXISTENTES
         // ==========================================
@@ -25,21 +29,27 @@ class MascotasSeeder extends Seeder
         // ==========================================
 
         if ($fundacionPatitas) {
+            $stockDisponible = max(0, $stockTotal - count(MascotaFactory::imagenesUsadas()));
+
             // 15 mascotas para Patitas Felices
-            Mascota::factory(15)
+            Mascota::factory(min(15, $stockDisponible))
                 ->conFundacion($fundacionPatitas->id)
                 ->conMuchasFotos()
                 ->create();
 
+            $stockDisponible = max(0, $stockTotal - count(MascotaFactory::imagenesUsadas()));
+
             // 3 mascotas destacadas
-            Mascota::factory(3)
+            Mascota::factory(min(3, $stockDisponible))
                 ->conFundacion($fundacionPatitas->id)
                 ->destacada()
                 ->conVideo()
                 ->create();
 
+            $stockDisponible = max(0, $stockTotal - count(MascotaFactory::imagenesUsadas()));
+
             // 2 cachorros
-            Mascota::factory(2)
+            Mascota::factory(min(2, $stockDisponible))
                 ->conFundacion($fundacionPatitas->id)
                 ->cachorro()
                 ->create();
@@ -56,7 +66,12 @@ class MascotasSeeder extends Seeder
                 continue;
             }
 
-            $cantidad = rand(3, 8);
+            $stockDisponible = max(0, $stockTotal - count(MascotaFactory::imagenesUsadas()));
+            if ($stockDisponible <= 0) {
+                break;
+            }
+
+            $cantidad = min(rand(3, 8), $stockDisponible);
             Mascota::factory($cantidad)
                 ->conFundacion($fundacion->id)
                 ->create();
@@ -70,20 +85,35 @@ class MascotasSeeder extends Seeder
         $fundacionesRandom = $todasFundaciones->random(min(5, $todasFundaciones->count()));
 
         foreach ($fundacionesRandom as $fundacion) {
+            $stockDisponible = max(0, $stockTotal - count(MascotaFactory::imagenesUsadas()));
+            if ($stockDisponible <= 0) {
+                break;
+            }
+
             // Mascotas adoptadas
-            Mascota::factory(rand(1, 3))
+            Mascota::factory(min(rand(1, 3), $stockDisponible))
                 ->conFundacion($fundacion->id)
                 ->adoptada()
                 ->create();
 
+            $stockDisponible = max(0, $stockTotal - count(MascotaFactory::imagenesUsadas()));
+            if ($stockDisponible <= 0) {
+                break;
+            }
+
             // Mascotas rescatadas
-            Mascota::factory(rand(1, 2))
+            Mascota::factory(min(rand(1, 2), $stockDisponible))
                 ->conFundacion($fundacion->id)
                 ->rescatada()
                 ->create();
 
+            $stockDisponible = max(0, $stockTotal - count(MascotaFactory::imagenesUsadas()));
+            if ($stockDisponible <= 0) {
+                break;
+            }
+
             // Mascotas con necesidades especiales
-            Mascota::factory(rand(0, 1))
+            Mascota::factory(min(rand(0, 1), $stockDisponible))
                 ->conFundacion($fundacion->id)
                 ->conNecesidadesEspeciales()
                 ->create();
@@ -95,8 +125,13 @@ class MascotasSeeder extends Seeder
 
         // 5 mascotas destacadas en fundaciones aleatorias
         for ($i = 0; $i < 5; $i++) {
+            $stockDisponible = max(0, $stockTotal - count(MascotaFactory::imagenesUsadas()));
+            if ($stockDisponible <= 0) {
+                break;
+            }
+
             $fundacionRandom = $todasFundaciones->random();
-            Mascota::factory()
+            Mascota::factory(min(1, $stockDisponible))
                 ->conFundacion($fundacionRandom->id)
                 ->destacada()
                 ->conVideo()
