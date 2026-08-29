@@ -16,19 +16,24 @@ return [
         'https://localhost',
         'capacitor://localhost',
         'https://rescatando-mascotas.netlify.app',
+        'https://rescatando-mascotas-frontend-final-drab.vercel.app',
         'http://localhost:5173',
         'http://localhost:3000',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:3000',
     ],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '/^https:\/\/.*\.vercel\.app$/',
+    ],
 
     'allowed_headers' => [
         'Accept',
         'Authorization',
         'Content-Type',
         'X-Requested-With',
+        'X-CSRF-TOKEN',
+        'X-XSRF-TOKEN',
     ],
 
     'exposed_headers' => [],

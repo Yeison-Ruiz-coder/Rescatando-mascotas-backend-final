@@ -10,10 +10,22 @@ class ExampleTest extends TestCase
     /**
      * A basic test example.
      */
-    public function test_the_application_returns_a_successful_response(): void
+    public function test_public_api_returns_a_successful_response(): void
     {
-        $response = $this->get('/');
+        $response = $this->get('/api/mascotas?page=1&per_page=12');
 
         $response->assertStatus(200);
+    }
+
+    public function test_vercel_frontend_origin_is_allowed_for_api_requests(): void
+    {
+        $origin = 'https://rescatando-mascotas-frontend-final-drab.vercel.app';
+
+        $response = $this->withHeaders([
+            'Origin' => $origin,
+        ])->get('/api/mascotas?page=1&per_page=12');
+
+        $response->assertStatus(200);
+        $response->assertHeader('Access-Control-Allow-Origin', $origin);
     }
 }
