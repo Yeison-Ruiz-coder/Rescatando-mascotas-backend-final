@@ -139,7 +139,6 @@ class MascotaPublicService
     public function getEspeciesUnicas()
     {
         $especies = Mascota::query()
-            ->whereIn('estado', $this->getEstadosDisponibles())
             ->whereNotNull('especie')
             ->distinct()
             ->pluck('especie')
